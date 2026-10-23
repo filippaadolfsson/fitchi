@@ -2137,7 +2137,7 @@ async function slaPaNotis(){
 document.addEventListener('click', e => {
   if(e.target.closest('#notisJa')){ stangArk(); slaPaNotis(); return; }
   if(e.target.closest('#notisNej')){ S.notis = false; spara(); stangArk(); return; }
-  if(e.target.closest('#notisVaxla')){ if(S.notis){ S.notis = false; spara(); planeraNotiser(); toastG('Påminnelserna är avstängda.'); stangArk(); } else { stangArk(); slaPaNotis(); } return; }
+  if(e.target.closest('#notisVaxla')){ if(S.notis){ S.notis = false; spara(); planeraNotiser(); toastG('Påminnelserna är avstängda.'); visaResa(); } else { slaPaNotis().then(() => visaResa()); } return; }
 }, true);
 if(NOTIS){
   document.addEventListener('visibilitychange', () => { if(document.hidden) planeraNotiser(); });
@@ -2260,19 +2260,68 @@ document.addEventListener('click', e => {
 }, true);
 
 // börja om från början (i Din resa)
-const _visaResa = visaResa;
+// Din resa: tidslinje med nivåer, XP och inställningar
+{
+  const st = document.createElement('style'); st.textContent = `
+  .resa{display:flex;flex-direction:column;gap:16px}
+  .resaxp{border-radius:20px;padding:14px 16px;background:#ffffff0d;box-shadow:inset 0 0 0 1px var(--glas-kant);display:flex;flex-direction:column;gap:8px}
+  .resaxp .topp2{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--pa-scen-d)}
+  .resaxp .topp2 b{font:800 18px var(--display);color:var(--pa-scen)}
+  .resaxp .bar{height:8px;border-radius:99px;background:#ffffff14;overflow:hidden}
+  .resaxp .bar i{display:block;height:100%;border-radius:inherit;background:var(--lime)}
+  .linje{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+  .linje li{position:relative;display:grid;grid-template-columns:28px 1fr;gap:12px;padding:0 0 14px}
+  .linje li::before{content:"";position:absolute;left:13px;top:24px;bottom:-2px;width:2px;background:var(--glas-kant)}
+  .linje li:last-child::before{display:none}
+  .linje li.klar::before{background:#c8f16966}
+  .linje .prick{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 12px var(--display);background:#ffffff10;box-shadow:inset 0 0 0 1.5px var(--glas-kant);color:var(--pa-scen-d);position:relative;z-index:1}
+  .linje li.klar .prick{background:#c8f169;box-shadow:none;color:#1e1230}
+  .linje li.nasta .prick{background:#1e1230;box-shadow:inset 0 0 0 2px #c8f169;color:#c8f169}
+  .linje .txt{padding-top:4px;display:flex;flex-direction:column;gap:2px;min-width:0}
+  .linje .txt b{font:700 12px var(--text);letter-spacing:.04em;text-transform:uppercase;color:var(--pa-scen-d)}
+  .linje .txt span{font-size:15px;line-height:20px;color:var(--pa-scen)}
+  .linje li.klar .txt span{color:var(--pa-scen-d)}
+  .linje li.last .txt span{color:var(--pa-scen);opacity:.6}
+  .linje li.nasta .txt{border-radius:16px;padding:10px 12px;margin:-6px 0 0;background:#c8f16914;box-shadow:inset 0 0 0 1.5px #c8f169aa}
+  .linje li.nasta .txt b{color:#c8f169}
+  .visamer{appearance:none;border:0;background:none;color:var(--pa-scen-d);font:600 13px var(--text);text-decoration:underline;cursor:pointer;align-self:flex-start;padding:0 0 0 40px}
+  .installningar{border-radius:20px;background:#ffffff0d;box-shadow:inset 0 0 0 1px var(--glas-kant);overflow:hidden}
+  .installningar button{appearance:none;border:0;background:none;width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;color:var(--pa-scen);font:600 15px var(--text);text-align:left;cursor:pointer}
+  .installningar button+button{border-top:1px solid var(--glas-kant)}
+  .installningar small{font-weight:500;font-size:13px;color:var(--pa-scen-d)}
+  .vaxel{width:44px;height:26px;border-radius:99px;background:#ffffff22;position:relative;flex:none;transition:background .2s}
+  .vaxel::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+  .vaxel.pa{background:#c8f169}.vaxel.pa::after{transform:translateX(18px)}
+  #borjaOm.saker{color:#ff8a80}
+  .resafot{font-size:12px;line-height:17px;color:var(--pa-scen-d);text-align:center;padding:0 12px}`;
+  document.head.appendChild(st);
+}
+let resaAllt = false;
 visaResa = function(){
-  _visaResa();
-  const b = document.createElement('button'); b.className = 'knapp sek'; b.id = 'borjaOm'; b.textContent = 'Börja om från början';
-  b.onclick = () => {
-    if(b.dataset.saker !== '1'){ b.dataset.saker = '1'; b.textContent = 'Tryck igen för att radera allt och börja om'; b.style.color = '#ff8a80'; return; }
-    try{ localStorage.removeItem(LAGER); }catch(e){}
-    S.klar = false; location.replace(location.pathname);
-  };
-  $('#ark').appendChild(b);
-  { const vk = document.createElement('button'); vk.className = 'knapp ljus'; vk.id = 'visaVeckan'; vk.textContent = `Veckan med ${S.namn}`; b.before(vk); }
-  if(NOTIS){ const n = document.createElement('button'); n.className = 'knapp sek'; n.id = 'notisVaxla'; n.textContent = S.notis ? 'Påminnelser: på · stäng av' : 'Påminnelser: av · slå på'; b.before(n); }
+  const nasta = NIVABEL.find(([n]) => n > S.niva), behov = xpBehov(S.niva);
+  const iN = nasta ? NIVABEL.indexOf(nasta) : NIVABEL.length - 1, synliga = resaAllt ? NIVABEL : NIVABEL.slice(Math.max(0, iN - 2), iN + 4);
+  const rader = synliga.map(([n, t]) => { const klar = n <= S.niva, ar = nasta && n === nasta[0];
+    const kvar = ar ? Math.max(0, behov - Math.round(S.xp)) + (n > S.niva + 1 ? [...Array(n - S.niva - 1)].reduce((a, _, i) => a + xpBehov(S.niva + 1 + i), 0) : 0) : 0;
+    return `<li class="${klar ? 'klar' : ar ? 'nasta' : 'last'}"><span class="prick">${klar ? '✓' : n}</span><div class="txt"><b>${klar ? 'Nivå ' + n + ' · upplåst' : ar ? 'Nästa · nivå ' + n + ' · ' + kvar + ' XP kvar' : 'Nivå ' + n}</b><span>${t}</span></div></li>`; }).join('');
+  oppnaArk(arkHuvud('Din resa', `${S.namn}, nivå ${S.niva}`, '')
+    + `<div class="resa">
+      <div class="resaxp"><div class="topp2"><span><b>${Math.round(S.xp)}</b> av ${behov} XP</span><span>mot nivå ${S.niva + 1}</span></div><div class="bar"><i style="width:${Math.min(100, S.xp / behov * 100)}%"></i></div></div>
+      <ol class="linje">${rader}</ol>
+      ${resaAllt ? '' : `<button class="visamer" id="resaAllt">Visa hela vägen till nivå ${NIVABEL[NIVABEL.length - 1][0]}</button>`}
+      <button class="knapp ljus" id="visaVeckan">Veckan med ${S.namn}</button>
+      <div class="installningar">
+        ${NOTIS ? `<button id="notisVaxla"><span>Påminnelser<br><small>Högst två om dagen</small></span><span class="vaxel ${S.notis ? 'pa' : ''}"></span></button>` : ''}
+        <button id="borjaOm"><span>Börja om från början<br><small>Raderar din fitchi och allt du har samlat</small></span><span>›</span></button>
+      </div>
+      <p class="resafot">Nivåer går aldrig förlorade. Varje nivå ger mynt, och nya nivåer låser upp beteenden, minispel och prylar.</p></div>`);
 };
+document.addEventListener('click', e => {
+  if(e.target.closest('#resaAllt')){ resaAllt = true; const y = $('#ark').scrollTop; visaResa(); $('#ark').scrollTop = y; return; }
+  const bo = e.target.closest('#borjaOm');
+  if(bo){ if(!bo.classList.contains('saker')){ bo.classList.add('saker'); bo.querySelector('span').innerHTML = 'Tryck igen för att radera allt<br><small>Det går inte att ångra</small>'; return; }
+    try{ localStorage.removeItem(LAGER); }catch(err){} S.klar = false; location.replace(location.pathname); return; }
+}, true);
+document.addEventListener('click', e => { if(e.target.closest('[data-resa]')) resaAllt = false; }, true);
 // start
 if(ladda()){ formVeckor(); document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn); visa('s-hem'); }
 else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data.steg = 0; S.protein = 0; S.vatten = 0; S.gront = 0; S.glod = 70; }
