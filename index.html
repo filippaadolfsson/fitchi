@@ -1395,11 +1395,90 @@ document.getElementById('borja').addEventListener('click', () => { S.klar = true
 let sparT; document.addEventListener('click', () => { clearTimeout(sparT); sparT = setTimeout(spara, 400); });
 document.addEventListener('visibilitychange', () => { if(document.hidden) spara(); else if(S.klar){ const idag = dagNr(new Date()); if(idag !== S.dag){ nyRiktigDag(idag - S.dag); ritaHem(); } } });
 addEventListener('pagehide', spara);
+// installera som app
+if('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+
+// ===== Android-appen: steg, sömn och puls från Samsung Health via Health Connect =====
+const HALSA = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? window.Capacitor.Plugins.FitchiHalsa : null;
+if(HALSA){
+  const st = document.createElement('style'); st.textContent = `
+  .halsarad{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .halsarad span{font:600 12px var(--text);padding:6px 10px;border-radius:99px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen)}
+  .halsarad span b{font-weight:800}
+  .koppla{border-radius:22px;padding:14px 16px;background:#c8f1691c;box-shadow:inset 0 0 0 1px #c8f16966;display:flex;flex-direction:column;gap:8px}
+  .koppla b{font:800 17px var(--display)} .koppla p{font-size:14px;line-height:20px;color:var(--dampad)}`;
+  document.head.appendChild(st);
+  const rad = document.createElement('div'); rad.className = 'halsarad'; rad.id = 'halsarad'; rad.hidden = true;
+  document.querySelector('#s-hem .xp').after(rad);
+  const kort = document.createElement('div'); kort.className = 'koppla'; kort.id = 'koppla'; kort.hidden = true;
+  document.querySelector('#s-hem .under').prepend(kort);
+  S.halsa = S.halsa || {};
+  let halsaKlar = false, vantaMorgon = false;
+  const klarNu = () => { halsaKlar = true; if(vantaMorgon){ vantaMorgon = false; if(!S.morgonKlar) setTimeout(visaMorgon, 200); } };
+  const fmtH = m => `${Math.floor(m/60)} h ${String(Math.round(m%60)).padStart(2,'0')} min`;
+  function visaKoppla(titel, text, knapp){
+    kort.hidden = false; kort.innerHTML = `<b>${titel}</b><p>${text}</p>` + (knapp ? `<button class="lite" id="kopplaKnapp">${knapp}</button>` : '');
+    const k = document.getElementById('kopplaKnapp'); if(k) k.onclick = async () => { try{ const r = await HALSA.begar(); if(r.antal > 0){ kort.hidden = true; halsaLas(); } else visaKoppla(titel, 'Inga behörigheter gavs. Du kan försöka igen, eller ge dem senare i Health Connect.', knapp); }catch(e){ visaKoppla('Något gick fel', String(e.message || e), null); } };
+  }
+  async function halsaKolla(){
+    try{
+      const s = await HALSA.status();
+      if(!s.tillganglig){ visaKoppla('Health Connect saknas', 'Telefonen har inte Health Connect. Fitchi fungerar ändå, men utan data från klockan.', null); klarNu(); return; }
+      if(s.antal === 0){ visaKoppla('Koppla din klocka', 'Låt Fitchi läsa steg, sömn och puls från Samsung Health. Datan stannar i telefonen.', 'Koppla Samsung Health'); klarNu(); return; }
+      kort.hidden = true; halsaLas();
+    }catch(e){ console.log('halsa', e); klarNu(); }
+  }
+  async function halsaLas(){
+    let d; try{ d = await HALSA.las(); }catch(e){ console.log('las', e); klarNu(); return; }
+    const h = S.halsa, idag = dagNr(new Date());
+    if(h.dag !== idag){ h.dag = idag; h.stegBas = 0; h.stegGivna = 0; }
+    // steg: energi och små belöningar för nya steg
+    if(typeof d.steg === 'number'){
+      S.data.steg = d.steg;
+      S.m.energi = Math.max(S.m.energi, Math.min(100, Math.round(d.steg/110 + 8)));
+      const nya = Math.floor(d.steg/2000) - (h.stegGivna || 0);
+      if(nya > 0 && S.glod > 0){ const g = Math.min(25, nya*5); S.glod = Math.min(100, S.glod + g); S.xp += nya*8; while(S.xp >= 100){ S.xp -= 100; S.niva++; }
+        if(h.stegGivna !== undefined && h.stegGivna > 0 || nya < 3) toastG(`${(Math.floor(d.steg/2000)*2000).toLocaleString('sv-SE')} steg! Glöd +${g}, +${nya*8} XP`, 2600);
+        h.stegGivna = Math.floor(d.steg/2000); }
+    }
+    // sömn: styr lugn och morgonen
+    if(d.somnMin > 0){
+      const tim = d.somnMin/60; S.data.somn = Math.round(tim*10)/10; h.somnMin = d.somnMin;
+      if(h.somnDag !== idag){ h.somnDag = idag; S.m.lugn = Math.max(0, Math.min(100, Math.round(25 + (tim-5)*16))); }
+    }
+    // puls: låg vilopuls ger lite extra lugn
+    const vp = d.vilopuls || d.pulsMin; if(vp){ S.data.puls = vp; h.puls = vp; if(h.pulsDag !== idag){ h.pulsDag = idag; S.m.lugn = Math.max(0, Math.min(100, S.m.lugn + Math.round((62 - vp)*0.6))); } }
+    const delar = [];
+    if(typeof d.steg === 'number') delar.push(`<span><b>${d.steg.toLocaleString('sv-SE')}</b> steg</span>`);
+    if(d.somnMin > 0) delar.push(`<span><b>${fmtH(d.somnMin)}</b> sömn</span>`);
+    if(vp) delar.push(`<span><b>${vp}</b> ${d.vilopuls ? 'vilopuls' : 'puls'}</span>`);
+    rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
+    if($('#s-hem').classList.contains('aktiv') && !$('#slöja').classList.contains('oppen')) ritaHem();
+    spara(); klarNu();
+  }
+  // morgonen: sömnen kommer från klockan i stället för frågan
+  const _visaMorgon = visaMorgon;
+  visaMorgon = function(){
+    if(!halsaKlar){ vantaMorgon = true; return; }
+    const m = S.halsa && S.halsa.somnDag === dagNr(new Date()) ? S.halsa.somnMin : 0;
+    if(!m){ _visaMorgon(); return; }
+    if($('#slöja').classList.contains('oppen')) return;
+    const tim = m/60, val = tim >= 7 ? 'bra' : tim >= 5.5 ? 'okej' : 'daligt';
+    const t = {bra:`${S.namn} vaknar utvilad`, okej:`${S.namn} vaknar`, daligt:`${S.namn} är lite trött`}[val];
+    const r = {bra:'En riktigt bra natt. Dagens uppdrag får lite mer energi.', okej:'En okej natt. Ta det i din takt idag.', daligt:'Kort natt. Dagens uppdrag blir lugnare, och vila räknas.'}[val];
+    oppnaArk(arkHuvud('God morgon', t, `Klockan säger att du sov ${fmtH(m)}. ${r}`) + `<div class="arkfitchi">${ork(val==='daligt'?'trott':'pigg', 120)}</div><button class="knapp" data-sov="${val}">Godmorgon, ${S.namn}</button>`);
+  };
+  const SPARA_EXTRA = () => { try{ const o = JSON.parse(localStorage.getItem(LAGER) || '{}'); o.halsa = S.halsa; localStorage.setItem(LAGER, JSON.stringify(o)); }catch(e){} };
+  const _spara = spara; spara = function(){ _spara(); SPARA_EXTRA(); };
+  try{ const o = JSON.parse(localStorage.getItem(LAGER) || 'null'); if(o && o.halsa) S.halsa = o.halsa; }catch(e){}
+  document.addEventListener('visibilitychange', () => { if(!document.hidden && S.klar) halsaKolla(); });
+  document.getElementById('borja').addEventListener('click', () => setTimeout(halsaKolla, 1200));
+  setTimeout(() => { if(S.klar) halsaKolla(); }, 600);
+}
+
 // start
 if(ladda()){ document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn); visa('s-hem'); }
 else { S.m = {energi:62, styrka:55, lugn:60, naring:55}; S.data.somn = 7.4; S.data.steg = 7000; }
-// installera som app
-if('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 
 </script>
 </body>
