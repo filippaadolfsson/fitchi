@@ -890,7 +890,7 @@ document.addEventListener('click', e => {
   const k = e.target.closest('[data-klar]');
   if(k){ const u = S.uppdrag[+k.dataset.klar]; if(u.klar) return; u.klar = true;
     S.saldo += u.p; const mm = u.m==='gladje' ? 'lugn' : u.m; S.m[mm] = Math.min(100, S.m[mm] + 15); if(u.m==='gladje') S.m.energi = Math.min(100, S.m.energi+5);
-    S.xp += 12; if(S.xp>=100){ S.xp-=100; S.niva++; }
+    S.xp += 12; while(S.xp>=xpBehov(S.niva)){ S.xp-=xpBehov(S.niva); S.niva++; }
     let msg = `+${u.p} mynt`;
     if(S.uppdrag.every(x => x.klar)){ S.saldo += 50; msg = `Alla tre klara! +${u.p} och +50 i bonus`; }
     ritaHem(); klappa();
@@ -912,7 +912,7 @@ function ritaHem(){
   $('#ringar').innerHTML = RINGAR.map(([k,n]) => `<button class="chip glas" data-matare="${k}" aria-label="${n}: ${Math.round(S.m[k])} av 100. Visa detaljer">${ring(S.m[k],k)}<span>${n}</span></button>`).join('');
   ritaUppdrag();
   $('#saldo').textContent = fmt(S.saldo); $('#niva').textContent = 'Nivå ' + S.niva;
-  $('#xpbar').style.width = S.xp + '%'; $('#xptext').textContent = `${Math.round(S.xp)} av 100 XP mot nivå ${S.niva+1}`;
+  $('#xpbar').style.width = Math.min(100, S.xp / xpBehov(S.niva) * 100) + '%'; $('#xptext').textContent = `${Math.round(S.xp)} av ${xpBehov(S.niva)} XP mot nivå ${S.niva+1}`;
 }
 
 // Logga
@@ -929,7 +929,7 @@ $('#spara').onclick = () => {
   const okning = Math.min(100 - S.m[mat], Math.round(S.min*0.9));
   S.m[mat] += okning; if(mat!=='energi') S.m.energi = Math.min(100, S.m.energi + Math.round(S.min*0.3));
   const mynt = 20 + S.min, xp = Math.min(35, Math.round(S.min*0.8));
-  S.saldo += mynt; S.xp += xp; S.lag = (S.lag||31)+1; $('#lagPass').textContent = S.lag; $('#lagBar').style.width = Math.min(100,S.lag/40*100)+'%'; let niva = false; if(S.xp>=100){ S.xp -= 100; S.niva++; niva = true; }
+  S.saldo += mynt; S.xp += xp; S.lag = (S.lag||31)+1; $('#lagPass').textContent = S.lag; $('#lagBar').style.width = Math.min(100,S.lag/40*100)+'%'; let niva = false; while(S.xp>=xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; niva = true; }
   visa('s-belon');
   const mood = mat==='lugn' ? 'lugn' : 'stark';
   $('#belonOrkis').innerHTML = ork(mood, 170);
@@ -1192,6 +1192,7 @@ S.glod = 60; S.sover = false; S.morgonKlar = true; S.senastNiva = S.niva; S.kris
 const STADIER = [[1,'Gnista'],[10,'Glöd'],[25,'Låga'],[40,'Legend']];
 const stadium = n => STADIER.filter(([f]) => n >= f).at(-1)[1];
 const stKlass = n => 'st-' + ({Gnista:'gnista','Glöd':'glod','Låga':'laga',Legend:'legend'})[stadium(n)];
+function xpBehov(n){ return 100 + 25 * (Math.max(1, n) - 1); }
 const NIVABEL = [[2,'Första prylen och veckans kista','första prylen'],[3,'Minispel: leka med din fitchi','minispelet'],[5,'Vänner: peppa och se varandras fitchis','vänner'],[7,'Expeditioner och nytt beteende: dansen','dansen'],[10,'Elementet växer: mer eld, vind, vatten, månsken eller kristaller','starkare element'],[12,'Lag och lagutmaningar','lag'],[15,'Andra fitchi-platsen: adoptera en till','en fitchi till'],[20,'Hemlig fitchi och nytt beteende: tricket','tricket'],[25,'Elementet växer igen och ett sällsynt skin','sällsynt skin'],[30,'Bättre förmåner hos partners','bättre förmåner'],[40,'Legendskin: aura och strålande diamant','legendskin'],[50,'Ny säsong: legendmärkning och säsongsskin','ny säsong']];
 const FYND = ['en ametistkristall','en liten solhatt','15 mynt','en glittrande sten','en fjäder','en kristallsplitter','30 mynt'];
 function toastG(txt, ms){ const t = $('#toast3'); t.textContent = txt; t.classList.add('syns'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('syns'), ms||1900); }
@@ -1216,7 +1217,7 @@ ritaHem = function(){
   _ritaHem();
   $('#niva').textContent = `Nivå ${S.niva}`;
   const nasta = NIVABEL.find(([n]) => n > S.niva);
-  $('#xptext').textContent = `${Math.round(S.xp)} av 100 XP mot nivå ${S.niva+1}` + (nasta ? ` · ${nasta[2]} på nivå ${nasta[0]}` : '');
+  $('#xptext').textContent = `${Math.round(S.xp)} av ${xpBehov(S.niva)} XP mot nivå ${S.niva+1}` + (nasta ? ` · ${nasta[2]} på nivå ${nasta[0]}` : '');
   ritaGlod();
   if(S.niva > S.senastNiva){ const fran = S.senastNiva; S.senastNiva = S.niva; setTimeout(() => visaNivaUpp(fran), 350); }
   else if(!S.morgonKlar && S.glod > 0) setTimeout(visaMorgon, 350);
@@ -1445,7 +1446,7 @@ if(HALSA){
       S.data.pulsNu = d.pulsNu || null; S.data.vilopulsTyp = d.vilopuls ? 'Vilopuls' : 'Lägsta puls'; S.data.steg = d.steg; S.data.halsa = true; S.data.stegKalla = d.stegKallaPaket || ''; S.data.stegKallor = d.stegKallor || null; if(typeof d.stegIgar === 'number') S.data.stegIgar = d.stegIgar;
       S.m.energi = Math.max(S.m.energi, Math.min(100, Math.round(d.steg/110 + 8)));
       const nya = Math.floor(d.steg/2000) - (h.stegGivna || 0);
-      if(nya > 0 && S.glod > 0){ const g = Math.min(25, nya*5); S.glod = Math.min(100, S.glod + g); S.xp += nya*8; while(S.xp >= 100){ S.xp -= 100; S.niva++; }
+      if(nya > 0 && S.glod > 0){ const g = Math.min(25, nya*5); S.glod = Math.min(100, S.glod + g); S.xp += nya*8; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
         if(h.stegGivna !== undefined && h.stegGivna > 0 || nya < 3) toastG(`${(Math.floor(d.steg/2000)*2000).toLocaleString('sv-SE')} steg! Glöd +${g}, +${nya*8} XP`, 2600);
         h.stegGivna = Math.floor(d.steg/2000); }
     }
@@ -1851,7 +1852,7 @@ function startaAndas(){
 function klarAndas(){
   clearInterval(andasTimer);
   const idag = dagNr(new Date()), forsta = S.andasDag !== idag;
-  if(forsta){ S.andasDag = idag; S.m.lugn = Math.min(100, S.m.lugn + 12); S.xp += 10; while(S.xp >= 100){ S.xp -= 100; S.niva++; } }
+  if(forsta){ S.andasDag = idag; S.m.lugn = Math.min(100, S.m.lugn + 12); S.xp += 10; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; } }
   spara();
   $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>` + arkHuvud('Andas', 'Snyggt andat', forsta ? `${S.namn} känner sig lugnare. Lugn +12, +10 XP.` : `${S.namn} tyckte om det. Belöningen får ni en gång om dagen.`)
     + `<button class="knapp ljus" data-stang-ark>Klar</button>`;
@@ -1934,7 +1935,7 @@ function slutFanga(poang){
   const idag = dagNr(new Date()), forsta = S.fangaDag !== idag, rekord = poang > (S.fangaRekord || 0);
   if(rekord) S.fangaRekord = poang;
   let belon = '';
-  if(forsta && poang > 0){ S.fangaDag = idag; const mynt = Math.min(40, poang * 2); S.saldo += mynt; S.xp += 8; while(S.xp >= 100){ S.xp -= 100; S.niva++; }
+  if(forsta && poang > 0){ S.fangaDag = idag; const mynt = Math.min(40, poang * 2); S.saldo += mynt; S.xp += 8; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
     S.m.energi = Math.min(100, S.m.energi + 8); belon = `+${mynt} mynt, +8 XP och energi +8.`; }
   else belon = forsta ? '' : 'Belöningen får ni en gång om dagen, men rekord räknas alltid.';
   spara(); ritaHem();
@@ -2007,7 +2008,7 @@ function klockPass(lista){
     const okning = Math.min(100 - S.m[mat], Math.round(min * 0.9));
     S.m[mat] += okning; if(mat !== 'energi') S.m.energi = Math.min(100, S.m.energi + Math.round(min * 0.3));
     const mynt = 20 + Math.min(60, min), xp = Math.min(35, Math.round(min * 0.8));
-    S.saldo += mynt; S.xp += xp; while(S.xp >= 100){ S.xp -= 100; S.niva++; }
+    S.saldo += mynt; S.xp += xp; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
     S.glod = Math.min(100, S.glod + Math.min(25, 5 + Math.round(min / 2)));
     S.passlogg = (S.passlogg || []).concat({tid: p.start, typ: typ[0], namn: typ[1], min, m: mat, kalla: 'klocka'}).slice(-60);
     if(dagNr(new Date(p.start)) === dagNr(new Date())) nyckelIdag();
