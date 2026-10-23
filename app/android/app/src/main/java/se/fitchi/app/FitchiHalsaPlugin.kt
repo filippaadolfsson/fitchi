@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -101,9 +102,23 @@ class FitchiHalsaPlugin : Plugin() {
 
                 // Steg idag och igår
                 if (givna.contains(HealthPermission.getReadPermission(StepsRecord::class))) {
-                    val a = klient.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(idag, nu)))
+                    // Vilka appar skriver steg idag? Telefon, klocka och andra appar kan räkna samma steg.
+                    val perApp = mutableMapOf<String, Long>()
+                    var sida: String? = null
+                    do {
+                        val svar = klient.readRecords(ReadRecordsRequest(StepsRecord::class, TimeRangeFilter.between(idag, nu), pageToken = sida))
+                        for (r in svar.records) perApp[r.metadata.dataOrigin.packageName] = (perApp[r.metadata.dataOrigin.packageName] ?: 0L) + r.count
+                        sida = svar.pageToken
+                    } while (sida != null)
+                    val kallor = JSObject(); perApp.forEach { (k, v) -> kallor.put(k, v) }
+                    ret.put("stegKallor", kallor)
+                    // Samsung Health räknar redan ihop telefon och klocka, så använd bara dess siffra när den finns
+                    val samsung = "com.sec.android.app.shealth"
+                    val bara = if (perApp.containsKey(samsung)) setOf(DataOrigin(samsung)) else emptySet()
+                    ret.put("stegKalla", if (bara.isEmpty()) "Health Connect" else "Samsung Health")
+                    val a = klient.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(idag, nu), bara))
                     ret.put("steg", a[StepsRecord.COUNT_TOTAL] ?: 0L)
-                    val b = klient.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(igar, idag)))
+                    val b = klient.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(igar, idag), bara))
                     ret.put("stegIgar", b[StepsRecord.COUNT_TOTAL] ?: 0L)
                 }
 

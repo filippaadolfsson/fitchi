@@ -1440,7 +1440,7 @@ if(HALSA){
     if(h.dag !== idag){ h.dag = idag; h.stegBas = 0; h.stegGivna = 0; }
     // steg: energi och små belöningar för nya steg
     if(typeof d.steg === 'number'){
-      S.data.pulsNu = d.pulsNu || null; S.data.vilopulsTyp = d.vilopuls ? 'Vilopuls' : 'Lägsta puls'; S.data.steg = d.steg; S.data.halsa = true; if(typeof d.stegIgar === 'number') S.data.stegIgar = d.stegIgar;
+      S.data.pulsNu = d.pulsNu || null; S.data.vilopulsTyp = d.vilopuls ? 'Vilopuls' : 'Lägsta puls'; S.data.steg = d.steg; S.data.halsa = true; S.data.stegKalla = d.stegKalla || 'Samsung Health'; S.data.stegKallor = d.stegKallor || null; if(typeof d.stegIgar === 'number') S.data.stegIgar = d.stegIgar;
       S.m.energi = Math.max(S.m.energi, Math.min(100, Math.round(d.steg/110 + 8)));
       const nya = Math.floor(d.steg/2000) - (h.stegGivna || 0);
       if(nya > 0 && S.glod > 0){ const g = Math.min(25, nya*5); S.glod = Math.min(100, S.glod + g); S.xp += nya*8; while(S.xp >= 100){ S.xp -= 100; S.niva++; }
@@ -1575,7 +1575,11 @@ oppnaMatare = function(k){
   const fmtH = h => `${Math.floor(h)} h ${String(Math.round((h % 1) * 60)).padStart(2,'0')} min`;
   let rader = [], insikt = null;
   if(k === 'energi'){
-    if(klocka){ rader.push(['Steg', fmt(d.steg || 0), 'Samsung Health']); if(typeof d.stegIgar === 'number') rader.push(['Steg igår', fmt(d.stegIgar), 'Samsung Health']); }
+    if(klocka){ const kl2 = d.stegKalla || 'Samsung Health';
+      rader.push(['Steg', fmt(d.steg || 0), kl2]); if(typeof d.stegIgar === 'number') rader.push(['Steg igår', fmt(d.stegIgar), kl2]);
+      const APPNAMN = {'com.sec.android.app.shealth':'Samsung Health','com.google.android.apps.fitness':'Google Fit','com.google.android.apps.healthdata':'Telefonen (Health Connect)','com.android.healthconnect.controller':'Telefonen (Health Connect)'};
+      const andra = Object.entries(d.stegKallor || {}).filter(([p]) => p !== 'com.sec.android.app.shealth' && kl2 === 'Samsung Health');
+      andra.forEach(([p, n]) => rader.push(['Räknas inte med', fmt(n) + ' steg', 'Även från ' + (APPNAMN[p] || p)])); }
     else rader.push(['Steg', '6 240', ex]);
     passIdag.forEach(p => rader.push([p.namn, p.min + ' min', 'Loggat ' + kl(p.tid)]));
     if(klocka && typeof d.stegIgar === 'number') insikt = d.steg >= d.stegIgar ? `Du har redan gått fler steg än igår (${fmt(d.stegIgar)}).` : `${fmt(d.stegIgar - d.steg)} steg kvar till gårdagens nivå.`;
