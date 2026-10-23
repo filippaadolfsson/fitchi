@@ -1336,7 +1336,7 @@ ritaHem = function(){ _ritaHem2(); const el = $('#hemOrkis'); el.dataset.pose = 
 // ===== 3D-fitchis =====
 const F3D = {};
 for(const k of ['bjorn','hare','uggla','utter','katt']) F3D[k] = `img/${k}.webp`;
-const F3DP = {"bjorn": {"lugn": "img/bruno/lugn.webp", "neutral": "img/bruno/neutral.webp", "pigg": "img/bruno/pigg.webp", "sover": "img/bruno/sover.webp", "stark": "img/bruno/stark.webp", "trott": "img/bruno/trott.webp"}, "hare": {"neutral": "img/hugo/neutral.webp", "pigg": "img/hugo/pigg.webp", "stark": "img/hugo/stark.webp", "trott": "img/hugo/trott.webp"}};
+const F3DP = {"bjorn": {"lugn": "img/bruno/lugn.webp", "neutral": "img/bruno/neutral.webp", "pigg": "img/bruno/pigg.webp", "sover": "img/bruno/sover.webp", "stark": "img/bruno/stark.webp", "trott": "img/bruno/trott.webp"}, "hare": {"lugn": "img/hugo/lugn.webp", "neutral": "img/hugo/neutral.webp", "pigg": "img/hugo/pigg.webp", "sover": "img/hugo/sover.webp", "stark": "img/hugo/stark.webp", "trott": "img/hugo/trott.webp"}};
 ork = (mood, w) => { if(typeof posFor === 'function') mood = posFor(mood); const sov = (S.sover || S.glod <= 0) && w >= 120, key = sov ? 'sover' : mood, p = F3DP[S.art] || {}, src = p[key] || p[mood==='pigg' && !p.pigg ? 'neutral' : mood] || F3D[S.art];
   const kl = (['neutral','pigg','stark','lugn','trott'].includes(key) && p[key]) ? ' vid' : key==='sover' && p.sover ? ' liggande' : '';
   const SK = S.art==='bjorn' ? {neutral:922, pigg:920, stark:933, trott:893, lugn:823} : {}, hp = kl===' vid' && SK[key] ? Math.round(SK[key]/935*100) : 100;
