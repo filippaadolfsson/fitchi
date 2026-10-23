@@ -1957,12 +1957,39 @@ document.addEventListener('click', e => { if(S.dansar && e.target.closest('#hemO
 // ibland dansar fitchin av sig själv när den är pigg och glöden är hög
 setTimeout(() => { if(S.klar && S.niva >= 5 && !S.sover && S.glod >= 70 && S.m.energi >= 65 && Math.random() < .35 && !$('#slöja').classList.contains('oppen')) dansa(9000); }, 2500);
 
+// --- dygnsljus (nivå 4): scenen följer tiden på dygnet
+if(!NIVABEL.some(r => r[0] === 4)){ NIVABEL.push([4, 'Dygnsljus: scenen följer tiden på dygnet', 'dygnsljuset']); NIVABEL.sort((a, b) => a[0] - b[0]); }
+{
+  const prick = (x, y, r, a) => `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,${a}) 0, rgba(255,255,255,${a}) ${r}px, transparent ${r + 1}px)`;
+  const STJ = [[8,10,1,.9],[18,22,1.2,.7],[30,8,1,.8],[42,17,.8,.6],[58,9,1.2,.9],[70,20,1,.7],[83,12,1.3,.8],[92,26,1,.6],[12,34,.8,.5],[88,38,.8,.5],[24,46,1,.4],[76,44,1,.4]].map(a => prick(...a)).join(',');
+  const st = document.createElement('style'); st.textContent = `
+  #s-hem .topp.scen{transition:background-color 1.5s}
+  #s-hem .topp.tid-morgon{background-color:#5e4a86;background-image:radial-gradient(ellipse at 50% -15%,#ffd890aa 0,#ffd89000 55%),radial-gradient(circle at 50% 38%,#9a86c4 0,#5e4a86 58%,#1d1630 100%)}
+  #s-hem .topp.tid-dag{background-color:#4a2a68;background-image:radial-gradient(ellipse at 50% -10%,#e9d8ff55 0,#e9d8ff00 45%),radial-gradient(circle at 50% 38%,#7a52a8 0,#4a2a68 58%,#170e24 100%)}
+  #s-hem .topp.tid-kvall{background-color:#4a1f45;background-image:radial-gradient(ellipse at 50% 70%,#ff7a4a88 0,#ff7a4a00 55%),radial-gradient(circle at 50% 38%,#7a3266 0,#4a1f45 58%,#150a1a 100%)}
+  #s-hem .topp.tid-natt{background-color:#1b1233;background-image:${STJ},radial-gradient(circle at 50% 38%,#33245a 0,#1b1233 58%,#0b0714 100%)}
+  #s-hem .topp.tid-natt{position:relative}
+  #s-hem .topp.tid-natt::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background-image:${[[36,14,1.2,1],[64,26,1,1],[6,24,1,1],[80,6,1,1]].map(a => prick(...a)).join(',')};animation:blinka 3.2s ease-in-out infinite}
+  @keyframes blinka{0%,100%{opacity:.15}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){#s-hem .topp.tid-natt::after{animation:none;opacity:.6}}
+  .dygnetikett{font:600 11px var(--text);color:var(--pa-scen-d);text-align:center;margin-top:-6px;opacity:.85}`;
+  document.head.appendChild(st);
+}
+const DYGN = {morgon:'Morgonljus', dag:'Dagsljus', kvall:'Kvällsljus', natt:'Natt'};
+function dygnNu(){ const h = new Date().getHours(); return h >= 5 && h < 10 ? 'morgon' : h >= 10 && h < 17 ? 'dag' : h >= 17 && h < 21 ? 'kvall' : 'natt'; }
+function ritaDygn(){
+  const t = document.querySelector('#s-hem .topp'); if(!t) return;
+  ['morgon','dag','kvall','natt'].forEach(k => t.classList.remove('tid-' + k));
+  if(S.niva >= 4) t.classList.add('tid-' + dygnNu());
+}
+setInterval(ritaDygn, 5 * 60000);
+
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
     if(S.niva >= 2 && !S.forstaPryl && S.klar){ S.forstaPryl = true; fapryl('kettlebell'); S.framme = S.framme || 'kettlebell';
       setTimeout(() => toastG(`Nivå 2: ${S.namn} fick sin första pryl, en kettlebell!`, 3200), 800); spara(); }
     if(S.dansar && !S.sover && $('#humor')) $('#humor').textContent = `${S.namn} dansar!`;
-    ritaPryl(); ritaKistknapp(); }; }
+    ritaDygn(); ritaPryl(); ritaKistknapp(); }; }
 
 // börja om från början (i Din resa)
 const _visaResa = visaResa;
