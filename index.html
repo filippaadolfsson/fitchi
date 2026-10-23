@@ -1,0 +1,1406 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fitchi</title>
+<meta name="theme-color" content="#120c1c">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Fitchi">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="img/ikon.svg"><link rel="apple-touch-icon" href="img/ikon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--gradde:#f7f2ea;--vit:#ffffff;--natt:#1c1420;--dampad:#6b5d66;--linje:#e6dcd3;--tomat:#c93b20;--lime:#c8f169;
+--scen:#3b1f4f;--scen-ljus:#5a3274;--pa-scen:#f7f2ea;--pa-scen-d:#d9b8f0;--glas:#ffffff14;--glas-kant:#ffffff1f;
+--energi:#c8f169;--styrka:#ff7a5c;--lugn:#d9b8f0;--naring:#ffb07a;--mynt:#d9a441;--mynt-ljus:#f2d48a;--mynt-text:#8a5f10;
+--display:'Bricolage Grotesque',system-ui,sans-serif;--text:Figtree,system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#e9e2d8;font-family:var(--text);color:var(--natt);display:flex;flex-direction:column;align-items:center;padding:24px 12px;gap:12px}
+.yta{display:flex;gap:28px;align-items:flex-start;justify-content:center;flex-wrap:wrap;width:100%}
+.panel{width:340px;max-width:100%;background:var(--vit);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px #1c142014;font-size:13px}
+.panel h3{margin:0;font:800 18px var(--display);letter-spacing:-.01em}
+.panel .grupp{display:flex;flex-direction:column;gap:8px}
+.panel .gt{font:600 11px var(--text);letter-spacing:.04em;color:var(--dampad);text-transform:none}
+.scen-knappar{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.scen-knappar button,.panel .pk{appearance:none;border:0;border-radius:14px;background:var(--gradde);padding:9px 10px;text-align:left;font:600 12px/16px var(--text);color:var(--natt);cursor:pointer}
+.scen-knappar button:hover,.panel .pk:hover{background:#ece4da}
+.scen-knappar button.aktivscen{background:var(--natt);color:var(--gradde)}
+.reglage{display:grid;grid-template-columns:96px 1fr 58px;gap:6px 8px;align-items:center}
+.reglage label{font-weight:600}
+.reglage output{text-align:right;font:700 12px var(--text);color:var(--dampad)}
+.reglage input[type=range]{width:100%;accent-color:#3b1f4f}
+.reglage select{font:500 12px var(--text);border-radius:8px;border:1px solid var(--linje);padding:4px;grid-column:2/4}
+.utlas{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.utlas div{background:#3b1f4f;color:#f7f2ea;border-radius:12px;padding:8px 4px;text-align:center}
+.utlas b{display:block;font:800 18px var(--display)}
+.utlas span{font-size:10px;color:#d9b8f0}
+.formrad{display:flex;flex-direction:column;gap:6px}
+.frad{display:grid;grid-template-columns:60px 1fr 48px;align-items:center;gap:8px;font-weight:600}
+.frad b{font:700 12px var(--text);color:var(--dampad);text-align:right}
+.prickar{display:flex;gap:5px}
+.prickar i{width:22px;height:10px;border-radius:99px;background:#ece4da}
+.prickar i.p{background:#3b1f4f}
+.prickar i.minne{background:#3b1f4f40}
+.logik{font-size:11px;line-height:16px;color:var(--dampad);background:var(--gradde);border-radius:12px;padding:10px}
+.tillbaka{background:#eefacb;border-radius:22px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.hint{font-size:13px;color:var(--dampad);text-align:center;max-width:390px}
+.telefon{width:390px;max-width:100%;height:800px;background:var(--gradde);border-radius:44px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #1c1420,0 30px 60px -20px #1c142066;display:flex;flex-direction:column}
+.skarm{position:absolute;inset:0;display:none;flex-direction:column;overflow-y:auto}
+.skarm.aktiv{display:flex;animation:in .28s ease}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.skarm.aktiv{animation:none}}
+.scen{background-color:var(--scen);background-image:radial-gradient(circle at 50% 38%,var(--scen-ljus) 0,var(--scen) 62%);color:var(--pa-scen)}
+.glas{background:var(--glas);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:inset 0 0 0 1px var(--glas-kant)}
+.pad{padding:56px 24px 24px}
+h1{font-family:var(--display);font-weight:800;font-size:34px;line-height:1.02;letter-spacing:-.03em;margin:0}
+h2{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.1;letter-spacing:-.02em;margin:0}
+p{margin:0}
+.ingress{font-size:17px;line-height:25px}
+.liten{font-size:12px;line-height:16px;color:var(--dampad)}
+.knapp{appearance:none;border:0;width:100%;min-height:52px;border-radius:999px;font:600 16px/20px var(--text);background:var(--natt);color:var(--gradde);cursor:pointer}
+.knapp:active{transform:scale(.98)}
+.knapp.ljus{background:var(--pa-scen);color:var(--scen)}
+.knapp.sek{background:transparent;color:var(--dampad);min-height:40px;font-weight:500}
+.knapp:disabled{opacity:.35}
+.knapp:focus-visible,.val:focus-visible,.farg:focus-visible{outline:none;box-shadow:0 0 0 2px var(--gradde),0 0 0 4px var(--scen)}
+.botten{margin-top:auto;padding:16px 24px 32px;display:flex;flex-direction:column;gap:8px}
+.steg{display:flex;gap:6px;justify-content:center}
+.steg i{width:6px;height:6px;border-radius:50%;background:#ffffff40}
+.steg i.p{width:18px;border-radius:99px;background:var(--pa-scen)}
+.steg.ljus i{background:var(--linje)}.steg.ljus i.p{background:var(--natt)}
+.orkis{display:block;margin:0 auto}
+.studs{animation:studs 1.2s ease infinite}
+@keyframes studs{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.studs{animation:none}}
+input.namn{width:100%;min-height:52px;border-radius:16px;border:0;padding:0 16px;font:600 18px var(--text);background:var(--glas);color:var(--pa-scen);box-shadow:inset 0 0 0 1px var(--glas-kant)}
+input.namn::placeholder{color:#d9b8f099}
+input.namn:focus{outline:none;box-shadow:inset 0 0 0 2px var(--pa-scen-d)}
+.farger{display:flex;gap:12px;justify-content:center}
+.farg{width:40px;height:40px;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px #ffffff33}
+.farg[aria-pressed=true]{box-shadow:0 0 0 3px var(--scen),0 0 0 5px var(--pa-scen)}
+.val{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;border-radius:20px;border:0;background:var(--vit);box-shadow:0 1px 2px #1c142010;font:500 15px/20px var(--text);color:var(--natt);cursor:pointer}
+.val .bock{margin-left:auto;width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--linje);flex:none;display:flex;align-items:center;justify-content:center}
+.val[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--natt)}
+.val[aria-pressed=true] .bock{background:var(--natt);box-shadow:none}
+.val[aria-pressed=true] .bock::after{content:"";width:9px;height:5px;border-left:2px solid var(--gradde);border-bottom:2px solid var(--gradde);transform:rotate(-45deg) translate(1px,-1px)}
+.val small{display:block;font-size:12px;color:var(--dampad);font-weight:400}
+.ikon{width:36px;height:36px;border-radius:12px;background:var(--gradde);display:flex;align-items:center;justify-content:center;font:700 15px var(--display);flex:none}
+.trygg{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:16px;background:#ebe3f2;font-size:13px;line-height:18px}
+.lista{display:flex;flex-direction:column;gap:8px}
+/* hem */
+.topp{padding:52px 16px 18px;display:flex;flex-direction:column;gap:12px;border-radius:0 0 32px 32px}
+.horn{display:flex;justify-content:space-between;align-items:center}
+.piller{border-radius:999px;padding:6px 12px;font:600 13px/18px var(--text);display:inline-flex;align-items:center;gap:6px}
+.saldo{padding-left:5px;font-family:var(--display);font-weight:800}
+.mynt{width:18px;height:18px;border-radius:50%;background:var(--mynt);box-shadow:inset 0 0 0 3px var(--mynt-ljus);flex:none}
+.humor{font:800 28px/1 var(--display);letter-spacing:-.03em;text-align:center}
+.xp{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--pa-scen-d)}
+.xpbar{width:140px;height:4px;border-radius:99px;background:var(--glas-kant);overflow:hidden}
+.xpbar i{display:block;height:100%;background:var(--mynt);border-radius:99px;transition:width .8s ease}
+.ringar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.chip{border-radius:16px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chip span{font:500 11px/14px var(--text);letter-spacing:.02em;color:var(--pa-scen-d)}
+.chip circle.v{transition:stroke-dasharray .9s ease}
+.under{padding:18px 16px;display:flex;flex-direction:column;gap:12px}
+.kort{background:var(--vit);border-radius:24px;box-shadow:0 1px 2px #1c142010;padding:16px}
+.uppdrag{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.plus{font:800 18px/1 var(--display);color:var(--mynt-text)}
+.tips{display:flex;gap:10px;align-items:center;font-size:14px;line-height:20px}
+/* logga */
+.typer{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.typ{appearance:none;border:0;border-radius:20px;background:var(--vit);box-shadow:0 1px 2px #1c142010;padding:14px;text-align:left;font:600 15px var(--text);color:var(--natt);cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.typ small{font:500 11px var(--text);color:var(--dampad)}
+.typ[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--natt)}
+.tid{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tid button{appearance:none;border:0;width:48px;height:48px;border-radius:50%;background:var(--vit);box-shadow:0 1px 2px #1c142010;font:600 22px var(--text);cursor:pointer;color:var(--natt)}
+.tid strong{font:800 48px/1 var(--display);letter-spacing:-.03em}
+.tid strong small{font:600 16px var(--text);letter-spacing:0;margin-left:4px}
+/* belöning */
+.belon{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+.storplus{display:inline-flex;align-items:center;gap:10px;font:800 44px/1 var(--display);color:var(--mynt)}
+.storplus .mynt{width:34px;height:34px;box-shadow:inset 0 0 0 6px var(--mynt-ljus)}
+.vinster{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.konfetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.konfetti i{position:absolute;top:-10px;width:8px;height:8px;border-radius:50%;animation:fall 1.8s ease-in forwards}
+@keyframes fall{to{transform:translateY(820px);opacity:.2}}
+@media (prefers-reduced-motion:reduce){.konfetti{display:none}}
+/* butik */
+.bento{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bento .kort{padding:14px;display:flex;flex-direction:column;gap:6px}
+.bento .bred{grid-column:1/3}
+.etk{font:500 11px/14px var(--text);letter-spacing:.02em;color:var(--dampad)}
+.pris{display:inline-flex;align-items:center;gap:6px;font:800 15px var(--display)}
+.lite{appearance:none;border:0;align-self:flex-start;min-height:36px;padding:0 14px;border-radius:999px;font:600 13px var(--text);background:var(--natt);color:var(--gradde);cursor:pointer;margin-top:4px}
+.lite.sek{background:var(--gradde);color:var(--natt)}
+.sambox{background:#fbeee6}
+.toast{position:absolute;left:16px;right:16px;bottom:92px;z-index:30;background:var(--natt);color:var(--gradde);border-radius:16px;padding:12px 16px;font-size:14px;display:none}
+.toast.syns{display:block;animation:in .25s ease}
+.insikt{background:#fff8e8;box-shadow:inset 0 0 0 1px #ecd9a8}
+.varfor{appearance:none;border:0;background:none;font:500 13px var(--text);color:var(--dampad);text-decoration:underline;cursor:pointer;margin-left:auto}
+.snabb{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.snabb button{appearance:none;border:0;border-radius:18px;background:var(--vit);box-shadow:0 1px 2px #1c142010;padding:12px;text-align:left;font:600 14px var(--text);color:var(--natt);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.snabb button small{font:500 11px var(--text);color:var(--dampad)}
+.snabb button:active{transform:scale(.97)}
+.lagrad{display:flex;gap:2px}
+.van{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:20px;background:var(--vit);box-shadow:0 1px 2px #1c142010}
+.van .info{display:flex;flex-direction:column;gap:2px;flex:1}
+.van b{font:700 15px var(--text)}
+.pepp{appearance:none;border:0;min-height:36px;padding:0 14px;border-radius:999px;background:var(--gradde);font:600 13px var(--text);color:var(--natt);cursor:pointer}
+.pepp[aria-pressed=true]{background:var(--lime)}
+.taggar{display:flex;flex-wrap:wrap;gap:8px}
+.tagg{appearance:none;border:0;min-height:40px;padding:0 14px;border-radius:999px;background:var(--vit);box-shadow:0 1px 2px #1c142010;font:600 14px var(--text);color:var(--natt);cursor:pointer}
+.tagg[aria-pressed=true]{background:var(--natt);color:var(--gradde)}
+.seg{display:flex;background:#ece4da;border-radius:999px;padding:4px;gap:2px}
+.seg button{flex:1;appearance:none;border:0;min-height:38px;border-radius:999px;background:transparent;font:600 13px var(--text);color:var(--dampad);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--vit);color:var(--natt);box-shadow:0 1px 2px #1c142018}
+.etk{margin:0}
+.aggbadge{width:64px;height:64px;border-radius:50%;background:var(--scen);display:flex;align-items:center;justify-content:center;margin-bottom:-4px}
+.vagga{display:flex;justify-content:center;animation:vagga 2.4s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes vagga{0%,100%{transform:rotate(0)}10%{transform:rotate(-6deg)}20%{transform:rotate(5deg)}30%{transform:rotate(0)}}
+.skaka{animation:skaka .5s ease-in-out 3}
+@keyframes skaka{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+.kom{animation:kom .6s cubic-bezier(.2,1.4,.4,1)}
+@keyframes kom{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.vagga,.skaka,.kom{animation:none}}
+.altrad{display:flex;gap:8px;justify-content:center}
+.alt{appearance:none;border:0;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);border-radius:18px;padding:6px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--pa-scen);font:600 11px var(--text);cursor:pointer;width:92px}
+.alt[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--pa-scen);background:#ffffff26}
+.alt small{font-weight:500;color:var(--pa-scen-d);font-size:10px}
+[hidden]{display:none!important}
+.uhuvud{display:flex;justify-content:space-between;align-items:baseline;margin-top:2px}
+.uprog{font:700 13px var(--text);color:var(--dampad)}
+.bonusbar{height:6px;border-radius:99px;background:var(--linje);overflow:hidden}
+.bonusbar i{display:block;height:100%;width:0;background:var(--mynt);border-radius:99px;transition:width .6s ease}
+.uppdrag3{display:flex;flex-direction:column;gap:8px}
+.ukort{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;border-radius:22px;background:var(--vit);box-shadow:0 1px 2px #1c142010;transition:opacity .3s,transform .3s}
+.ukort .uik{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:none;color:var(--natt)}
+.ukort .uik svg{width:22px;height:22px}
+.ukort .ut{flex:1;min-width:0}
+.ukort .ut b{display:block;font:700 15px/20px var(--text)}
+.ukort .ut small{display:block;font-size:12px;line-height:16px;color:var(--dampad)}
+.ukort .up{font:800 14px var(--display);color:var(--mynt-text);white-space:nowrap}
+.bocka{appearance:none;border:0;width:40px;height:40px;border-radius:50%;background:var(--gradde);box-shadow:inset 0 0 0 2px var(--linje);cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
+.bocka svg{width:18px;height:18px}
+.bocka:hover{box-shadow:inset 0 0 0 2px var(--natt)}
+.ukort.klar{opacity:.6}
+.ukort.klar .bocka{background:var(--lime);box-shadow:none;color:var(--natt)}
+.ukort.klar .ut b{text-decoration:line-through;text-decoration-thickness:2px}
+.byt{appearance:none;border:0;background:none;color:var(--dampad);cursor:pointer;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.byt svg{width:16px;height:16px}
+.byt:hover{background:var(--gradde);color:var(--natt)}
+.ukort.klar .byt{visibility:hidden}
+.ukort.ny{animation:kom .45s cubic-bezier(.2,1.3,.4,1)}
+.djurscen{position:relative;display:flex;justify-content:center}
+.djurknapp{appearance:none;border:0;background:none;padding:0;cursor:pointer;transform-origin:50% 92%;-webkit-tap-highlight-color:transparent}
+.djurknapp:focus-visible{outline:none;border-radius:24px;box-shadow:0 0 0 2px var(--pa-scen-d)}
+.djurknapp.r-pigg{animation:hopp .7s cubic-bezier(.3,.7,.4,1) 2}
+@keyframes hopp{0%,100%{transform:none}18%{transform:scale(1.12,.88)}45%{transform:translateY(-30px) scale(.94,1.07)}72%{transform:scale(1.08,.93)}}
+.djurknapp.r-stark{animation:flex .9s ease}
+@keyframes flex{0%,100%{transform:none}15%{transform:scale(1.14) rotate(-5deg)}35%{transform:scale(1.14) rotate(5deg)}55%{transform:scale(1.16) rotate(-4deg)}75%{transform:scale(1.08) rotate(2deg)}}
+.djurknapp.r-lugn{animation:vagg 2.2s ease-in-out}
+@keyframes vagg{0%,100%{transform:none}25%{transform:rotate(-6deg) scale(1.04)}50%{transform:rotate(0) scale(1.06)}75%{transform:rotate(6deg) scale(1.04)}}
+.djurknapp.r-trott{animation:gaspa 1.8s ease}
+@keyframes gaspa{0%,100%{transform:none}35%{transform:translateY(8px) scale(1.04,.88)}60%{transform:scale(.97,1.05)}80%{transform:translateY(4px) scale(1.02,.95)}}
+.partiklar{position:absolute;inset:0;pointer-events:none}
+.partiklar i{position:absolute;left:50%;top:40%;opacity:0;animation:flyt var(--t,1.2s) ease-out forwards;animation-delay:var(--d,0s)}
+.partiklar i svg{display:block}
+@keyframes flyt{0%{opacity:0;transform:translate(0,0) scale(.4)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.1)}}
+@media (prefers-reduced-motion:reduce){.djurknapp[class*=r-]{animation:none}.partiklar i{animation-duration:.01s}}
+.flikar{position:sticky;bottom:14px;margin:auto 14px 14px;padding:8px;border:0;border-radius:999px;background:var(--natt);display:flex;justify-content:space-between;align-items:center;box-shadow:0 12px 28px -10px #1c142099;z-index:5}
+.flik{appearance:none;border:0;background:none;height:48px;min-width:48px;padding:0 12px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:6px;color:#b9aab3;font:600 13px var(--text);cursor:pointer;transition:background .2s,color .2s}
+.flik svg{width:22px;height:22px;flex:none}
+.flik span{display:none}
+.flik.aktiv{background:var(--gradde);color:var(--natt);padding:0 16px 0 14px}
+.flik.aktiv span{display:inline}
+.flik.plusk{background:var(--lime);color:var(--natt);width:48px;padding:0}
+.flik:focus-visible{outline:none;box-shadow:0 0 0 2px var(--natt),0 0 0 4px var(--lime)}
+.chip{cursor:pointer;appearance:none;border:0;color:inherit;font:inherit;transition:transform .15s,background .2s}
+.chip:hover{background:#ffffff22}.chip:active{transform:scale(.96)}
+.chip:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--pa-scen)}
+.slöja{position:absolute;inset:0;background:#1c142066;z-index:20;display:none}
+.slöja.oppen{display:block;animation:tona .2s ease}
+@keyframes tona{from{opacity:0}}
+.ark{position:absolute;left:0;right:0;bottom:0;max-height:90%;overflow-y:auto;border-radius:32px 32px 0 0;padding:10px 20px 28px;display:flex;flex-direction:column;gap:16px;animation:upp .3s cubic-bezier(.2,.9,.3,1)}
+@keyframes upp{from{transform:translateY(100%)}}
+@media (prefers-reduced-motion:reduce){.ark,.slöja.oppen{animation:none}}
+.handtag{width:40px;height:5px;border-radius:99px;background:#ffffff40;align-self:center}
+.arkhuvud{display:flex;align-items:center;gap:16px}
+.stang{appearance:none;border:0;width:36px;height:36px;border-radius:50%;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 18px var(--text);cursor:pointer;margin-left:auto;align-self:flex-start}
+.rubrik-liten{font:500 11px/14px var(--text);letter-spacing:.06em;color:var(--pa-scen-d);margin:0}
+.rader{display:flex;flex-direction:column;border-radius:20px;overflow:hidden}
+.rad2{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:var(--glas)}
+.rad2+.rad2{border-top:1px solid var(--glas-kant)}
+.rad2 b{font:700 15px var(--display)}
+.rad2 small{display:block;font-size:11px;color:var(--pa-scen-d)}
+.vecka{display:flex;align-items:flex-end;gap:8px;height:96px;padding:12px 14px;border-radius:20px;background:var(--glas)}
+.vecka div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.vecka i{display:block;width:100%;border-radius:8px;opacity:.55}
+.vecka div.idag i{opacity:1}
+.vecka span{font-size:10px;color:var(--pa-scen-d)}
+.uppd{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:20px;background:var(--glas)}
+.uppd .t{flex:1}
+.uppd .t b{display:block;font:700 15px var(--text)}
+.uppd .t small{font-size:12px;color:var(--mynt)}
+.valj{appearance:none;border:0;min-height:36px;padding:0 14px;border-radius:999px;background:var(--pa-scen);color:var(--scen);font:600 13px var(--text);cursor:pointer}
+.kansla{display:flex;gap:6px;flex-wrap:wrap}
+.kansla button{appearance:none;border:0;min-height:36px;padding:0 12px;border-radius:999px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 13px var(--text);cursor:pointer}
+.kansla button[aria-pressed=true]{background:var(--pa-scen);color:var(--scen)}
+.insiktark{padding:12px 14px;border-radius:20px;background:#d9a44122;box-shadow:inset 0 0 0 1px #d9a44155;font-size:14px;line-height:20px}
+
+/* ===== Fitchi: mörkt tema med lime ===== */
+:root{--gradde:#120c1c;--vit:#1c1428;--natt:#ffffff;--dampad:#aca6b6;--linje:#2e2540;--lime:#c8f169;--pa-lime:#120c1c;
+--scen:#2a1840;--scen-ljus:#4a2766;--pa-scen:#ffffff;--pa-scen-d:#d8cde3;--energi:#c8f169;--styrka:#ff7a5c;--lugn:#b48be0;--naring:#ffb07a;--mynt:#e2ac3a;--mynt-ljus:#f6d27a;--mynt-text:#f6d27a}
+body{background:#0b0712}
+.telefon{box-shadow:0 0 0 10px #07040d,0 0 0 11px #3a2c4d,0 30px 60px -20px #000}
+.scen{background-image:radial-gradient(circle at 50% 38%,var(--scen-ljus) 0,var(--scen) 55%,#120c1c 100%)}
+.knapp,.knapp.ljus{background:var(--lime);color:var(--pa-lime);font-weight:700}
+.knapp.sek{background:transparent;color:var(--dampad)}
+.knapp:focus-visible,.val:focus-visible,.farg:focus-visible{box-shadow:0 0 0 2px #120c1c,0 0 0 4px var(--lime)}
+.kort,.val,.ukort,.typ,.snabb button,.van,.tagg,.tid button{box-shadow:inset 0 0 0 1px var(--linje)}
+.val[aria-pressed=true],.typ[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--lime)}
+.val[aria-pressed=true] .bock{background:var(--lime)}
+.val[aria-pressed=true] .bock::after{border-color:var(--pa-lime)}
+.tagg[aria-pressed=true]{background:var(--lime);color:var(--pa-lime);box-shadow:none}
+.seg{background:#ffffff0d}.seg button[aria-pressed=true]{background:var(--lime);color:var(--pa-lime)}
+.steg.ljus i.p{background:var(--lime)}
+.lite{background:var(--lime);color:var(--pa-lime)}
+.lite.sek{background:#ffffff12;color:var(--natt)}
+.toast{background:var(--scen);color:#fff;box-shadow:inset 0 0 0 1px var(--glas-kant)}
+.tillbaka{background:#c8f1691c;box-shadow:inset 0 0 0 1px #c8f16955}
+.trygg{background:#b48be01c;box-shadow:inset 0 0 0 1px #b48be040}
+.sambox{background:#ff7a5c14}
+.insikt{background:#e2ac3a14;box-shadow:inset 0 0 0 1px #e2ac3a55}
+.ikon{background:#ffffff0f}
+.bocka{background:transparent}
+.ukort.klar .bocka{color:var(--pa-lime)}
+.pepp{background:#ffffff12}.pepp[aria-pressed=true]{color:var(--pa-lime)}
+.flikar{background:#07040d;box-shadow:inset 0 0 0 1px #2e2540,0 12px 28px -10px #000}
+.flik{color:#aca6b6}.flik.aktiv{background:var(--lime);color:var(--pa-lime)}
+.flik.plusk{background:var(--lime)}
+.xpbar i,.bonusbar i{background:var(--lime)}
+.scen-knappar button:hover,.panel .pk:hover{background:#2e2540}
+.scen-knappar button.aktivscen{background:var(--lime);color:var(--pa-lime)}
+.prickar i{background:#2e2540}.prickar i.p{background:var(--lime)}
+.utlas div{background:var(--scen)}
+.panel{box-shadow:inset 0 0 0 1px var(--linje)}
+.reglage input[type=range]{accent-color:#c8f169}
+.logik{background:#ffffff0a}
+.logo-topp{display:flex;justify-content:center;margin-bottom:6px}
+.aggbadge{background:transparent;box-shadow:inset 0 0 0 1px var(--linje)}
+.pulsa{animation:pulsa .9s ease-in-out 2}
+@keyframes pulsa{0%,100%{transform:scale(1);filter:drop-shadow(0 0 0 #c8f16900)}50%{transform:scale(1.12);filter:drop-shadow(0 0 22px #c8f169)}}
+@media (prefers-reduced-motion:reduce){.pulsa{animation:none}}
+
+.resa{border:0;color:var(--pa-scen);cursor:pointer}
+.glodrad{align-self:center;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;width:230px;margin-top:-4px}
+.glodnamn{font:600 12px var(--text);color:var(--pa-scen-d)}
+.glodbar{flex:1;height:7px;border-radius:99px;background:var(--glas-kant);overflow:hidden}
+.glodbar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9fd83a,var(--lime));transition:width .8s ease,background .4s}
+.glodrad.lag .glodbar i{background:linear-gradient(90deg,#c98a2a,#e2ac3a)}
+.glodrad b{font:800 13px var(--display);min-width:22px;text-align:right}
+.omsorg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.omsorg button{appearance:none;border:0;min-height:44px;border-radius:999px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 13px var(--text);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.omsorg button:hover{background:#ffffff22}
+.omsorg svg{width:16px;height:16px;fill:none;stroke:var(--lime);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.omsorg button:disabled{opacity:.4;cursor:default}
+.vack{animation:vackglod 1.8s ease-in-out infinite}
+@keyframes vackglod{50%{box-shadow:0 0 28px #c8f169aa}}
+@media (prefers-reduced-motion:reduce){.vack,.djurscen.st-legend::before,.zz i{animation:none}.zz i{opacity:1}}
+.djurscen .orkis{transition:filter .8s,transform .8s;transform-origin:50% 90%}
+
+.djurscen.st-glod .orkis{filter:drop-shadow(0 0 12px #c8f16955)}
+.djurscen.st-laga .orkis{transform:scale(1.06);filter:drop-shadow(0 0 16px #ffb46a99)}
+.djurscen.st-legend .orkis{transform:scale(1.1);filter:drop-shadow(0 0 22px #c8f169) drop-shadow(0 0 40px #b48be088)}
+.djurscen.st-legend::before{content:"";position:absolute;left:50%;top:48%;width:220px;height:220px;transform:translate(-50%,-50%);border-radius:50%;background:conic-gradient(from 0deg,#c8f16900,#c8f16955,#b48be055,#c8f16900);animation:aura 6s linear infinite;filter:blur(8px)}
+@keyframes aura{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.zz{position:absolute;right:22%;top:12%;display:none;pointer-events:none}
+.zz i{display:block;font:800 18px var(--display);color:var(--pa-scen-d);font-style:normal;animation:zz 2.4s ease-in-out infinite;opacity:0}
+.zz i:nth-child(2){margin-left:12px;font-size:22px;animation-delay:.8s}.zz i:nth-child(3){margin-left:24px;font-size:28px;animation-delay:1.6s}
+@keyframes zz{0%{opacity:0;transform:translateY(10px)}40%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+.djurscen.sover .zz{display:block}
+.djurscen.sover .orkis{filter:brightness(.75) saturate(.75)}
+.djurscen.kristall::after{content:"";position:absolute;left:50%;top:50%;width:190px;height:250px;transform:translate(-50%,-52%);clip-path:polygon(50% 0,100% 38%,50% 100%,0 38%);background:linear-gradient(160deg,#c8f16926,#b48be033 60%,#ffffff12);box-shadow:inset 0 0 0 2px #c8f16955;pointer-events:none}
+.djurscen.kristall .orkis{filter:grayscale(.8) brightness(.55)}
+.djurscen.kristall .djurknapp{animation:none}
+.resarad{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--glas);font-size:14px}
+.resarad+.resarad{border-top:1px solid var(--glas-kant)}
+.resarad b{font:800 14px var(--display);min-width:54px}
+.resarad span{flex:1}
+.resarad.klar{color:var(--pa-scen-d)}.resarad.klar i{color:var(--lime)}
+.resarad.nasta{background:#c8f1691f;box-shadow:inset 0 0 0 1.5px var(--lime)}
+.resarad.last{opacity:.55}
+.resarad i{font-style:normal;font-weight:700;font-size:13px}
+.stadiehuvud{font:700 11px var(--text);letter-spacing:.12em;color:var(--lime);margin:10px 0 6px;text-transform:uppercase}
+.valrad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.valrad button{appearance:none;border:0;min-height:64px;border-radius:18px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 14px var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.valrad button small{font:500 11px var(--text);color:var(--pa-scen-d)}
+.valrad button:hover{box-shadow:inset 0 0 0 2px var(--lime)}
+.arkfitchi{display:flex;justify-content:center;position:relative}
+.upplast{padding:14px 16px;border-radius:20px;background:#c8f1691c;box-shadow:inset 0 0 0 1px #c8f16966;display:flex;flex-direction:column;gap:4px}
+.upplast b{font:800 17px var(--display)}
+
+.djurscen.varld{display:block;height:212px;margin:0 -16px;overflow:hidden}
+.varld .mark{position:absolute;left:-10%;right:-10%;bottom:-40px;height:80px;border-radius:50%;background:radial-gradient(60% 60% at 50% 30%,#ffffff14,#ffffff00 70%)}
+.vandrare{position:absolute;left:0;bottom:4px;width:150px;will-change:transform}
+.vand{transition:transform .3s ease}
+.vand.vanster{transform:scaleX(-1)}
+.skugga{position:absolute;left:28px;right:28px;bottom:2px;height:14px;border-radius:50%;background:#00000059;filter:blur(4px)}
+.vandrare .zz{right:-6px;top:4px}
+.vandrare.gar .djurknapp{animation:gang .44s ease-in-out infinite}
+@keyframes gang{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)}}
+.vandrare.gar.lugnt .djurknapp{animation-duration:.7s}
+.vandrare.hopp .djurknapp{animation:hopp .7s cubic-bezier(.3,.7,.4,1)}
+.vandrare.titta .djurknapp{animation:titta 1.6s ease-in-out}
+@keyframes titta{0%,100%{transform:none}30%,60%{transform:rotate(-6deg) translateY(-2px)}}
+.vandrare.gar .skugga{animation:skg .44s ease-in-out infinite}
+@keyframes skg{50%{transform:scaleX(.85);opacity:.7}}
+@media (prefers-reduced-motion:reduce){.vandrare.gar .djurknapp,.vandrare.gar .skugga,.vandrare.hopp .djurknapp,.vandrare.titta .djurknapp{animation:none}}
+
+.f3d{display:block;position:relative;margin:0 auto}
+.f3d img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:50% 100%;transform-origin:50% 100%;animation:andas3 3.4s ease-in-out infinite;-webkit-user-drag:none;user-select:none}
+@keyframes andas3{50%{transform:scale(1.012,1.028)}}
+.f3d.humor-pigg img{animation:pigg3 1.15s ease-in-out infinite}
+@keyframes pigg3{0%,100%{transform:translateY(0) scale(1,1)}35%{transform:translateY(-7px) scale(.98,1.04)}65%{transform:translateY(0) scale(1.04,.96)}}
+.f3d.humor-stark img{animation:stark3 2.4s ease-in-out infinite;filter:drop-shadow(0 0 16px #c8f16970)}
+@keyframes stark3{50%{transform:scale(1.05,1.035)}}
+.f3d.humor-lugn img{animation:andas3 5.5s ease-in-out infinite;filter:drop-shadow(0 0 20px #b48be080) brightness(.96)}
+.f3d.humor-trott img{animation:trott3 4.2s ease-in-out infinite;filter:saturate(.75) brightness(.85)}
+@keyframes trott3{0%,100%{transform:rotate(-2.5deg) scale(1,.97)}50%{transform:rotate(2deg) translateY(5px) scale(1.02,.93)}}
+@media (prefers-reduced-motion:reduce){.f3d img{animation:none!important}}
+
+.f3d.vid img{animation:none!important;filter:none!important;width:auto;height:100%;left:50%;right:auto;transform:translateX(-50%)}
+.f3d.liggande img{width:190%;left:-45%;animation:none!important;filter:none!important}
+
+/* djuren lever: varje pose har sin egen rörelse */
+.djurbild{transform-box:fill-box;transform-origin:50% 100%;animation:liv 3.6s ease-in-out infinite}
+@keyframes liv{0%,100%{transform:scale(1,1)}50%{transform:scale(1.012,1.02)}}
+.humor-pigg .djurbild{animation:livPigg 1s cubic-bezier(.45,0,.55,1) infinite}
+@keyframes livPigg{0%,100%{transform:scale(1.03,.96) translateY(0)}45%{transform:scale(.98,1.03) translateY(-7%)}70%{transform:translateY(-2%)}}
+.humor-lugn .djurbild{animation:livLugn 5.2s ease-in-out infinite}
+@keyframes livLugn{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-3%) scale(1.01,1.022)}}
+.humor-stark .djurbild{animation:livStark 1.9s ease-in-out infinite}
+@keyframes livStark{0%,100%{transform:scale(1)}15%{transform:scale(1.045,1.03)}30%{transform:scale(1.01)}45%{transform:scale(1.045,1.03)}60%{transform:scale(1)}}
+.humor-trott .djurbild{animation:livTrott 4.4s ease-in-out infinite}
+@keyframes livTrott{0%,100%{transform:rotate(-1.5deg) scale(1,.985)}50%{transform:rotate(2deg) scale(1.01,.97)}}
+@media (prefers-reduced-motion:reduce){.djurbild{animation:none!important}}
+
+.lev{overflow:visible}
+.lev .rytm{transform-box:fill-box;transform-origin:50% 100%}
+.lev[data-p=neutral] .rytm{animation:lvAndas 3.6s ease-in-out infinite}
+@keyframes lvAndas{0%,100%{transform:scale(1,1)}50%{transform:scale(1.012,1.022)}}
+.lev[data-p=pigg] .rytm{animation:lvHoppa .95s cubic-bezier(.4,0,.6,1) infinite}
+@keyframes lvHoppa{0%,100%{transform:translateY(0) scale(1.035,.955)}45%{transform:translateY(-8%) scale(.975,1.035)}70%{transform:translateY(-3%)}}
+.lev[data-p=stark] .rytm{animation:lvSpann 1.9s ease-in-out infinite}
+@keyframes lvSpann{0%,100%{transform:scale(1)}15%{transform:scale(1.04,1.025)}30%{transform:scale(1.008)}45%{transform:scale(1.04,1.025)}60%{transform:scale(1)}}
+.lev[data-p=lugn] .rytm{animation:lvSvava 5.4s ease-in-out infinite}
+@keyframes lvSvava{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-3.5%) scale(1.008,1.02)}}
+.lev[data-p=trott] .rytm{animation:lvGunga 4.6s ease-in-out infinite}
+@keyframes lvGunga{0%,100%{transform:rotate(-1.4deg) scale(1,.985)}50%{transform:rotate(1.8deg) scale(1.01,.972)}}
+.lev .aglod{mix-blend-mode:screen;animation:lvPuls 1.3s ease-in-out infinite}
+@keyframes lvPuls{0%,100%{opacity:.45}35%{opacity:.85}60%{opacity:.55}80%{opacity:.95}}
+.lev .vindrorelse{opacity:.55;animation:lvVind 3s ease-in-out infinite}
+@keyframes lvVind{0%,100%{opacity:.35}50%{opacity:.7}}
+.lev.a-vatten .aglod{animation-duration:2.2s}
+.lev[data-p=stark] .aglod{animation-duration:.8s}
+.lev[data-p=lugn] .aglod,.lev[data-p=trott] .aglod{animation-duration:3s}
+.lev .bglod{mix-blend-mode:screen;animation:lvSprick 2.6s ease-in-out infinite}
+@keyframes lvSprick{0%,100%{opacity:.12}50%{opacity:1}}
+.lev.a-uggla .bglod{animation:lvTindra 3.4s ease-in-out infinite}
+@keyframes lvTindra{0%,100%{opacity:.15}20%{opacity:.9}35%{opacity:.35}60%{opacity:1}80%{opacity:.3}}
+.lev.a-katt .bglod{animation:lvGlitter 1.6s steps(1) infinite}
+@keyframes lvGlitter{0%{opacity:.3}15%{opacity:1}30%{opacity:.5}50%{opacity:.95}65%{opacity:.25}85%{opacity:.85}}
+.lev[data-p=stark] .bglod{animation-duration:1.3s}
+.lev .dia{mix-blend-mode:screen;transform-box:fill-box;transform-origin:center;animation:lvDia 2.4s ease-in-out infinite}
+@keyframes lvDia{0%,100%{opacity:.35;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+.lev .lock{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(0);transition:transform .07s ease-in}
+.lev .frans{opacity:0;transition:opacity .05s}
+.lev.blinkar .lock{transform:scaleY(1)}
+.lev.blinkar .frans{opacity:1;transition-delay:.05s}
+.lev[data-p=trott] .lock{transition-duration:.3s}
+.lev[data-p=trott].blinkar .frans{transition-delay:.25s}
+.lev .gnista{opacity:0}
+.lev[data-p=pigg] .gnista,.lev[data-p=stark] .gnista{animation:lvGnista 1.5s ease-out infinite}
+@keyframes lvGnista{0%{opacity:0;transform:translate(0,0) scale(.5)}20%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1)}}
+.lev .lugnprick{opacity:0}
+.lev[data-p=lugn] .lugnprick{animation:lvPrick 4s ease-in-out infinite}
+@keyframes lvPrick{0%{opacity:0;transform:translateY(0)}30%{opacity:.9}100%{opacity:0;transform:translateY(-12%)}}
+.lev .zz{opacity:0;font-family:"Bricolage Grotesque",system-ui;font-weight:800;fill:#d9b8f0}
+.lev[data-p=trott] .zz{animation:lvZz 3s ease-in infinite}
+@keyframes lvZz{0%{opacity:0;transform:translate(0,0) scale(.6)}30%{opacity:1}100%{opacity:0;transform:translate(6%,-14%) scale(1.3)}}
+@media (prefers-reduced-motion:reduce){.lev *{animation:none!important}}
+
+.panel,.hint{display:none}
+body.testlage .panel,body.testlage .hint{display:flex}
+@media (max-width:520px){
+  body{padding:0;background:#120c1c}
+  .yta{gap:0}
+  .telefon{width:100vw;height:100dvh;border-radius:0;box-shadow:none}
+  .pad{padding-top:calc(56px + env(safe-area-inset-top))}
+  .topp{padding-top:calc(52px + env(safe-area-inset-top))}
+  .flikar{margin-bottom:calc(14px + env(safe-area-inset-bottom))}
+}
+</style>
+</head>
+<body>
+<p class="hint">Prototyp av Fitchi. Klicka dig igenom. Inget sparas och ingen data skickas någonstans.</p>
+<div class="yta">
+<div class="telefon" id="tel">
+
+<!-- 1 Välkommen -->
+<section class="skarm aktiv scen" id="s-valkommen" aria-label="Välkommen">
+  <div class="pad" style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px;text-align:center">
+    <div class="logo-topp"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 0 270 146" width="132" height="72" aria-label="Fitchi" role="img"><path d="M10.607999999999999 96.0V61.992000000000004H2.1839999999999997V49.824000000000005L17.16 50.448V48.472Q13.208 47.744 10.66 45.82Q8.112 43.896 6.968 41.29600000000001Q5.824 38.696000000000005 5.824 35.68Q5.824 31.104 8.216 27.828000000000003Q10.607999999999999 24.552000000000007 14.975999999999999 22.784000000000006Q19.343999999999998 21.016000000000005 25.168 21.016000000000005Q30.264 21.016000000000005 34.424 22.212000000000003Q38.583999999999996 23.408 41.08 25.176000000000002L40.144 40.256Q37.544 38.488 34.268 37.344Q30.991999999999997 36.2 28.183999999999997 36.2Q25.272 36.2 23.296 37.708Q21.32 39.216 21.32 42.648Q21.32 45.352000000000004 22.516 46.70400000000001Q23.712 48.056000000000004 25.479999999999997 48.524Q27.247999999999998 48.992000000000004 29.016 48.992000000000004H41.08V61.992000000000004H26.936V96.0Z M43.879999999999995 96.0V41.088H60.623999999999995V96.0ZM52.303999999999995 33.392Q47.519999999999996 33.392 44.971999999999994 31.364Q42.42399999999999 29.336 42.42399999999999 25.592Q42.42399999999999 21.64 44.971999999999994 19.612000000000002Q47.519999999999996 17.584000000000003 52.303999999999995 17.584000000000003Q57.19199999999999 17.584000000000003 59.739999999999995 19.612000000000002Q62.288 21.64 62.288 25.488Q62.288 29.336 59.739999999999995 31.364Q57.19199999999999 33.392 52.303999999999995 33.392Z M90.048 97.352Q80.37599999999999 97.352 75.79999999999998 92.20400000000001Q71.22399999999999 87.056 71.22399999999999 75.72V54.192H63.42399999999999L63.736 41.192H69.35199999999999Q72.67999999999999 41.088 74.39599999999999 40.152Q76.112 39.216 76.52799999999999 36.616L77.88 28.92H87.344V41.088H100.55199999999999V54.712H87.344V74.992Q87.344 78.528 89.06 80.19200000000001Q90.776 81.856 94.31199999999998 81.856Q96.288 81.856 98.05599999999998 81.44Q99.82399999999998 81.024 100.96799999999999 80.296V95.792Q97.63999999999999 96.832 94.88399999999999 97.092Q92.12799999999999 97.352 90.048 97.352Z M131.744 97.456Q124.672 97.456 119.264 95.48Q113.856 93.504 110.216 89.81200000000001Q106.576 86.12 104.65199999999999 80.92Q102.728 75.72 102.728 69.272Q102.728 62.616 104.65199999999999 57.208Q106.576 51.800000000000004 110.216 47.848Q113.856 43.896 119.16 41.764Q124.464 39.632000000000005 131.32799999999997 39.632000000000005Q138.192 39.632000000000005 143.184 41.816Q148.176 44.0 151.34799999999998 47.952Q154.51999999999998 51.904 155.664 57.104L140.168 62.304Q139.856 58.872 138.504 56.688Q137.152 54.504000000000005 135.01999999999998 53.516000000000005Q132.88799999999998 52.528 130.392 52.528Q127.79199999999999 52.528 125.81599999999999 53.568Q123.83999999999999 54.608000000000004 122.488 56.688Q121.136 58.768 120.40799999999999 61.732Q119.67999999999999 64.696 119.67999999999999 68.544Q119.67999999999999 74.056 121.08399999999999 77.74799999999999Q122.48799999999999 81.44 125.24399999999999 83.312Q127.99999999999999 85.184 131.952 85.184Q136.00799999999998 85.184 138.296 83.52Q140.584 81.856 141.624 79.412Q142.664 76.968 142.87199999999999 74.576L157.432 77.8Q157.016 81.648 155.404 85.23599999999999Q153.79199999999997 88.824 150.67199999999997 91.58Q147.552 94.336 142.92399999999998 95.896Q138.296 97.456 131.744 97.456Z M160.232 96.0V61.056000000000004V21.120000000000005H176.976V38.28Q176.976 40.36 176.82 42.596000000000004Q176.664 44.832 176.29999999999998 47.172Q175.93599999999998 49.512 175.572 51.903999999999996Q175.208 54.296 174.688 56.584H177.184Q178.64 51.488 180.82399999999998 47.692Q183.00799999999998 43.896 186.54399999999998 41.764Q190.07999999999998 39.632000000000005 195.59199999999998 39.632000000000005Q205.368 39.632000000000005 210.204 46.444Q215.04 53.256 215.04 67.4V96.0H198.192V70.208Q198.192 61.784 195.748 57.572Q193.30399999999997 53.36 188.31199999999998 53.36Q184.464 53.36 181.968 55.751999999999995Q179.47199999999998 58.144 178.224 62.147999999999996Q176.976 66.152 176.976 71.04V96.0Z M222.104 96.0V41.088H238.848V96.0ZM230.52800000000002 33.392Q225.744 33.392 223.19600000000003 31.364Q220.64800000000002 29.336 220.64800000000002 25.592Q220.64800000000002 21.64 223.19600000000003 19.612000000000002Q225.744 17.584000000000003 230.52800000000002 17.584000000000003Q235.416 17.584000000000003 237.964 19.612000000000002Q240.512 21.64 240.512 25.488Q240.512 29.336 237.964 31.364Q235.416 33.392 230.52800000000002 33.392Z" fill="#ffffff"/><path d="M4 120 H104 L116 102 L130 132 L142 108 L152 120 H222" stroke="#c8f169" stroke-width="7" fill="none" stroke-linejoin="round" stroke-linecap="round"/><g transform="translate(218 98) scale(.85)"><path d="M20 0 L40 20 L20 52 L0 20 Z" fill="#c8f169"/><path d="M20 0 L28 20 L20 52 L12 20 Z" fill="#e6ff9e"/><path d="M0 20 H40" stroke="#4f6b12" stroke-width="2" opacity=".5"/></g></svg></div>
+    <div class="vagga" id="storAgg"></div>
+    <h1>Möt din<br>fitchi</h1>
+    <p class="ingress" style="color:var(--pa-scen-d)">Svara på några snabba frågor så matchas du med den fitchi som passar dig – ett litet väsen som speglar hur du mår.</p>
+  </div>
+  <div class="botten"><div class="steg" data-steg></div><button class="knapp ljus" data-till="s-niva">Kom igång</button></div>
+</section>
+
+<!-- 2b Startnivå -->
+<section class="skarm" id="s-niva" aria-label="Var är du idag">
+  <div class="pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="aggbadge" data-agg aria-hidden="true"></div>
+    <h1>Var är du<br>idag?</h1>
+    <p class="ingress">Det finns inget rätt svar. Din fitchi börjar där du är, och växer med dig.</p>
+    <div class="lista" id="nivaer"></div>
+  </div>
+  <div class="botten"><div class="steg ljus" data-steg></div><button class="knapp" data-till="s-mal">Fortsätt</button></div>
+</section>
+
+<!-- 2c Mål -->
+<section class="skarm" id="s-mal" aria-label="Mål">
+  <div class="pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="aggbadge" data-agg aria-hidden="true"></div>
+    <h1>Vad vill du<br>ha mer av?</h1>
+    <p class="ingress">Välj så många du vill. Det påverkar vilken fitchi du matchas med och vilka mätare som är viktigast.</p>
+    <div class="taggar" data-grp="mal" data-multi></div>
+  </div>
+  <div class="botten"><div class="steg ljus" data-steg></div><button class="knapp" data-till="s-rorelse">Fortsätt</button></div>
+</section>
+
+<!-- 2d Rörelse -->
+<section class="skarm" id="s-rorelse" aria-label="Hur du rör dig">
+  <div class="pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="aggbadge" data-agg aria-hidden="true"></div>
+    <h1>Hur gillar du<br>att röra dig?</h1>
+    <p class="etk">Det här tycker jag om</p>
+    <div class="taggar" data-grp="typer" data-multi></div>
+    <p class="etk">Tid jag har en vanlig dag</p>
+    <div class="seg" data-grp="tid"></div>
+    <p class="etk">Det passar bäst</p>
+    <div class="seg" data-grp="nar"></div>
+  </div>
+  <div class="botten"><div class="steg ljus" data-steg></div><button class="knapp" data-till="s-matpref">Fortsätt</button></div>
+</section>
+
+<!-- 2e Mat -->
+<section class="skarm" id="s-matpref" aria-label="Mat">
+  <div class="pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="aggbadge" data-agg aria-hidden="true"></div>
+    <h1>Och maten?</h1>
+    <p class="ingress">Så att förslagen passar det du faktiskt äter.</p>
+    <p class="etk">Jag äter</p>
+    <div class="taggar" data-grp="kost"></div>
+    <p class="etk">Det här vill jag ha hjälp med</p>
+    <div class="taggar" data-grp="mathjalp" data-multi></div>
+  </div>
+  <div class="botten"><div class="steg ljus" data-steg></div><button class="knapp" data-till="s-pepp">Fortsätt</button></div>
+</section>
+
+<!-- 2f Peppstil -->
+<section class="skarm" id="s-pepp" aria-label="Peppstil">
+  <div class="pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="aggbadge" data-agg aria-hidden="true"></div>
+    <h1>Hur vill du<br>bli peppad?</h1>
+    <p class="ingress">Samma uppdrag, olika ton. Tryck för att se exempel.</p>
+    <div class="lista" data-grp="pepp"></div>
+    <div class="kort" style="background:var(--scen);color:var(--pa-scen)"><p class="etk" style="color:var(--pa-scen-d)">Så här låter det</p><p style="font-size:16px;line-height:22px;margin-top:6px" id="peppExempel"></p></div>
+  </div>
+  <div class="botten"><div class="steg ljus" data-steg></div><button class="knapp" data-till="s-situation">Fortsätt</button></div>
+</section>
+
+<!-- 3 Livssituation -->
+<section class="skarm" id="s-situation" aria-label="Din situation">
+  <div class="pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="aggbadge" data-agg aria-hidden="true"></div>
+    <h1>Berätta lite<br>om dig</h1>
+    <p class="ingress">Då anpassar vi uppdrag och mål. Allt är frivilligt och går att ändra.</p>
+    <div class="lista" id="situationer"></div>
+    <div class="trygg"><span>Det du väljer här stannar i appen. Det påverkar inte vilken fitchi du får, delas aldrig med vänner, arbetsgivare eller partners och styr aldrig reklam.</span></div>
+  </div>
+  <div class="botten"><div class="steg ljus" data-steg></div><button class="knapp" data-till="s-halsa">Fortsätt</button><button class="knapp sek" data-till="s-halsa">Hoppa över</button></div>
+</section>
+
+<!-- 4 Hälsodata -->
+<section class="skarm" id="s-halsa" aria-label="Koppla hälsodata">
+  <div class="pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="aggbadge" data-agg aria-hidden="true"></div>
+    <h1>All rörelse<br>räknas</h1>
+    <p class="ingress">Koppla det du redan använder, så fylls mätarna på av sig själva.</p>
+    <div class="seg" data-grp="plattform"></div>
+    <div class="lista" id="kallor"></div>
+  </div>
+  <div class="botten"><div class="steg ljus" data-steg></div><button class="knapp" id="klar" data-till="s-klack">Hitta min fitchi</button></div>
+</section>
+
+<!-- 4b Kläckning -->
+<section class="skarm scen" id="s-klack" aria-label="Matchning">
+  <div class="pad" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center">
+    <div id="klackScen" style="min-height:230px;display:flex;align-items:center;justify-content:center"></div>
+    <p class="liten" style="color:var(--pa-scen-d)" id="klackOver">Letar efter din match …</p>
+    <h1 id="klackTitel" style="min-height:70px"></h1>
+    <p id="klackKraft" style="color:var(--pa-scen-d);font-size:15px;line-height:21px"></p>
+    <div id="alternativ" hidden style="width:100%;display:flex;flex-direction:column;gap:12px">
+      <div class="altrad" id="altrad"></div>
+      <input class="namn" id="namn" maxlength="14" aria-label="Namn på din fitchi">
+    </div>
+  </div>
+  <div class="botten"><button class="knapp ljus" id="borja" hidden data-till="s-hem">Börja</button></div>
+</section>
+
+<!-- 5 Hem -->
+<section class="skarm" id="s-hem" aria-label="Hem">
+  <div class="topp scen">
+    <div class="horn"><button class="piller glas resa" id="niva" data-resa aria-label="Visa din resa">Nivå 7</button><span class="piller glas saldo"><span class="mynt" aria-hidden="true"></span><span id="saldo">1 240</span></span></div>
+    <div class="glodrad glas" id="glodrad" role="meter" aria-label="Glöd" aria-valuemin="0" aria-valuemax="100"><svg viewBox="0 0 20 26" width="14" height="18" aria-hidden="true"><path d="M10 1 L19 10 L10 25 L1 10 Z" fill="var(--lime)"/></svg><span class="glodnamn">Glöd</span><div class="glodbar"><i id="glodbar"></i></div><b id="glodtal">60</b></div>
+    <div class="djurscen varld" id="djurscen"><div class="mark" aria-hidden="true"></div>
+      <div class="vandrare" id="vandrare"><div class="skugga" aria-hidden="true"></div><div class="vand" id="vand"><button id="hemOrkis" class="djurknapp studs"></button></div><div class="partiklar" id="partiklar" aria-hidden="true"></div><div class="zz" aria-hidden="true"><i>z</i><i>z</i><i>Z</i></div></div></div>
+    <p class="humor" id="humor">Bruno är pigg</p>
+    <div class="xp"><div class="xpbar"><i id="xpbar" style="width:65%"></i></div><span id="xptext">65 % till nivå 8</span></div>
+    <div class="omsorg" id="omsorg">
+      <button data-oms="leka"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>Leka</button>
+      <button data-oms="mata"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7.5c0-1.4 1.2-1.8 1.2-3.3M13.5 7.5c0-1.4 1.2-1.8 1.2-3.3"/></svg>Mata</button>
+      <button data-oms="natta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>Natta</button>
+    </div>
+    <button class="knapp vack" id="vack" hidden>Väck <span class="vnamn">Bruno</span></button>
+    <div class="ringar" id="ringar"></div>
+  </div>
+  <div class="under">
+    <div class="tillbaka" id="tillbaka" hidden><b style="font:800 17px var(--display)" id="tillbakaTitel"></b><span class="liten" style="color:var(--natt)" id="tillbakaText"></span></div>
+    <div class="uhuvud"><h2>Dagens uppdrag</h2><span class="uprog" id="uprog">0 av 3</span></div>
+    <div class="bonusbar"><i id="bonusbar"></i></div>
+    <div style="display:flex;justify-content:space-between;margin-top:-4px"><p class="liten" id="bonustext">Klara alla tre för +50 i bonus</p><p class="liten" id="bytentext"></p></div>
+    <div class="uppdrag3" id="uppdrag3"></div>
+    <div class="kort insikt" id="insikt"><p class="etk">Fitchi har märkt</p><p style="font-size:15px;line-height:21px;margin:4px 0 10px" id="insiktText">Du tränar oftast på morgonen. Ska dagens uppdrag komma kl. 07 i stället för kl. 12?</p><div style="display:flex;gap:8px;align-items:center"><button class="lite" id="insiktJa">Ja, gör så</button><button class="lite sek" id="insiktNej">Nej tack</button><button class="varfor" id="varfor">Varför?</button></div><p class="liten" id="varforText" hidden style="margin-top:8px">Förslaget bygger på dina senaste 14 dagars loggade pass och sömn. Fitchi använder bara din egen aktivitet för förslag som det här, och du kan stänga av insikter i inställningarna.</p></div>
+  </div>
+  <nav class="flikar" aria-label="Meny" data-flikar></nav>
+</section>
+
+<!-- 6 Logga pass -->
+<section class="skarm" id="s-logga" aria-label="Logga pass">
+  <div class="pad" style="display:flex;flex-direction:column;gap:20px">
+    <button class="knapp sek" style="width:auto;align-self:flex-start;padding:0" data-till="s-hem">← Tillbaka</button>
+    <h1>Vad har<br>du gjort?</h1>
+    <div class="typer" id="typer"></div>
+    <div><p class="liten" style="margin-bottom:10px">Hur länge?</p>
+    <div class="tid"><button id="minus" aria-label="Minska tid">−</button><strong><span id="min">20</span><small>min</small></strong><button id="plus" aria-label="Öka tid">+</button></div></div>
+  </div>
+  <div class="botten"><button class="knapp" id="spara">Spara pass</button></div>
+</section>
+
+<!-- 7 Belöning -->
+<section class="skarm scen" id="s-belon" aria-label="Belöning">
+  <div class="konfetti" id="konfetti"></div>
+  <div class="belon">
+    <div id="belonOrkis"></div>
+    <h1 id="belonTitel">Snyggt jobbat!</h1>
+    <p style="color:var(--pa-scen-d)" id="belonText"></p>
+    <span class="storplus"><span class="mynt" aria-hidden="true"></span>+<span id="raknare">0</span></span>
+    <div class="vinster" id="vinster"></div>
+  </div>
+  <div class="botten"><button class="knapp ljus" data-till="s-hem">Tillbaka till <span class="vnamn">Bruno</span></button></div>
+</section>
+
+<!-- 9 Mat -->
+<section class="skarm" id="s-mat" aria-label="Mat">
+  <div class="topp scen" style="padding-bottom:20px">
+    <h1 style="font-size:28px">Mat idag</h1>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div id="matRing"></div>
+      <div style="display:flex;flex-direction:column;gap:4px"><span class="liten" style="color:var(--pa-scen-d)">Protein</span><span style="font:800 32px/1 var(--display);letter-spacing:-.02em"><span id="protein">54</span><small style="font:600 15px var(--text)"> av <span id="proteinMal">90</span> g</small></span><span class="liten" style="color:var(--pa-scen-d)" id="matTips">Ett mål till med protein så är <span class="vnamn">Bruno</span> mätt.</span></div>
+    </div>
+    <div class="ringar" style="grid-template-columns:repeat(3,1fr)" id="matChips"></div>
+  </div>
+  <div class="under">
+    <p class="etk">Lägg till med ett klick</p>
+    <div class="snabb" id="snabb"></div>
+    <button class="knapp" id="foto" style="background:var(--vit);color:var(--natt);box-shadow:0 1px 2px #1c142010">Fota måltiden</button>
+    <p class="liten" style="text-align:center">Fitchi räknar protein, grönsaker och vatten. Aldrig kalorier eller vikt.</p>
+  </div>
+  <nav class="flikar" aria-label="Meny" data-flikar></nav>
+</section>
+
+<!-- 10 Vänner -->
+<section class="skarm" id="s-vanner" aria-label="Vänner">
+  <div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-bottom:12px">
+    <h1>Vänner</h1>
+    <div class="kort" style="background:var(--scen);color:var(--pa-scen);display:flex;flex-direction:column;gap:10px">
+      <span class="etk" style="color:var(--pa-scen-d)">Lagets veckomål · Ladies who lift</span>
+      <span style="font:800 26px/1 var(--display);letter-spacing:-.02em"><span id="lagPass">31</span> av 40 pass</span>
+      <div class="xpbar" style="width:100%;height:6px"><i id="lagBar" style="width:77%"></i></div>
+      <div class="lagrad" id="lagrad"></div>
+      <span class="liten" style="color:var(--pa-scen-d)">Når ni målet får alla +150 mynt.</span>
+    </div>
+    <div class="lista" id="vanLista"></div>
+    <button class="knapp" style="background:var(--vit);color:var(--natt);box-shadow:0 1px 2px #1c142010">Bjud in en vän</button>
+    <p class="liten" style="text-align:center">Vänner ser bara din fitchi, humör och nivå. Aldrig din livssituation eller hälsodata.</p>
+  </div>
+  <nav class="flikar" aria-label="Meny" data-flikar></nav>
+</section>
+
+<!-- 8 Butik -->
+<section class="skarm" id="s-butik" aria-label="Myntbutik">
+  <div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h1>Butik</h1><span class="piller saldo" style="background:var(--vit);box-shadow:0 1px 2px #1c142010"><span class="mynt" aria-hidden="true"></span><span id="saldo2">1 240</span></span></div>
+    <div class="bento">
+      <div class="kort bred" style="background:var(--scen);color:var(--pa-scen);flex-direction:row;align-items:center;gap:10px"><div id="butikOrkis" style="flex:none"></div><div style="display:flex;flex-direction:column;gap:4px"><span class="etk" style="color:var(--pa-scen-d)">Till <span class="vnamn">Bruno</span></span><h2 style="font-size:19px">Solhatt</h2><span class="pris" style="color:var(--mynt)"><span class="mynt"></span>300</span><button class="lite" style="background:var(--pa-scen);color:var(--scen)" data-kop="300" data-namn="Solhatten">Köp</button></div></div>
+      <div class="kort"><span class="etk">Förmån</span><h2 style="font-size:17px">20 % på löparskor</h2><span class="pris"><span class="mynt"></span>800</span><button class="lite" data-kop="800" data-namn="Rabattkoden">Lös in</button></div>
+      <div class="kort"><span class="etk">Förmån</span><h2 style="font-size:17px">Gratis yogapass</h2><span class="pris"><span class="mynt"></span>1 500</span><button class="lite" data-kop="1500" data-namn="Yogapasset">Lös in</button></div>
+      <div class="kort bred sambox"><span class="etk">Samarbete</span><h2 style="font-size:17px">Näring saknar protein idag</h2><p style="font-size:14px;line-height:20px">En proteinbar ger 20 g. Rabatt via Fitchi.</p><p class="liten">Eller: kesella med bär, 25 g.</p><button class="lite sek">Visa erbjudandet</button></div>
+    </div>
+  </div>
+  <nav class="flikar" aria-label="Meny" data-flikar></nav>
+</section>
+
+<div class="toast" id="toast4" role="status"></div>
+<div class="toast" id="toast2" role="status"></div>
+<div class="toast" id="toast3" role="status"></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="slöja" id="slöja"><div class="ark scen" id="ark" role="dialog" aria-modal="true" aria-labelledby="arkTitel"></div></div>
+</div>
+<aside class="panel" aria-label="Testpanel">
+  <div><h3>Testpanel</h3><p class="liten" style="margin-top:4px">Låtsas vara data från telefon och klocka. Syns bara när vi testar.</p></div>
+  <div class="grupp"><span class="gt">Scenarier</span><div class="scen-knappar" id="scenarier"></div></div>
+  <div class="grupp"><span class="gt">Data från telefon och klocka</span><div class="reglage" id="reglage"></div></div>
+  <div class="grupp"><span class="gt">Så blir mätarna och humöret</span><div class="utlas" id="utlas"></div><p class="liten" id="utlasHumor" style="text-align:center"></p></div>
+  <div class="grupp"><span class="gt">Tid</span><button class="pk" id="nyDag">Ny morgon: nya uppdrag, glöden sjunker</button><button class="pk" id="tvaDagar">Två dagar utan att öppna appen</button></div>
+  <div class="grupp"><span class="gt">Glöd och nivå</span><div class="scen-knappar"><button id="nivaPlus">+1 nivå</button><button id="niva9">Till nivå 9</button><button id="niva24">Till nivå 24</button><button id="niva39">Till nivå 39</button><button id="glod0">Glöd till 0</button><button id="glod100">Glöd till 100</button></div></div>
+  <div class="grupp"><span class="gt">Form över veckor</span><div class="formrad" id="formrad"></div>
+    <div class="scen-knappar"><button id="veckaAktiv">+1 aktiv vecka</button><button id="veckaInaktiv">+1 inaktiv vecka</button><button id="manadAktiv">+1 aktiv månad</button><button id="paus">Pausläge: av</button></div>
+    <p class="liten" id="formInfo"></p></div>
+  <details class="logik"><summary style="cursor:pointer;font-weight:600">Hur räknas det?</summary><p style="margin-top:6px">Energi = steg + pass senaste veckan. Styrka = styrkepass + protein. Lugn = sömn + HRV + vilopuls + incheckning. Näring = protein + vatten + grönsaker. Tränat hårt flera dagar och låg HRV ger en vilodag. Borta i 3 dagar eller mer ger ett varmt välkommen tillbaka och lättare uppdrag. Formen bygger på snittet över flera veckor: ett steg upp per cirka 3 aktiva veckor, ett steg ner per cirka 5 inaktiva, och tillbaka till tidigare nivå går dubbelt så snabbt (muskelminne). Prylar försvinner aldrig.</p></details>
+</aside>
+</div>
+<p class="hint">Tips: gå igenom matchningen, eller använd testpanelen för att hoppa direkt till startvyn med olika scenarier.</p>
+
+<script>
+function levande(a,p,attrs){ return ''; }
+const SVG = {"bjorn-neutral": "", "bjorn-pigg": "", "bjorn-stark": "", "bjorn-lugn": "", "bjorn-trott": "", "hare-neutral": "", "hare-pigg": "", "hare-stark": "", "hare-lugn": "", "hare-trott": "", "uggla-neutral": "", "uggla-pigg": "", "uggla-stark": "", "uggla-lugn": "", "uggla-trott": "", "utter-neutral": "", "utter-pigg": "", "utter-stark": "", "utter-lugn": "", "utter-trott": "", "katt-neutral": "", "katt-pigg": "", "katt-stark": "", "katt-lugn": "", "katt-trott": ""};
+const S = {namn:'Bruno', art:'bjorn', sit:new Set(), typ:'promenad', min:20, saldo:1240, xp:65, niva:7,
+  m:{energi:62, styrka:55, lugn:38, naring:70}};
+S.pref = {mal:new Set(['ork','lugn']), typer:new Set(['promenad','styrka']), tid:'15', nar:'morgon', kost:'alla', mathjalp:new Set(['protein']), pepp:'varm', plattform:'iphone'};
+const $ = s => document.querySelector(s);
+const posFor = mood => (mood==='pigg' && (S.m?.energi ?? 0) < 70 && S.data.borta < 3) ? 'neutral' : mood;
+let ork = (mood, w) => { const f = formSteg(); mood = posFor(mood); return `<svg class="orkis humor-${mood}" viewBox="0 0 170 200" width="${w}" height="${w*200/170}" aria-hidden="true" style="overflow:visible">${formBak(f)}${levande(S.art, mood, 'x="0" y="0" width="170" height="200"')}${formFram(f)}</svg>`; };
+const kx = 85, ky = 120, u = 110;
+function formBak(f){ const fl = f.lugn; if(!fl) return '';
+  let o = `<ellipse cx="${kx}" cy="${ky+u*0.05}" rx="${u*(0.5+0.06*fl)}" ry="${u*(0.62+0.06*fl)}" fill="#d9b8f0" fill-opacity="${(0.07*fl).toFixed(2)}"/>`;
+  if(fl>=3) o += `<ellipse cx="${kx}" cy="${ky+u*0.05}" rx="${u*(0.56+0.06*fl)}" ry="${u*(0.68+0.06*fl)}" fill="none" stroke="#d9b8f0" stroke-opacity=".5" stroke-width="1.3"/>`;
+  if(fl>=4) o += [[-0.62,-0.3],[0.6,-0.45],[0.66,0.2],[-0.58,0.35],[0.1,-0.85]].map(([x,y]) => `<circle cx="${kx+x*u}" cy="${ky+y*u}" r="2" fill="#f7f2ea" fill-opacity=".8"/>`).join('');
+  return o; }
+const strl = (x,y,s,c) => `<path d="M${x} ${y-s} Q${x} ${y} ${x+s} ${y} Q${x} ${y} ${x} ${y+s} Q${x} ${y} ${x-s} ${y} Q${x} ${y} ${x} ${y-s}Z" fill="${c}"/>`;
+function formFram(f){ let o = ''; const fe = f.energi, fn = f.naring, hy = ky - u*0.22, by = ky + u*0.34;
+  if(fe>=2) o += [-1,1].map(k => `<path d="M${kx+k*u*0.15-u*0.08} ${by+u*0.4} q ${u*0.08} ${u*0.04} ${u*0.16} 0" stroke="#c8f169" stroke-width="1.8" fill="none" stroke-linecap="round"/>`).join('');
+  if(fe>=3) o += [0.22,0.32,0.42].map((yy,i) => `<path d="M${kx-u*(0.48+0.04*i)} ${ky+u*yy} h ${-u*(0.1+0.03*fe)}" stroke="#c8f169" stroke-width="2.2" stroke-linecap="round" stroke-opacity=".8"/>`).join('');
+  if(fe>=4) o += `<path d="M${kx+u*0.5} ${ky-u*0.55} l ${u*0.05} ${-u*0.06} M${kx+u*0.58} ${ky-u*0.45} l ${u*0.07} ${-u*0.02} M${kx+u*0.52} ${ky-u*0.66} l ${u*0.01} ${-u*0.07}" stroke="#c8f169" stroke-width="2" stroke-linecap="round"/>`;
+  if(fn>=1) o += `<ellipse cx="${kx-u*0.17}" cy="${hy-u*0.2}" rx="${u*0.07}" ry="${u*0.035}" transform="rotate(-30 ${kx-u*0.17} ${hy-u*0.2})" fill="#fff" fill-opacity="${(0.16*fn).toFixed(2)}"/>`;
+  if(fn>=3) o += [[0.3,-0.3],[-0.32,0.2],[0.28,0.5]].map(([x,y]) => strl(kx+x*u, hy+y*u, u*0.04, '#fff')).join('');
+  return o; }
+const fmt = n => n.toLocaleString('sv-SE');
+
+function visa(id){
+  document.querySelectorAll('.skarm').forEach(s => s.classList.toggle('aktiv', s.id === id));
+  if(ORD.includes(id)) ritaAgg(id);
+  if(id==='s-klack'){ klack(); S.uppdrag = null; }
+  if(id==='s-hem') ritaHem();
+  if(id==='s-butik') ritaButik();
+  if(id==='s-mat') ritaMat();
+  if(id==='s-logga'){ S.typ = TYPER.find(t => S.pref.typer.has(t[0]))?.[0] || S.typ; ritaTyper(); }
+  if(['s-mal','s-rorelse','s-matpref','s-pepp','s-halsa'].includes(id)) ritaVal();
+  if(id==='s-vanner') ritaVanner();
+  $('#'+id).scrollTop = 0;
+}
+document.addEventListener('click', e => { const t = e.target.closest('[data-till]'); if(t) visa(t.dataset.till); });
+
+// Djurarter
+const ARTER = {
+  bjorn:{namn:'Kraftbjörn', kort:'Bruno', farg:'#ff7a5c', kraft:'Växer av tunga lyft och proteinrik mat. Eldkragen glöder starkare för varje pass.', forslag:'Bruno'},
+  hare:{namn:'Vindhare', kort:'Hugo', farg:'#c8f169', kraft:'Lever för löprundor, steg och fart. Vindslöjorna växer när du rör dig.', forslag:'Hugo'},
+  uggla:{namn:'Månuggla', kort:'Luna', farg:'#b48be0', kraft:'Blir starkast av sömn och vila. Månskärorna lyser efter en god natt.', forslag:'Luna'},
+  utter:{namn:'Vattenutter', kort:'Otto', farg:'#5fd4e0', kraft:'Älskar simning, lek och variation. Bonus varje gång du testar något nytt.', forslag:'Otto'},
+  katt:{namn:'Kristallkatt', kort:'Kit', farg:'#ffb46a', kraft:'Smidig och följsam. Yoga, rörlighet och balans får kristallerna att glöda.', forslag:'Kit'}};
+function rankning(){
+  const p = S.pref, sc = {bjorn:0,hare:0,uggla:0,utter:0,katt:0}, add = (k,v) => sc[k] += v;
+  const T = {styrka:['bjorn',3],hemma:['bjorn',1],lopning:['hare',3],cykel:['hare',2],simning:['hare',1],yoga:['katt',3],dans:['utter',2],padel:['utter',3],promenad:['uggla',1]};
+  p.typer.forEach(t => T[t] && add(...T[t]));
+  const M = {styrka:['bjorn',2],kondition:['hare',2],lugn:['uggla',3],somn:['uggla',2],rorlighet:['katt',3],ork:['utter',1],kost:['bjorn',1]};
+  p.mal.forEach(m => M[m] && add(...M[m]));
+  if(p.typer.size >= 3) add('utter',2);
+  if(p.pepp==='rolig') add('utter',1); if(p.pepp==='varm') add('uggla',1); if(p.pepp==='rak') add('bjorn',1);
+  return Object.keys(sc).sort((a,b) => sc[b]-sc[a]);
+}
+function aggSvg(n, w){
+  const top = rankning().slice(0,3).map(k => ARTER[k].farg), pr = [[-0.35,-0.15,0.15],[0.3,0.25,0.18],[-0.12,0.62,0.12],[0.34,-0.5,0.1],[-0.42,0.35,0.1],[0.05,-0.15,0.09],[0.5,0.7,0.08]];
+  const r = 42, cx = 60, cy = 62;
+  const dots = pr.slice(0, n).map(([x,y,rr],i) => `<circle cx="${cx+r*x}" cy="${cy+r*y}" r="${r*rr}" fill="${top[i%top.length]}"/>`).join('');
+  const glow = n>0 ? `<ellipse cx="${cx}" cy="${cy}" rx="${r*1.25}" ry="${r*1.45}" fill="${top[0]}" fill-opacity="${Math.min(.35,.06*n)}"/>` : '';
+  const op = Math.min(1, 0.62 + 0.055*n).toFixed(2);
+  return `<svg viewBox="0 0 120 130" width="${w}" height="${w*130/120}" aria-hidden="true">${glow}<path d="M60 14 L100 54 L60 120 L20 54 Z" fill="#c8f169" fill-opacity="${op}"/><path d="M60 14 L76 54 L60 120 L44 54 Z" fill="#e6ff9e" fill-opacity="${op}"/><path d="M20 54 H100" stroke="#120c1c" stroke-opacity=".35" stroke-width="2"/><path d="M60 14 L100 54 L60 120 L20 54 Z" fill="none" stroke="#c8f169" stroke-width="2.5" stroke-linejoin="round"/>${dots}</svg>`;
+}
+const ORD = ['s-valkommen','s-niva','s-mal','s-rorelse','s-matpref','s-pepp','s-situation','s-halsa'];
+function ritaAgg(id){ const n = Math.max(0, ORD.indexOf(id));
+  document.querySelectorAll('#'+id+' [data-agg]').forEach(b => b.innerHTML = aggSvg(n, 44)); }
+$('#storAgg').innerHTML = aggSvg(0, 150);
+document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn);
+
+// Kläckning
+function klack(){
+  const r = rankning(); S.art = r[0]; S.alt = [r[0], r[1], r[2]];
+  $('#alternativ').hidden = true; $('#borja').hidden = true; $('#klackTitel').textContent = ''; $('#klackKraft').textContent = '';
+  $('#klackOver').textContent = 'Letar efter din match …';
+  $('#klackScen').innerHTML = `<div class="pulsa">${aggSvg(7, 150)}</div>`;
+  setTimeout(() => {
+    visaArt(true);
+    $('#alternativ').hidden = false; $('#borja').hidden = false;
+    $('#altrad').innerHTML = S.alt.map((k,i) => `<button class="alt" aria-pressed="${i===0}" data-art="${k}"><svg viewBox="0 0 170 200" width="60" height="70" aria-hidden="true">${SVG[k+'-pigg']}</svg>${ARTER[k].kort}<small>${i===0?'bäst match':'också bra'}</small></button>`).join('');
+  }, 1700);
+}
+function visaArt(forsta){
+  const a = ARTER[S.art];
+  $('#klackScen').innerHTML = `<div class="kom"><svg viewBox="0 0 170 200" width="190" height="224" role="img" aria-label="${a.namn}">${levande(S.art, 'stark', 'x="0" y="0" width="170" height="200"')}</svg></div>`;
+  $('#klackOver').textContent = forsta ? 'Det är en match!' : 'Du valde';
+  $('#klackTitel').textContent = `${a.forslag}, ${a.namn}`; $('#klackKraft').textContent = a.kraft;
+  $('#namn').placeholder = `Behåll ${a.forslag} eller ge ett eget namn`;
+}
+$('#s-klack').addEventListener('click', e => { const b = e.target.closest('[data-art]'); if(!b) return;
+  S.art = b.dataset.art; document.querySelectorAll('[data-art]').forEach(x => x.setAttribute('aria-pressed', x===b)); visaArt(false); });
+$('#namn').addEventListener('input', e => { S.namn = e.target.value.trim() || ARTER[S.art].forslag; document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn); });
+$('#borja').addEventListener('click', () => { if(!$('#namn').value.trim()){ S.namn = ARTER[S.art].forslag; document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn); } }, true);
+
+// 3
+const SIT = [
+  ['glp1','GLP-1 eller annan viktmedicin','Fokus på styrka och protein','G'],
+  ['stress','Sjukskriven för stress','Vila räknas som framsteg','☾'],
+  ['rehab','Skada eller rehab','Anpassade rörelser','✚'],
+  ['gravid','Gravid eller nybliven förälder','Mjuka mål','♡'],
+  ['inget','Inget särskilt','Standardupplägg','✓']];
+$('#situationer').innerHTML = SIT.map(([k,t,s,i]) =>
+  `<button class="val" aria-pressed="false" data-sit="${k}"><span class="ikon" aria-hidden="true">${i}</span><span>${t}<small>${s}</small></span><span class="bock"></span></button>`).join('');
+$('#situationer').addEventListener('click', e => { const b = e.target.closest('[data-sit]'); if(!b) return;
+  const k = b.dataset.sit, on = b.getAttribute('aria-pressed') !== 'true';
+  if(k==='inget' && on) { S.sit.clear(); document.querySelectorAll('[data-sit]').forEach(x => x.setAttribute('aria-pressed','false')); }
+  else if(on) { S.sit.delete('inget'); $('[data-sit=inget]').setAttribute('aria-pressed','false'); }
+  on ? S.sit.add(k) : S.sit.delete(k); b.setAttribute('aria-pressed', on); });
+
+// 4
+const KALLOR = {
+  iphone:[['Apple Hälsa','Steg, pass, sömn och puls från iPhone och Apple Watch','♡',true]],
+  android:[['Health Connect','Androids hälsonav: steg, pass, sömn och puls','♡',true],['Samsung Health','Om du har Galaxy-klocka eller -telefon','S',false]],
+  alla:[['Garmin','Klockor och pulsmätare','G',false],['Fitbit','Steg, sömn och puls','F',false],['Oura','Sömn, återhämtning och HRV','O',false],['Strava','Löpning, cykel och promenader','S',false],['Gymmet','Incheckning på partnergym','⌂',false]]};
+function ritaKallor(){ $('#kallor').innerHTML = [...KALLOR[S.pref.plattform], ...KALLOR.alla].map(([t,s,i,on]) =>
+  `<button class="val" aria-pressed="${on}"><span class="ikon" aria-hidden="true">${i}</span><span>${t}<small>${s}</small></span><span class="bock"></span></button>`).join(''); }
+ritaKallor();
+$('#kallor').addEventListener('click', e => { const b = e.target.closest('.val'); if(b) b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')!=='true'); });
+
+// Hem
+const RINGAR = [['energi','energi'],['styrka','styrka'],['lugn','lugn'],['naring','näring']];
+function ring(v, col){ const r=15, c=2*Math.PI*r, d=c*v/100;
+  return `<svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="${r}" fill="none" stroke="var(--glas-kant)" stroke-width="4"/><circle class="v" cx="19" cy="19" r="${r}" fill="none" stroke="var(--${col})" stroke-width="4" stroke-linecap="round" stroke-dasharray="${d.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 19 19)"/><text x="19" y="23" text-anchor="middle" fill="var(--pa-scen)" font-family="Bricolage Grotesque" font-weight="800" font-size="12">${Math.round(v)}</text></svg>`; }
+function humor(){
+  if(S.sit.has('stress')) return ['lugn', `${S.namn} tar det lugnt`];
+  if(S.data.borta >= 3) return ['pigg', `${S.namn} är glad att se dig`];
+  if(S.vila) return ['lugn', `${S.namn} vill vila idag`];
+  const m = S.m; if(m.styrka>=75) return ['stark', `${S.namn} känner sig stark`];
+  if(m.energi<30 || S.data.somn < 5.5) return ['trott', `${S.namn} är lite trött`];
+  return m.energi >= 70 ? ['pigg', `${S.namn} är pigg`] : ['pigg', `${S.namn} mår bra`];
+}
+function uppdrag(){
+  if(S.sit.has('stress')) return ['10 min andning ute','Lugn är viktigast just nu. Vila räknas också som framsteg.','lugn'];
+  if(S.sit.has('glp1')) return ['15 min styrka','Muskler är guld under behandlingen. Ät proteinet först idag.','styrka'];
+  if(S.sit.has('rehab')) return ['10 min rörlighet','Små, mjuka rörelser. Följ det din vård har sagt.','energi'];
+  const NAMN = {promenad:'promenad',styrka:'styrka',lopning:'löpning',yoga:'yoga',padel:'padel',dans:'dans',cykel:'cykling',hemma:'hemmaträning',simning:'simning'};
+  const typ = [...S.pref.typer][0] || 'promenad';
+  let min = {'5':5,'15':15,'30':30,'45':45}[S.pref.tid]; if(S.start==='igang') min = Math.min(min,10); if(S.start==='uppehall') min = Math.min(min,15);
+  const ton = {varm:'Ingen stress, även lite gör skillnad.', rak:'Du har tiden. Kör.', rolig:`${S.namn} har redan värmt upp. Nästan.`}[S.pref.pepp];
+  return [`${min} min ${NAMN[typ]}`, ton, 'energi'];
+}
+function insikt(){
+  const d = S.data;
+  if(d.borta >= 3) return null;
+  if(S.vila) return `Du har tränat hårt ${d.pass} dagar och din HRV är lägre än vanligt (${d.hrv} ms). Ska dagens uppdrag bli återhämtning?`;
+  if(d.somn < 6.5) return `Du har sovit ${String(d.somn).replace('.',',')} timmar. Lugn sjunker de nätter du sover under 7 timmar. Ska Fitchi påminna dig om att varva ner kl. 22 ikväll?`;
+  if(d.steg < 4000) return 'Det har blivit få steg de senaste dagarna. Ska uppdragen bli kortare men fler, så att det känns lättare att komma igång?';
+  if(S.pref.nar==='morgon') return 'Du sa att morgnar passar bäst, men de senaste två veckorna har du oftast tränat efter kl. 17. Ska uppdraget komma kl. 17 i stället?';
+  if(S.pref.nar==='kvall') return 'Du sover sämre de kvällar du tränar hårt efter kl. 20. Ska Fitchi föreslå lugnare pass sena kvällar?';
+  return 'Du klarar uppdragen oftast på vardagar men hoppar över dem på helger. Ska helgernas uppdrag bli kortare?';
+}
+// Tre dagliga uppdrag
+const UIK = {
+  energi:'<path d="M7 16c-1.5 0-2.5-1.2-2.3-3.2.3-2.8 1.3-5.8 3.3-5.8 1.6 0 2 1.6 1.7 4.2C9.4 14 8.6 16 7 16zM15 20c-1.6 0-2.3-1.8-2-4.2.3-2.6 1.4-5.3 3.3-5.3 1.6 0 2.2 1.5 1.9 4-.4 3.2-1.5 5.5-3.2 5.5z"/>',
+  styrka:'<path d="M6.5 8v8M17.5 8v8M3.5 10v4M20.5 10v4M6.5 12h11"/>',
+  lugn:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  naring:'<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7.5c0-1.4 1.2-1.8 1.2-3.3M13.5 7.5c0-1.4 1.2-1.8 1.2-3.3"/>',
+  gladje:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>'};
+const UFARG = {energi:'var(--energi)', styrka:'var(--styrka)', lugn:'var(--lugn)', naring:'var(--naring)', gladje:'#f2d48a'};
+const BANK = {
+  energi:[['{m} min promenad','promenad'],['{m} min cykel','cykel'],['{m} min dans till favoritlåtar','dans'],['Ta trapporna hela dagen',''],['{m} min löpning','lopning']],
+  styrka:[['{m} min styrka hemma','hemma'],['{m} min gympass','styrka'],['3 x 10 knäböj',''],['Plankan 3 x 30 sekunder','']],
+  lugn:[['5 min meditation',''],['10 min andningsövning',''],['{m} min yoga','yoga'],['Promenad i dagsljus utan mobil',''],['Skärmfritt efter kl. 21','']],
+  naring:[['Proteinrik frukost',''],['Två glas vatten till lunch',''],['En näve grönt till middagen',''],['Ät något med protein innan kl. 15','']],
+  gladje:[['Unna dig något gott, helt utan dåligt samvete',''],['Ring eller sms:a någon du gillar',''],['Gör något bara för skojs skull',''],['Lyssna på en låt du älskar, högt',''],['Sätt dig i solen en stund','']]};
+const VARFOR = {energi:'Energi är lägst just nu', styrka:'Bygger din styrka', lugn:'Lugn behöver lite kärlek', naring:'Näring är under målet', gladje:'För att livet ska vara kul också'};
+const POANG = {energi:30, styrka:35, lugn:25, naring:20, gladje:20};
+function valjUppdrag(matare, utesluten){
+  let min = {'5':5,'15':15,'30':30,'45':45}[S.pref.tid]; if(S.start==='igang') min = Math.min(min,10); if(S.start==='uppehall') min = Math.min(min,15);
+  if(S.data && (S.data.borta>=3 || S.data.steg<4000)) min = Math.min(min,10);
+  let lista = BANK[matare].filter(([t]) => t !== utesluten);
+  const pass = lista.filter(([,typ]) => typ && S.pref.typer.has(typ)); if(pass.length) lista = pass.concat(lista.filter(x => !pass.includes(x)).slice(0,1));
+  const [t] = lista[Math.floor(Math.random()*Math.min(lista.length, 2))];
+  return {m:matare, t:t.replace('{m}', min), p:POANG[matare], varfor:VARFOR[matare], klar:false};
+}
+function skapaUppdrag(){
+  let ordning = ['energi','styrka','lugn','naring'].sort((a,b) => S.m[a]-S.m[b]);
+  if(S.sit.has('stress')) ordning = ['lugn', ...ordning.filter(x => x!=='lugn' && x!=='styrka')];
+  if(S.sit.has('glp1')) ordning = ['styrka','naring', ...ordning.filter(x => x!=='styrka' && x!=='naring')];
+  if(S.vila) ordning = ['lugn', ...ordning.filter(x => x!=='lugn' && x!=='styrka')];
+  const valda = ordning.slice(0,2);
+  S.uppdrag = [...valda.map(m => valjUppdrag(m)), valjUppdrag('gladje')];
+  if(S.vila) S.uppdrag[0] = {m:'lugn', t:'Vilodag: 15 min lugn stretch', p:30, varfor:'Kroppen behöver återhämtning', klar:false};
+  if(S.data.borta >= 3){ S.uppdrag[0] = {m:'energi', t:'5 min promenad, bara för att komma igång', p:30, varfor:'En mjuk start efter pausen', klar:false};
+    S.uppdrag[1] = {m:'gladje', t:'Klappa på din fitchi', p:15, varfor:'Det har saknat dig', klar:false}; }
+  if(S.sit.has('stress')) S.uppdrag[0].varfor = 'Vila och lugn först just nu';
+}
+S.byten = 2;
+function ritaUppdrag(nyIndex){
+  $('#bytentext').innerHTML = S.byten > 0 ? `${S.byten} byte${S.byten>1?'n':''} kvar idag` : 'Inga byten kvar idag';
+  const klara = S.uppdrag.filter(u => u.klar).length;
+  $('#uprog').textContent = `${klara} av 3`; $('#bonusbar').style.width = (klara/3*100)+'%';
+  $('#bonustext').textContent = klara===3 ? 'Alla klara! Bonus +50 är din.' : `Klara alla tre för +50 i bonus`;
+  $('#uppdrag3').innerHTML = S.uppdrag.map((u,i) => `<div class="ukort${u.klar?' klar':''}${i===nyIndex?' ny':''}">
+    <span class="uik" style="background:${UFARG[u.m]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UIK[u.m]}</svg></span>
+    <span class="ut"><b>${u.t}</b><small>${u.varfor}</small></span>
+    <span class="up">+${u.p}</span>
+    <button class="byt" data-byt="${i}" aria-label="Byt uppdrag, ${S.byten} kvar idag" ${S.byten>0?'':'hidden'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg></button>
+    <button class="bocka" data-klar="${i}" aria-pressed="${u.klar}" aria-label="${u.klar?'Klart':'Markera som klart'}: ${u.t}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+  </div>`).join('');
+}
+document.addEventListener('click', e => {
+  const k = e.target.closest('[data-klar]');
+  if(k){ const u = S.uppdrag[+k.dataset.klar]; if(u.klar) return; u.klar = true;
+    S.saldo += u.p; const mm = u.m==='gladje' ? 'lugn' : u.m; S.m[mm] = Math.min(100, S.m[mm] + 15); if(u.m==='gladje') S.m.energi = Math.min(100, S.m.energi+5);
+    S.xp += 12; if(S.xp>=100){ S.xp-=100; S.niva++; }
+    let msg = `+${u.p} mynt`;
+    if(S.uppdrag.every(x => x.klar)){ S.saldo += 50; msg = `Alla tre klara! +${u.p} och +50 i bonus`; }
+    ritaHem(); klappa();
+    const t = $('#toast4'); t.textContent = msg; t.classList.add('syns'); setTimeout(() => t.classList.remove('syns'), 1800); return; }
+  const b = e.target.closest('[data-byt]');
+  if(b){ if(S.byten<=0) return; S.byten--; const i = +b.dataset.byt, gammal = S.uppdrag[i]; S.uppdrag[i] = valjUppdrag(gammal.m, gammal.t); S.uppdrag[i].varfor = gammal.varfor; ritaUppdrag(i);
+    if(S.byten===0){ const t = $('#toast4'); t.textContent = 'Det var dagens sista byte. Nya byten i morgon.'; t.classList.add('syns'); setTimeout(() => t.classList.remove('syns'), 2000); } }
+});
+
+function ritaHem(){
+  if(!S.uppdrag) skapaUppdrag();
+  const ins = insikt(); if($('#insikt')){ $('#insikt').hidden = !ins; if(ins) $('#insiktText').textContent = ins; }
+  const borta = S.data.borta >= 3; $('#tillbaka').hidden = !borta && !S.formNytt;
+  if(S.formNytt && !borta && S.formNytt.typ==='upp'){ $('#tillbakaTitel').textContent = 'Ny form!'; $('#tillbakaText').textContent = `${S.namn}s ${S.formNytt.m.map(k => UPPTEXT[k]).join(' och ')}. Det syns att du har varit aktiv.`; }
+  if(S.formNytt && S.formNytt.typ==='ner'){ $('#tillbaka').hidden = false; $('#tillbakaTitel').textContent = `${S.namn} har tappat lite form`; $('#tillbakaText').textContent = `Men ${S.namn} minns allt. Ett par aktiva veckor så är ni tillbaka, det går dubbelt så snabbt andra gången. Prylarna och minnena behåller ni alltid.`; }
+  else if(borta){ $('#tillbakaTitel').textContent = `Välkommen tillbaka!`; $('#tillbakaText').textContent = `${S.namn} har väntat på dig. Inget har gått förlorat, och idag börjar vi lugnt med lite kortare uppdrag.`; }
+  const [mood, txt] = humor(); $('#hemOrkis').innerHTML = ork(mood, 150); $('#hemOrkis').setAttribute('aria-label', `${txt}. Tryck för att klappa ${S.namn}`);
+  $('#humor').textContent = txt;
+  $('#ringar').innerHTML = RINGAR.map(([k,n]) => `<button class="chip glas" data-matare="${k}" aria-label="${n}: ${Math.round(S.m[k])} av 100. Visa detaljer">${ring(S.m[k],k)}<span>${n}</span></button>`).join('');
+  ritaUppdrag();
+  $('#saldo').textContent = fmt(S.saldo); $('#niva').textContent = 'Nivå ' + S.niva;
+  $('#xpbar').style.width = S.xp + '%'; $('#xptext').textContent = `${100-S.xp} % till nivå ${S.niva+1}`;
+}
+
+// Logga
+const TYPER_ALLA = [['promenad','Promenad','energi','#c8f169'],['styrka','Styrka','styrka','#ff7a5c'],['yoga','Yoga eller vila','lugn','#d9b8f0'],['lopning','Löpning','energi','#c8f169'],['padel','Padel','energi','#c8f169'],['dans','Dans','energi','#c8f169'],['cykel','Cykel','energi','#c8f169'],['hemma','Hemmaträning','styrka','#ff7a5c'],['simning','Simning','energi','#c8f169'],['annat','Annat','energi','#c8f169']];
+const TYPER = [...TYPER_ALLA].sort((a,b) => (S.pref.typer.has(b[0])?1:0)-(S.pref.typer.has(a[0])?1:0));
+function ritaTyper(){ TYPER.sort((a,b) => (S.pref.typer.has(b[0])?1:0)-(S.pref.typer.has(a[0])?1:0)); $('#typer').innerHTML = TYPER.map(([k,t,m]) => `<button class="typ" aria-pressed="${k===S.typ}" data-typ="${k}">${t}<small>Fyller ${m==='naring'?'näring':m}</small></button>`).join(''); }
+ritaTyper();
+$('#typer').addEventListener('click', e => { const b = e.target.closest('[data-typ]'); if(!b) return; S.typ = b.dataset.typ;
+  document.querySelectorAll('[data-typ]').forEach(x => x.setAttribute('aria-pressed', x===b)); });
+$('#minus').onclick = () => { S.min = Math.max(5, S.min-5); $('#min').textContent = S.min; };
+$('#plus').onclick = () => { S.min = Math.min(120, S.min+5); $('#min').textContent = S.min; };
+$('#spara').onclick = () => {
+  const typ = TYPER.find(t => t[0]===S.typ), mat = typ[2];
+  const okning = Math.min(100 - S.m[mat], Math.round(S.min*0.9));
+  S.m[mat] += okning; if(mat!=='energi') S.m.energi = Math.min(100, S.m.energi + Math.round(S.min*0.3));
+  const mynt = 20 + S.min, xp = Math.min(35, Math.round(S.min*0.8));
+  S.saldo += mynt; S.xp += xp; S.lag = (S.lag||31)+1; $('#lagPass').textContent = S.lag; $('#lagBar').style.width = Math.min(100,S.lag/40*100)+'%'; let niva = false; if(S.xp>=100){ S.xp -= 100; S.niva++; niva = true; }
+  visa('s-belon');
+  const mood = mat==='lugn' ? 'lugn' : 'stark';
+  $('#belonOrkis').innerHTML = ork(mood, 170);
+  $('#belonTitel').textContent = niva ? `Nivå ${S.niva}!` : (mat==='lugn' ? 'Skönt att vila' : 'Snyggt jobbat');
+  $('#belonText').textContent = `${typ[1]}, ${S.min} min. ${S.namn} fick ${mat==='naring'?'näring':mat} +${okning}.`;
+  $('#vinster').innerHTML = `<span class="piller glas">+${xp} XP</span><span class="piller glas">${mat==='naring'?'näring':mat} +${okning}</span>`;
+  let n = 0; const steg = Math.max(1, Math.round(mynt/24)); const r = $('#raknare');
+  const t = setInterval(() => { n = Math.min(mynt, n+steg); r.textContent = n; if(n>=mynt) clearInterval(t); }, 30);
+  const k = $('#konfetti'); k.innerHTML = Array.from({length:28}, (_,i) =>
+    `<i style="left:${(i*37)%100}%;background:${['#c8f169','#d9a441','#ff7a5c','#d9b8f0'][i%4]};animation-delay:${(i%7)*0.08}s"></i>`).join('');
+};
+
+// Stegprickar och flikar
+document.querySelectorAll('[data-steg]').forEach(d => {
+  const ord = ORD, i = ord.indexOf(d.closest('.skarm').id);
+  d.innerHTML = ord.map((_,k) => `<i class="${k===i?'p':''}"></i>`).join(''); });
+const ik = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IKON = {'s-hem':ik('<path d="M4 10.5 12 4l8 6.5V19a2 2 0 0 1-2 2h-3v-6H9v6H6a2 2 0 0 1-2-2z"/>'),
+  's-mat':ik('<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7.5c0-1.4 1.2-1.8 1.2-3.3M13.5 7.5c0-1.4 1.2-1.8 1.2-3.3"/>'),
+  's-vanner':ik('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14c2.2.8 3.5 3 3.5 6"/>'),
+  's-butik':ik('<path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>'),
+  plus:ik('<path d="M12 5v14M5 12h14"/>')};
+const FLIKAR = [['s-hem','Hem'],['s-mat','Mat'],['s-logga','Logga'],['s-vanner','Vänner'],['s-butik','Butik']];
+document.querySelectorAll('[data-flikar]').forEach(n => { const egen = n.closest('.skarm').id;
+  n.innerHTML = FLIKAR.map(([id,t]) => id==='s-logga'
+    ? `<button class="flik plusk" data-till="${id}" aria-label="Logga">${IKON.plus}</button>`
+    : `<button class="flik${id===egen?' aktiv':''}" ${id===egen?'aria-current="page"':`data-till="${id}"`} aria-label="${t}">${IKON[id]}<span>${t}</span></button>`).join(''); });
+
+// Personliga val
+const VAL = {
+  mal:[['ork','Mer energi'],['styrka','Bli starkare'],['kondition','Bättre kondition'],['lugn','Mindre stress'],['somn','Bättre sömn'],['rorlighet','Rörlighet'],['kost','Äta bättre']],
+  typer:[['promenad','Promenad'],['styrka','Gym och styrka'],['lopning','Löpning'],['yoga','Yoga'],['padel','Padel'],['dans','Dans'],['cykel','Cykel'],['hemma','Hemmaträning'],['simning','Simning']],
+  tid:[['5','5 min'],['15','15 min'],['30','30 min'],['45','45+']],
+  nar:[['morgon','Morgon'],['lunch','Lunch'],['kvall','Kväll'],['varierar','Varierar']],
+  kost:[['alla','Allt'],['pesc','Pescetariskt'],['vego','Vegetariskt'],['vegan','Veganskt']],
+  mathjalp:[['protein','Mer protein'],['gront','Mer grönt'],['vatten','Dricka mer vatten'],['regelbundet','Äta regelbundet'],['sug','Mindre sötsug']],
+  pepp:[['varm','Varm och mjuk','Som en snäll vän'],['rak','Rak och peppig','Som en coach som tror på dig'],['rolig','Lekfull','Lite skämt och mycket Orkis']],
+  plattform:[['iphone','iPhone'],['android','Android']]
+};
+const PEPP = {varm:n => `${n} undrar om ni ska ta en promenad idag. Ingen stress, även tio minuter gör skillnad.`,
+  rak:n => `Dags att röra på dig. 15 minuter, sen är dagens uppdrag klart. ${n} och du fixar det.`,
+  rolig:n => `${n} har packat skorna och står vid dörren. Typ. Ska vi gå ut en sväng?`};
+function ritaVal(){
+  document.querySelectorAll('[data-grp]').forEach(g => { const k = g.dataset.grp, multi = g.hasAttribute('data-multi');
+    const valt = v => multi ? S.pref[k].has(v) : S.pref[k]===v;
+    if(k==='pepp') g.innerHTML = VAL[k].map(([v,t,d]) => `<button class="val" aria-pressed="${valt(v)}" data-v="${v}"><span>${t}<small>${d}</small></span><span class="bock"></span></button>`).join('');
+    else g.innerHTML = VAL[k].map(([v,t]) => `<button class="${g.classList.contains('seg')?'':'tagg'}" aria-pressed="${valt(v)}" data-v="${v}">${t}</button>`).join(''); });
+  $('#peppExempel').textContent = PEPP[S.pref.pepp](S.namn);
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-grp] [data-v]'); if(!b) return;
+  const g = b.closest('[data-grp]'), k = g.dataset.grp, v = b.dataset.v;
+  if(g.hasAttribute('data-multi')) { S.pref[k].has(v) ? S.pref[k].delete(v) : S.pref[k].add(v); }
+  else S.pref[k] = v;
+  ritaVal(); if(k==='plattform') ritaKallor(); });
+
+// Startnivå
+const NIVAER = [['igang','Jag vill komma igång','Korta, lätta uppdrag att börja med'],['uppehall','Jag har haft ett uppehåll','Vi bygger upp lugnt igen'],['regelbunden','Jag tränar redan regelbundet','Utmaningar som matchar din nivå']];
+S.start = 'igang';
+$('#nivaer').innerHTML = NIVAER.map(([k,t,d]) => `<button class="val" aria-pressed="${k===S.start}" data-start="${k}"><span>${t}<small>${d}</small></span><span class="bock"></span></button>`).join('');
+$('#nivaer').addEventListener('click', e => { const b = e.target.closest('[data-start]'); if(!b) return; S.start = b.dataset.start;
+  document.querySelectorAll('[data-start]').forEach(x => x.setAttribute('aria-pressed', x===b)); });
+
+// Insikt
+$('#insiktJa').onclick = () => { $('#insikt').innerHTML = '<p class="etk">Klart</p><p style="font-size:15px;line-height:21px;margin-top:4px">Fitchi har anpassat sig. Du kan ändra det när du vill under Inställningar.</p>'; };
+$('#insiktNej').onclick = () => { $('#insikt').hidden = true; };
+$('#varfor').onclick = () => { const v = $('#varforText'); v.hidden = !v.hidden; };
+
+// Mat
+S.protein = 54; S.vatten = 4; S.gront = 2;
+const SNABB_ALLA = [['Ägg','2 st · 13 g protein',13,0,0],['Kesella','250 g · 25 g protein',25,0,0],['Kyckling','150 g · 35 g protein',35,0,0],['Linser','1 portion · 18 g protein',18,0,1],['Grönsaker','En näve',0,0,1],['Vatten','Ett glas',0,1,0]];
+const SNABB_VEGAN = [['Tofu','150 g · 20 g protein',20,0,0],['Sojayoghurt','200 g · 9 g protein',9,0,0],['Linser','1 portion · 18 g protein',18,0,1],['Edamame','1 skål · 17 g protein',17,0,1],['Grönsaker','En näve',0,0,1],['Vatten','Ett glas',0,1,0]];
+const SNABB_VEGO = [['Ägg','2 st · 13 g protein',13,0,0],['Kesella','250 g · 25 g protein',25,0,0],['Halloumi','80 g · 18 g protein',18,0,0],['Linser','1 portion · 18 g protein',18,0,1],['Grönsaker','En näve',0,0,1],['Vatten','Ett glas',0,1,0]];
+const SNABB_PESC = [['Ägg','2 st · 13 g protein',13,0,0],['Kesella','250 g · 25 g protein',25,0,0],['Lax','125 g · 26 g protein',26,0,0],['Linser','1 portion · 18 g protein',18,0,1],['Grönsaker','En näve',0,0,1],['Vatten','Ett glas',0,1,0]];
+let SNABB = SNABB_ALLA;
+function ritaSnabb(){ SNABB = {alla:SNABB_ALLA,pesc:SNABB_PESC,vego:SNABB_VEGO,vegan:SNABB_VEGAN}[S.pref.kost];
+  $('#snabb').innerHTML = SNABB.map(([t,d],i) => `<button data-snabb="${i}">${t}<small>${d}</small></button>`).join(''); }
+function ritaMat(){
+  ritaSnabb();
+  const mal = S.sit.has('glp1') ? 110 : 90; $('#proteinMal').textContent = mal; $('#protein').textContent = S.protein;
+  const v = Math.min(100, Math.round(S.protein/mal*100)); S.m.naring = Math.max(S.m.naring, Math.round((v + Math.min(100,S.gront*20) + Math.min(100,S.vatten*12.5))/3));
+  const r=40, c=2*Math.PI*r, d=c*v/100;
+  $('#matRing').innerHTML = `<svg width="100" height="100" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--glas-kant)" stroke-width="10"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--naring)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${d.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 50 50)" style="transition:stroke-dasharray .8s ease"/><text x="50" y="57" text-anchor="middle" fill="var(--pa-scen)" font-family="Bricolage Grotesque" font-weight="800" font-size="22">${v}%</text></svg>`;
+  $('#matChips').innerHTML = [['Grönt',S.gront,5,'portioner'],['Vatten',S.vatten,8,'glas'],['Näring',S.m.naring,100,'mätaren']].map(([t,a,b,e]) =>
+    `<div class="chip glas" style="padding:10px 6px"><span style="font:800 18px var(--display);color:var(--pa-scen)">${Math.round(a)}<small style="font:500 11px var(--text)">/${b}</small></span><span>${t.toLowerCase()} · ${e}</span></div>`).join('');
+  $('#matTips').innerHTML = S.protein >= mal ? `Protein klart för idag. <span class="vnamn">${S.namn}</span> är mätt och glad.` : `${mal - S.protein} g kvar. Ett mål till med protein så är <span class="vnamn">${S.namn}</span> mätt.`;
+}
+$('#snabb').addEventListener('click', e => { const b = e.target.closest('[data-snabb]'); if(!b) return;
+  const [t,,p,v,g] = SNABB[+b.dataset.snabb]; S.protein += p; S.vatten += v; S.gront += g; S.saldo += 5; ritaMat();
+  const tt = $('#toast2'); tt.textContent = `${t} tillagt. +5 mynt`; tt.classList.add('syns'); setTimeout(() => tt.classList.remove('syns'), 1600); });
+$('#foto').onclick = () => { const tt = $('#toast2'); tt.textContent = 'Här öppnas kameran. Fitchi känner igen maten och föreslår protein, grönt och vatten.'; tt.classList.add('syns'); setTimeout(() => tt.classList.remove('syns'), 2800); };
+
+// Vänner
+const VANNER = [['Sara','bjorn-stark','Nivå 9 · styrkepass i morse'],['Jonna','uggla-lugn','Nivå 4 · vilodag idag'],['Amir','hare-pigg','Nivå 12 · 3 pass i rad'],['Lisa','katt-trott','Nivå 6 · lite trött idag']];
+function ritaVanner(){
+  $('#vanLista').innerHTML = VANNER.map(([n,k,t],i) => `<div class="van"><svg viewBox="0 0 170 200" width="52" height="61" aria-hidden="true">${SVG[k]}</svg><div class="info"><b>${n}</b><span class="liten">${t}</span></div><button class="pepp" aria-pressed="false" data-pepp="${n}">Peppa</button></div>`).join('');
+  $('#lagrad').innerHTML = [S.art+'-pigg', ...VANNER.map(v => v[1])].map(k => `<svg viewBox="0 0 170 200" width="44" height="52" aria-hidden="true">${SVG[k]}</svg>`).join('');
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-pepp]'); if(!b || b.getAttribute('aria-pressed')==='true') return;
+  b.setAttribute('aria-pressed','true'); b.textContent = 'Peppad';
+  const tt = $('#toast3'); tt.textContent = `${b.dataset.pepp} får en pepp från ${S.namn}.`; tt.classList.add('syns'); setTimeout(() => tt.classList.remove('syns'), 1800); });
+
+// Klappa djuret
+const FORM = {
+  hjarta:c => `<svg width="22" height="20" viewBox="0 0 24 22"><path d="M12 21s-9-5.6-9-12a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6.4-9 12-9 12z" fill="${c}"/></svg>`,
+  stjarna:c => `<svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 1 Q12 12 23 12 Q12 12 12 23 Q12 12 1 12 Q12 12 12 1Z" fill="${c}"/></svg>`,
+  bubbla:c => `<svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="${c}" stroke-width="2.5"/></svg>`,
+  z:c => `<svg width="20" height="22" viewBox="0 0 20 22"><path d="M4 4h12L4 18h12" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`};
+const REAKTION = {
+  pigg:{form:'hjarta', farg:['#ff8f9a','#ffb07a','#c8f169'], n:8, t:1.2, text:n => `${n} hoppar av glädje`},
+  stark:{form:'stjarna', farg:['#d9a441','#f2d48a'], n:9, t:1.1, text:n => `${n} visar musklerna`},
+  lugn:{form:'bubbla', farg:['#d9b8f0','#ffffff99'], n:6, t:2.2, text:n => `${n} andas lugnt med dig`},
+  trott:{form:'z', farg:['#d9b8f0'], n:3, t:2, text:n => `${n} gäspar stort`}};
+let reagerar = false;
+function klappa(){
+  if(reagerar) return; reagerar = true;
+  const [mood] = humor(), r = REAKTION[mood], el = $('#hemOrkis');
+  el.classList.remove('studs'); void el.offsetWidth; el.classList.add('r-'+mood);
+  $('#partiklar').innerHTML = Array.from({length:r.n}, (_,i) => {
+    const vinkel = mood==='trott' ? -60 + i*6 : -160 + (i/(r.n-1||1))*140 + (Math.random()*16-8);
+    const dist = mood==='trott' ? 70 + i*22 : 70 + Math.random()*50;
+    const dx = mood==='trott' ? 40 + i*18 : Math.cos(vinkel*Math.PI/180)*dist, dy = mood==='trott' ? -50 - i*28 : Math.sin(vinkel*Math.PI/180)*dist - 20;
+    return `<i style="--dx:${dx.toFixed(0)}px;--dy:${dy.toFixed(0)}px;--t:${r.t}s;--d:${(i*(mood==='trott'?.35:.05)).toFixed(2)}s">${FORM[r.form](r.farg[i%r.farg.length])}</i>`; }).join('');
+  $('#humor').textContent = r.text(S.namn);
+  if(navigator.vibrate) navigator.vibrate(15);
+  const slut = mood==='lugn' ? 2300 : mood==='trott' ? 2600 : 1500;
+  setTimeout(() => { el.classList.remove('r-'+mood); el.classList.add('studs'); $('#humor').textContent = humor()[1]; reagerar = false; }, slut);
+}
+document.addEventListener('click', e => { if(e.target.closest('#hemOrkis')) klappa(); });
+
+// Mätardetaljer
+const MATARE = {
+  energi:{namn:'Energi', om:'Steg, pass och all rörelse under dagen.',
+    kallor:[['Steg','6 240','Apple Hälsa'],['Promenad','20 min','Loggat 07:12'],['Trappor','8 våningar','Apple Hälsa']],
+    vecka:[40,55,62,70,48,80,62], insikt:'Din energi är högst de dagar du rör dig före lunch.',
+    uppdrag:[['10 min promenad efter lunch',20],['Ta trapporna idag',10],['20 min cykel',35]]},
+  styrka:{namn:'Styrka', om:'Styrketräning, hemmaträning och protein som bygger muskler.',
+    kallor:[['Styrkepass','2 av 3 denna vecka','Loggat'],['Protein','54 av 90 g','Mat'],['Senaste pass','Ben och rygg, 35 min','I tisdags']],
+    vecka:[30,30,70,65,60,58,55], insikt:'Styrka håller sig uppe när du kör minst två pass i veckan.',
+    uppdrag:[['15 min styrka hemma',30],['3 x 10 knäböj',15],['Proteinrik frukost',10]]},
+  lugn:{namn:'Lugn', om:'Sömn, vilopuls, HRV och hur du själv känner dig.',
+    kallor:[['Sömn','6 h 10 min','Apple Hälsa'],['Vilopuls','58 slag/min','Apple Watch'],['HRV','42 ms, lägre än vanligt','Apple Watch'],['Din incheckning','Lite stressad','I morse']],
+    vecka:[60,58,45,52,40,35,38], insikt:'Lugn sjunker de nätter du sover under 7 timmar. Ikväll kan vara ett bra tillfälle för en tidig kväll.',
+    uppdrag:[['10 min andning',20],['Promenad i dagsljus',20],['Skärmfritt efter kl. 21',25]], checkin:true},
+  naring:{namn:'Näring', om:'Protein, grönsaker, vatten och regelbundna måltider. Aldrig kalorier.',
+    kallor:[['Protein','54 av 90 g','Mat'],['Grönsaker','2 av 5 portioner','Mat'],['Vatten','4 av 8 glas','Mat'],['Måltider','2 av 3 idag','Mat']],
+    vecka:[65,72,70,60,75,68,70], insikt:'Du når proteinmålet oftare de dagar du äter frukost före kl. 09.',
+    uppdrag:[['Proteinrikt mellanmål',15],['Två glas vatten till lunch',10],['En näve grönt till middagen',10]], mat:true}};
+const DAGAR = ['mån','tis','ons','tor','fre','lör','sön'];
+function oppnaMatare(k){
+  const m = MATARE[k], v = Math.round(S.m[k]), r = 40, c = 2*Math.PI*r, d = c*v/100;
+  const status = v >= 70 ? 'Det här går bra' : v >= 45 ? 'Helt okej' : 'Lite lågt just nu';
+  $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>
+  <div class="arkhuvud"><svg width="100" height="100" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--glas-kant)" stroke-width="10"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--${k})" stroke-width="10" stroke-linecap="round" stroke-dasharray="${d.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 50 50)"/><text x="50" y="58" text-anchor="middle" fill="var(--pa-scen)" font-family="Bricolage Grotesque" font-weight="800" font-size="26">${v}</text></svg>
+    <div style="display:flex;flex-direction:column;gap:4px"><p class="rubrik-liten">${status}</p><h2 id="arkTitel" style="font-size:30px">${m.namn}</h2><p style="font-size:13px;line-height:18px;color:var(--pa-scen-d)">${m.om}</p></div>
+    <button class="stang" id="stang" aria-label="Stäng">×</button></div>
+  ${m.checkin ? `<div><p class="rubrik-liten" style="margin-bottom:8px">Hur mår du nu?</p><div class="kansla">${['Lugn','Okej','Lite stressad','Stressad','Trött'].map(t => `<button aria-pressed="${t==='Lite stressad'}" data-kansla="${t}">${t}</button>`).join('')}</div></div>` : ''}
+  <div class="insiktark" style="background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant)"><b>Form: steg ${formSteg()[k]} av 4.</b> ${formSteg()[k] >= 4 ? 'Full form. Håll i det!' : `Med jämn aktivitet tar ${S.namn} nästa steg om cirka ${Math.max(1, Math.round((Math.floor(S.form[k])+1 - S.form[k]) / 0.34))} veckor.`}</div>
+  <div><p class="rubrik-liten" style="margin-bottom:8px">Idag</p><div class="rader">${m.kallor.map(([a,b,c]) => `<div class="rad2"><span>${a}<small>${c}</small></span><b>${b}</b></div>`).join('')}</div></div>
+  <div><p class="rubrik-liten" style="margin-bottom:8px">Senaste veckan</p><div class="vecka">${m.vecka.map((x,i) => `<div class="${i===6?'idag':''}"><i style="height:${x}%;background:var(--${k})"></i><span>${i===6?'idag':DAGAR[i]}</span></div>`).join('')}</div></div>
+  <div class="insiktark"><b style="color:var(--mynt)">Fitchi har märkt:</b> ${m.insikt}</div>
+  <div><p class="rubrik-liten" style="margin-bottom:8px">Uppdrag som fyller ${m.namn.toLowerCase()}</p><div style="display:flex;flex-direction:column;gap:8px">${m.uppdrag.map(([t,p]) => `<div class="uppd"><div class="t"><b>${t}</b><small>+${p} mynt</small></div><button class="valj" data-valj="${t}">Välj</button></div>`).join('')}</div></div>
+  ${m.mat ? '<button class="knapp ljus" data-till="s-mat" id="tillMat">Logga mat</button>' : ''}`;
+  $('#ark').dataset.m = k; $('#slöja').classList.add('oppen'); $('#stang').focus();
+}
+function stangArk(){ $('#slöja').classList.remove('oppen'); }
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-matare]'); if(c){ oppnaMatare(c.dataset.matare); return; }
+  if(e.target.id==='slöja' || e.target.closest('#stang') || e.target.closest('#tillMat')) stangArk();
+  const v = e.target.closest('[data-valj]'); if(v){ const mt = $('#ark').dataset.m; let i = S.uppdrag.findIndex(u => u.m===mt && !u.klar); if(i<0) i = S.uppdrag.findIndex(u => !u.klar); if(i<0) i = 0; S.uppdrag[i] = {m:mt, t:v.dataset.valj, p:POANG[mt], varfor:'Du valde det själv', klar:false}; ritaUppdrag(i); stangArk();
+    const t = $('#toast4'); t.textContent = 'Uppdraget har lagts till i dagens tre'; t.classList.add('syns'); setTimeout(() => t.classList.remove('syns'), 1600); }
+  const k = e.target.closest('[data-kansla]'); if(k){ document.querySelectorAll('[data-kansla]').forEach(x => x.setAttribute('aria-pressed', x===k));
+    S.m.lugn = {'Lugn':72,'Okej':58,'Lite stressad':38,'Stressad':26,'Trött':34}[k.dataset.kansla]; ritaHem(); oppnaMatare('lugn'); }
+});
+document.addEventListener('keydown', e => { if(e.key==='Escape') stangArk(); });
+
+// Form över tid
+S.form = {styrka:1.2, energi:1.6, lugn:0.6, naring:1.4}; S.formTopp = {...S.form}; S.vecka = 0; S.paus = false; S.formNytt = null;
+const formSteg = () => Object.fromEntries(Object.entries(S.form).map(([k,v]) => [k, Math.max(0, Math.min(4, Math.floor(v)))]));
+function vecka(aktiv){
+  const fore = formSteg(); S.vecka++;
+  Object.keys(S.form).forEach(k => {
+    if(S.paus) return;
+    if(aktiv){ const minne = S.form[k] < S.formTopp[k]; S.form[k] = Math.min(4.2, S.form[k] + (minne ? 0.68 : 0.34)); }
+    else S.form[k] = Math.max(0, S.form[k] - 0.2);
+    S.formTopp[k] = Math.max(S.formTopp[k], S.form[k]);
+  });
+  const efter = formSteg(), upp = Object.keys(efter).filter(k => efter[k] > fore[k]), ner = Object.keys(efter).filter(k => efter[k] < fore[k]);
+  S.formNytt = upp.length ? {typ:'upp', m:upp} : ner.length ? {typ:'ner', m:ner} : null;
+  S.data.borta = aktiv ? 0 : Math.min(14, S.data.borta + 7);
+}
+const MNAMN = {styrka:'styrka',energi:'energi',lugn:'lugn',naring:'näring'};
+const UPPTEXT = {styrka:'muskler växer', energi:'spänst ökar', lugn:'sken blir starkare', naring:'päls glänser mer'};
+
+// Testpanel
+S.data = {steg:7200, somn:7.2, puls:58, hrv:48, pass:3, styrkepass:2, protein:54, vatten:4, gront:2, checkin:'okej', borta:0};
+const REG = [['steg','Steg idag',0,16000,100,v => v.toLocaleString('sv-SE')],['somn','Sömn i natt',3,10,0.1,v => String(v).replace('.',',')+' h'],['puls','Vilopuls',45,90,1,v => v+' bpm'],['hrv','HRV',15,90,1,v => v+' ms'],
+  ['pass','Pass i rad',0,7,1,v => v+' dagar'],['styrkepass','Styrka/vecka',0,5,1,v => v+' pass'],['protein','Protein idag',0,150,1,v => v+' g'],['vatten','Vatten',0,12,1,v => v+' glas'],['gront','Grönsaker',0,6,1,v => v+' port.'],['borta','Dagar borta',0,14,1,v => v+' d']];
+const CHECKIN = {lugn:12,okej:4,stressad:-12,trott:-6};
+const SCENARIER = [
+  ['Vanlig bra dag',{steg:8200,somn:7.4,puls:57,hrv:52,pass:2,styrkepass:2,protein:80,vatten:6,gront:3,checkin:'okej',borta:0}],
+  ['Sov 5 timmar',{steg:5200,somn:5,puls:66,hrv:30,pass:1,styrkepass:2,protein:50,vatten:3,gront:1,checkin:'trott',borta:0}],
+  ['Tränat hårt 3 dagar',{steg:12500,somn:6.8,puls:62,hrv:28,pass:3,styrkepass:4,protein:110,vatten:7,gront:3,checkin:'okej',borta:0}],
+  ['Stilla vecka',{steg:2400,somn:7.8,puls:68,hrv:40,pass:0,styrkepass:0,protein:45,vatten:3,gront:1,checkin:'okej',borta:0}],
+  ['Stressig period',{steg:6000,somn:6,puls:72,hrv:24,pass:1,styrkepass:1,protein:60,vatten:4,gront:2,checkin:'stressad',borta:0}],
+  ['Borta i 5 dagar',{steg:3000,somn:7,puls:63,hrv:42,pass:0,styrkepass:0,protein:50,vatten:4,gront:2,checkin:'okej',borta:5}]];
+const kl = v => Math.max(0, Math.min(100, Math.round(v)));
+function berakna(){
+  const d = S.data, mal = S.sit.has('glp1') ? 110 : 90;
+  S.m.energi = kl(d.steg/130 + d.pass*6);
+  S.m.styrka = kl(d.styrkepass*18 + Math.min(1, d.protein/mal)*30);
+  S.m.lugn = kl((d.somn-4)/4*45 + (d.hrv-15)/55*25 + (80-d.puls)/30*15 + CHECKIN[d.checkin]);
+  S.m.naring = kl(Math.min(1, d.protein/mal)*50 + Math.min(1, d.vatten/8)*25 + Math.min(1, d.gront/5)*25);
+  S.protein = d.protein; S.vatten = d.vatten; S.gront = d.gront;
+  S.vila = d.pass >= 3 && d.hrv < 35;
+}
+function ritaPanel(){
+  $('#reglage').innerHTML = REG.map(([k,t,mn,mx,st,f]) => `<label for="r-${k}">${t}</label><input type="range" id="r-${k}" data-reg="${k}" min="${mn}" max="${mx}" step="${st}" value="${S.data[k]}"><output id="o-${k}">${f(S.data[k])}</output>`).join('')
+    + `<label for="r-checkin">Incheckning</label><select id="r-checkin" data-reg="checkin">${[['lugn','Lugn'],['okej','Okej'],['stressad','Stressad'],['trott','Trött']].map(([v,t]) => `<option value="${v}" ${S.data.checkin===v?'selected':''}>${t}</option>`).join('')}</select>`;
+  ritaUtlas();
+}
+function ritaUtlas(){
+  $('#utlas').innerHTML = [['energi','energi'],['styrka','styrka'],['lugn','lugn'],['naring','näring']].map(([k,n]) => `<div><b style="color:var(--${k})">${S.m[k]}</b><span>${n}</span></div>`).join('');
+  const [mood, txt] = humor(); $('#utlasHumor').textContent = `Humör: ${mood}. "${txt}"`;
+  const f = formSteg();
+  $('#formrad').innerHTML = Object.keys(f).map(k => `<div class="frad"><span>${MNAMN[k]}</span><span class="prickar">${[0,1,2,3].map(i => `<i class="${i < f[k] ? 'p' : ''}${i < Math.floor(S.formTopp[k]) && i >= f[k] ? ' minne' : ''}"></i>`).join('')}</span><b>steg ${f[k]}</b></div>`).join('');
+  $('#formInfo').textContent = `Vecka ${S.vecka}. ${S.paus ? 'Pausläge på: formen är fryst.' : 'Ett steg upp tar ungefär 3 aktiva veckor, ett steg ner ungefär 5 inaktiva. Ljusa prickar är muskelminne: dit går det dubbelt så snabbt att komma tillbaka.'}`;
+}
+function uppdatera(nyaUppdrag){
+  berakna(); if(nyaUppdrag) { S.uppdrag = null; S.byten = 2; }
+  const aktiv = document.querySelector('.skarm.aktiv').id;
+  if(!['s-hem','s-mat','s-vanner','s-butik'].includes(aktiv)) visa('s-hem'); else if(aktiv==='s-hem') ritaHem(); else if(aktiv==='s-mat') ritaMat();
+  ritaUtlas();
+}
+$('#scenarier').innerHTML = SCENARIER.map(([t],i) => `<button data-scen="${i}">${t}</button>`).join('');
+document.addEventListener('click', e => { const b = e.target.closest('[data-scen]'); if(!b) return;
+  Object.assign(S.data, SCENARIER[+b.dataset.scen][1]); document.querySelectorAll('[data-scen]').forEach(x => x.classList.toggle('aktivscen', x===b));
+  ritaPanel(); uppdatera(true); });
+document.addEventListener('input', e => { const r = e.target.closest('[data-reg]'); if(!r) return;
+  const k = r.dataset.reg; S.data[k] = k==='checkin' ? r.value : +r.value;
+  const def = REG.find(x => x[0]===k); if(def) $('#o-'+k).textContent = def[5](S.data[k]);
+  document.querySelectorAll('[data-scen]').forEach(x => x.classList.remove('aktivscen'));
+  uppdatera(['borta','pass','hrv'].includes(k)); });
+const veckoKlick = (n, aktiv) => { for(let i=0;i<n;i++) vecka(aktiv); uppdatera(true); ritaPanel(); };
+$('#veckaAktiv').onclick = () => veckoKlick(1, true);
+$('#veckaInaktiv').onclick = () => veckoKlick(1, false);
+$('#manadAktiv').onclick = () => veckoKlick(4, true);
+$('#paus').onclick = e => { S.paus = !S.paus; e.target.textContent = `Pausläge: ${S.paus ? 'på' : 'av'}`; e.target.classList.toggle('aktivscen', S.paus); ritaUtlas(); };
+$('#nyDag').onclick = () => { S.data.borta = 0; uppdatera(true); ritaPanel(); const t = $('#toast4'); t.textContent = 'Ny dag: tre nya uppdrag och två nya byten'; t.classList.add('syns'); setTimeout(() => t.classList.remove('syns'), 1800); };
+berakna(); ritaPanel();
+
+// Butik
+function ritaButik(){ $('#saldo2').textContent = fmt(S.saldo); $('#butikOrkis').innerHTML = ork('pigg', 88); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-kop]'); if(!b) return;
+  const p = +b.dataset.kop, toast = $('#toast');
+  if(S.saldo < p){ toast.textContent = `Du behöver ${fmt(p - S.saldo)} mynt till. Ett pass till så är du nära.`; }
+  else { S.saldo -= p; ritaButik(); toast.textContent = `${b.dataset.namn} är din.`; }
+  toast.classList.add('syns'); setTimeout(() => toast.classList.remove('syns'), 2200); });
+// ===== Glöd, ritualer och nivåresa =====
+S.glod = 60; S.sover = false; S.morgonKlar = true; S.senastNiva = S.niva; S.kristaller = 0;
+const STADIER = [[1,'Gnista'],[10,'Glöd'],[25,'Låga'],[40,'Legend']];
+const stadium = n => STADIER.filter(([f]) => n >= f).at(-1)[1];
+const stKlass = n => 'st-' + ({Gnista:'gnista','Glöd':'glod','Låga':'laga',Legend:'legend'})[stadium(n)];
+const NIVABEL = [[2,'Första prylen och veckans kista','första prylen'],[3,'Minispel: leka med din fitchi','minispelet'],[5,'Vänner: peppa och se varandras fitchis','vänner'],[7,'Expeditioner och nytt beteende: dansen','dansen'],[10,'Elementet växer: mer eld, vind, vatten, månsken eller kristaller','starkare element'],[12,'Lag och lagutmaningar','lag'],[15,'Andra fitchi-platsen: adoptera en till','en fitchi till'],[20,'Hemlig fitchi och nytt beteende: tricket','tricket'],[25,'Elementet växer igen och ett sällsynt skin','sällsynt skin'],[30,'Bättre förmåner hos partners','bättre förmåner'],[40,'Legendskin: aura och strålande diamant','legendskin'],[50,'Ny säsong: legendmärkning och säsongsskin','ny säsong']];
+const FYND = ['en ametistkristall','en liten solhatt','15 mynt','en glittrande sten','en fjäder','en kristallsplitter','30 mynt'];
+function toastG(txt, ms){ const t = $('#toast3'); t.textContent = txt; t.classList.add('syns'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('syns'), ms||1900); }
+function andraGlod(d, txt){
+  const fore = S.glod; S.glod = Math.max(0, Math.min(100, S.glod + d));
+  if(fore <= 0 && S.glod > 0) S.sover = false;
+  ritaGlod(); if(txt) toastG(`${txt}${d>0?` Glöd +${Math.round(S.glod-fore)}`:''}`);
+}
+function ritaGlod(){
+  if(!$('#glodrad')) return;
+  const g = Math.round(S.glod), rad = $('#glodrad'); $('#glodbar').style.width = g + '%'; $('#glodtal').textContent = g;
+  rad.setAttribute('aria-valuenow', g); rad.classList.toggle('lag', g < 30);
+  const sc = $('#djurscen'); sc.className = 'djurscen varld ' + stKlass(S.niva) + (S.glod <= 0 ? ' kristall' : S.sover ? ' sover' : '');
+  const k = S.glod/100; $('#hemOrkis').style.filter = S.glod > 0 ? `saturate(${(0.45+0.55*k).toFixed(2)}) brightness(${(0.72+0.28*k).toFixed(2)})` : '';
+  $('#omsorg').hidden = S.glod <= 0; $('#vack').hidden = S.glod > 0;
+  document.querySelectorAll('[data-oms]').forEach(b => b.disabled = S.sover && b.dataset.oms !== 'leka');
+}
+const _humor = humor;
+humor = function(){ if(S.glod <= 0) return ['lugn', `${S.namn} vilar i sin kristall`]; if(S.sover) return ['lugn', `${S.namn} sover gott`]; const r = _humor(); if(S.glod < 30) return [r[0], `${S.namn}s glöd är låg`]; return r; };
+const _ritaHem = ritaHem;
+ritaHem = function(){
+  _ritaHem();
+  $('#niva').textContent = `Nivå ${S.niva}`;
+  const nasta = NIVABEL.find(([n]) => n > S.niva);
+  $('#xptext').textContent = `${100-S.xp} % till nivå ${S.niva+1}` + (nasta ? ` · ${nasta[2]} på nivå ${nasta[0]}` : '');
+  ritaGlod();
+  if(S.niva > S.senastNiva){ const fran = S.senastNiva; S.senastNiva = S.niva; setTimeout(() => visaNivaUpp(fran), 350); }
+  else if(!S.morgonKlar && S.glod > 0) setTimeout(visaMorgon, 350);
+};
+function oppnaArk(html){ $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>${html}`; $('#slöja').classList.add('oppen'); }
+function arkHuvud(over, titel, text){ return `<div class="arkhuvud"><div style="display:flex;flex-direction:column;gap:4px"><p class="rubrik-liten">${over}</p><h2 id="arkTitel" style="font-size:28px">${titel}</h2>${text?`<p style="font-size:14px;line-height:20px;color:var(--pa-scen-d)">${text}</p>`:''}</div><button class="stang" id="stang" aria-label="Stäng">×</button></div>`; }
+function visaMorgon(){
+  if($('#slöja').classList.contains('oppen')) return;
+  oppnaArk(arkHuvud('God morgon', `${S.namn} vaknar`, 'Hur sov du i natt? Det avgör hur dagens uppdrag ser ut.')
+    + `<div class="arkfitchi">${ork('pigg', 120)}</div><div class="valrad"><button data-sov="bra">Bra<small>utvilad</small></button><button data-sov="okej">Okej<small>lagom</small></button><button data-sov="daligt">Dåligt<small>trött</small></button></div>`);
+}
+function visaNatta(){
+  oppnaArk(arkHuvud('Kvällsritual', `Natta ${S.namn}`, `${S.namn} har haft en bra dag. Kanske är det dags för dig också? 7–9 timmars sömn gör mest för din glöd i morgon.`)
+    + `<div class="arkfitchi">${ork('lugn', 120)}</div><button class="knapp" data-godnatt>God natt, ${S.namn}</button>`);
+}
+function visaNivaUpp(fran){
+  const nya = NIVABEL.filter(([n]) => n > fran && n <= S.niva), byte = stKlass(fran) !== stKlass(S.niva);
+  oppnaArk(arkHuvud('Ny nivå', `Nivå ${S.niva}!`, byte ? `${S.namn}s element växer och lyser starkare.` : `${S.namn} blev lite starkare.`)
+    + `<div class="arkfitchi djurscen ${stKlass(S.niva)}" style="min-height:150px">${ork('stark', 120)}</div>`
+    + (nya.length ? nya.map(([n,t]) => `<div class="upplast"><span class="rubrik-liten">Upplåst på nivå ${n}</span><b>${t}</b></div>`).join('') : `<div class="upplast"><span class="rubrik-liten">Belöning</span><b>+${50 + S.niva*5} mynt</b></div>`)
+    + `<button class="knapp" data-stang-ark>Fortsätt</button>`);
+  S.saldo += 50 + S.niva*5; $('#saldo').textContent = fmt(S.saldo);
+}
+function visaResa(){
+  let html = '';
+  NIVABEL.forEach(([n,t]) => {
+    const klar = n <= S.niva, nasta = !klar && NIVABEL.find(([m]) => m > S.niva)[0] === n;
+    html += `<div class="resarad ${klar?'klar':nasta?'nasta':'last'}"><b>Nivå ${n}</b><span>${t}</span><i>${klar?'✓':nasta?'Nästa':''}</i></div>`; });
+  oppnaArk(arkHuvud('Din resa', `${S.namn}, nivå ${S.niva}`, `Nivåer går aldrig förlorade. Varje nivå ger mynt, och nya nivåer låser upp beteenden, ett starkare element och prylar.`)
+    + `<div class="rader">${html}</div>`);
+}
+document.addEventListener('click', e => {
+  if(e.target.closest('[data-resa]')){ visaResa(); return; }
+  const sv = e.target.closest('[data-sov]');
+  if(sv){ const v = sv.dataset.sov; S.morgonKlar = true; S.sover = false;
+    S.data.checkin = {bra:'lugn', okej:'okej', daligt:'trott'}[v]; if(v==='daligt') S.data.somn = Math.min(S.data.somn, 5.5); if(v==='bra') S.data.somn = Math.max(S.data.somn, 7.5);
+    stangArk(); uppdatera(false); andraGlod(15, `${S.namn} vaknade.`); return; }
+  if(e.target.closest('[data-godnatt]')){ stangArk(); S.sover = true; andraGlod(15, `Sov gott. ${S.namn} vaknar när du gör det.`); ritaHem(); return; }
+  if(e.target.closest('[data-stang-ark]')){ stangArk(); if(!S.morgonKlar) setTimeout(visaMorgon, 300); return; }
+  const o = e.target.closest('[data-oms]');
+  if(o){ const k = o.dataset.oms;
+    if(k==='leka'){ klappa(); andraGlod(5, `Ni lekte en stund.`); }
+    if(k==='mata') visa('s-mat');
+    if(k==='natta') visaNatta(); return; }
+  if(e.target.closest('#vack')){ S.glod = 0; andraGlod(30, `${S.namn} vaknade ur kristallen! Inget har gått förlorat.`); S.sover = false; ritaHem(); klappa(); return; }
+  if(e.target.closest('[data-klar]')) setTimeout(() => andraGlod(5), 50);
+});
+document.addEventListener('click', e => { if(e.target.closest('#hemOrkis') && S.glod > 0) andraGlod(2); }, true);
+$('#snabb').addEventListener('click', e => { if(e.target.closest('[data-snabb]')) andraGlod(10, `Du matade ${S.namn}.`); });
+const _spara = $('#spara').onclick;
+$('#spara').onclick = () => { _spara(); const g = Math.min(25, 5 + Math.round(S.min/2)); S.glod = Math.min(100, S.glod + g);
+  let fynd = ''; if(Math.random() < .55){ fynd = FYND[Math.floor(Math.random()*FYND.length)]; S.kristaller++; }
+  $('#vinster').innerHTML += `<span class="piller glas">Glöd +${g}</span>` + (fynd ? `<span class="piller glas" style="box-shadow:inset 0 0 0 1.5px var(--lime)">Fynd: ${fynd}</span>` : '');
+  if(fynd) $('#belonText').textContent += ` På vägen hittade ${S.namn} ${fynd}!`; };
+// testpanel
+const _nyDag = $('#nyDag').onclick;
+$('#nyDag').onclick = () => { S.glod = Math.max(0, S.glod - 45); S.sover = false; S.morgonKlar = S.glod <= 0; _nyDag(); };
+$('#tvaDagar').onclick = () => { S.glod = Math.max(0, S.glod - 90); S.sover = false; S.morgonKlar = S.glod <= 0; uppdatera(true); ritaPanel(); toastG(S.glod <= 0 ? `${S.namn} har somnat in i sin kristall. Väck den när du vill.` : `${S.namn}s glöd har sjunkit.`, 2400); };
+const nivaTill = n => { S.niva = n; S.xp = 80; if(n < S.senastNiva) S.senastNiva = n; visa('s-hem'); ritaHem(); };
+$('#nivaPlus').onclick = () => { S.niva++; visa('s-hem'); ritaHem(); };
+$('#niva9').onclick = () => { S.senastNiva = 9; nivaTill(9); };
+$('#niva24').onclick = () => { S.senastNiva = 24; nivaTill(24); };
+$('#niva39').onclick = () => { S.senastNiva = 39; nivaTill(39); };
+$('#glod0').onclick = () => { S.glod = 0; visa('s-hem'); ritaHem(); };
+$('#glod100').onclick = () => { S.glod = 100; S.sover = false; visa('s-hem'); ritaHem(); };
+document.addEventListener('click', e => { const b = e.target.closest('[data-scen]'); if(b && SCENARIER[+b.dataset.scen][1].borta >= 3){ S.glod = 0; ritaHem(); } });
+
+// ===== Fri rörelse: fitchin lever i sin värld =====
+const V = {x:null, timer:null, anim:null, upptagen:false};
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const varldBredd = () => $('#djurscen').clientWidth;
+function satt(x){ V.x = x; $('#vandrare').style.transform = `translateX(${x.toFixed(1)}px)`; }
+function pose(p){ const el = $('#hemOrkis'); if(el.dataset.pose === p) return; el.dataset.pose = p; el.innerHTML = ork(p, 150); }
+function baspose(){ return humor()[0]; }
+function vilopose(){ const m = baspose(); return m === 'pigg' ? 'neutral' : m; }
+const _pose0 = pose; pose = p => { const el = $('#hemOrkis'); if(el.dataset.pose === p && el.dataset.sov === String(S.sover||S.glod<=0)) return; el.dataset.sov = String(S.sover||S.glod<=0); el.dataset.pose = p; el.innerHTML = ork(p, 150); };
+function kanRora(){ return false && !RM && S.glod > 0 && !S.sover && !reagerar && $('#s-hem').classList.contains('aktiv') && !$('#slöja').classList.contains('oppen'); }
+function ga(mal, klar){
+  const w = $('#vandrare'), fran = V.x, d = mal - fran; if(Math.abs(d) < 4){ klar && klar(); return; }
+  const lugn = ['lugn','trott'].includes(baspose()), fart = lugn ? 45 : (baspose()==='pigg' ? 95 : 70);
+  $('#vand').classList.toggle('vanster', d < 0);
+  w.classList.add('gar'); w.classList.toggle('lugnt', lugn); $('#hemOrkis').classList.remove('studs');
+  pose(baspose()==='stark' ? 'stark' : 'neutral');
+  const t0 = performance.now(), T = Math.abs(d) / fart * 1000;
+  cancelAnimationFrame(V.anim);
+  const steg = now => { const k = Math.min(1, (now - t0) / T), e = k < .5 ? 2*k*k : 1 - Math.pow(-2*k+2, 2)/2; satt(fran + d*e);
+    if(k < 1) V.anim = requestAnimationFrame(steg); else { w.classList.remove('gar','lugnt'); $('#hemOrkis').classList.add('studs'); pose(vilopose()); klar && klar(); } };
+  V.anim = requestAnimationFrame(steg);
+}
+function gor(klass, ms, p, klar){ const w = $('#vandrare'); if(p) pose(p); $('#hemOrkis').classList.remove('studs'); w.classList.remove(klass); void w.offsetWidth; w.classList.add(klass);
+  setTimeout(() => { w.classList.remove(klass); $('#hemOrkis').classList.add('studs'); pose(vilopose()); klar && klar(); }, ms); }
+function nasta(ms){ clearTimeout(V.timer); V.timer = setTimeout(tanka, ms); }
+function tanka(){
+  if(!kanRora()){ nasta(1200); return; }
+  const W = varldBredd() - 150, m = baspose(), r = Math.random();
+  const mal = () => 10 + Math.random() * (W - 20);
+  if(m === 'trott'){ r < .25 ? ga(mal(), () => nasta(5000)) : (pose('trott'), nasta(4000)); return; }
+  if(m === 'lugn'){ r < .3 ? ga(mal(), () => nasta(4500)) : r < .5 ? gor('titta', 1600, 'lugn', () => nasta(3500)) : (pose('lugn'), nasta(4000)); return; }
+  if(r < .45) ga(mal(), () => nasta(1400 + Math.random()*1600));
+  else if(r < .62) gor('hopp', 700, 'pigg', () => nasta(1800));
+  else if(r < .78) gor('titta', 1600, null, () => nasta(1500));
+  else if(r < .9 && m === 'stark') gor('hopp', 700, 'stark', () => nasta(2000));
+  else { pose(Math.random() < .35 ? m : vilopose()); nasta(2200 + Math.random()*2000); }
+}
+// tryck i världen: fitchin kommer springande
+$('#djurscen').addEventListener('click', e => {
+  if(e.target.closest('#hemOrkis') || !kanRora()) return;
+  const r = $('#djurscen').getBoundingClientRect(), x = Math.max(0, Math.min(varldBredd() - 150, e.clientX - r.left - 75));
+  clearTimeout(V.timer); ga(x, () => gor('hopp', 700, 'pigg', () => nasta(2500)));
+});
+// starta när hemskärmen visas
+const _ritaHem2 = ritaHem;
+ritaHem = function(){ _ritaHem2(); const el = $('#hemOrkis'); el.dataset.pose = humor()[0];
+  satt((varldBredd() - 150) / 2); $('#vand').classList.remove('vanster');
+  if(!kanRora()) $('#vandrare').classList.remove('gar'); nasta(1500); };
+
+// ===== 3D-fitchis =====
+const F3D = {};
+for(const k of ['bjorn','hare','uggla','utter','katt']) F3D[k] = `img/${k}.webp`;
+const F3DP = {bjorn:Object.fromEntries(['neutral','pigg','stark','lugn','trott','sover'].map(k => [k, `img/bruno/${k}.webp`]))};
+ork = (mood, w) => { if(typeof posFor === 'function') mood = posFor(mood); const sov = (S.sover || S.glod <= 0) && w >= 120, key = sov ? 'sover' : mood, p = F3DP[S.art] || {}, src = p[key] || p[mood==='pigg' && !p.pigg ? 'neutral' : mood] || F3D[S.art];
+  const kl = (['neutral','pigg','stark','lugn','trott'].includes(key) && p[key]) ? ' vid' : key==='sover' && p.sover ? ' liggande' : '';
+  const SK = {neutral:922, pigg:920, stark:933, trott:893, lugn:823}, hp = kl===' vid' && SK[key] ? Math.round(SK[key]/935*100) : 100;
+  return `<span class="f3d orkis humor-${mood}${kl}" style="width:${w}px;height:${Math.round(w*200/170)}px"><img src="${src}" alt="" draggable="false" style="${hp<100?`height:${hp}%;top:auto;bottom:0`:''}"></span>`; };
+levande = (art, mood, attrs) => `<image href="${F3D[art]}" ${attrs} preserveAspectRatio="xMidYMax meet"/>`;
+for(const k of Object.keys(SVG)){ const art = k.split('-')[0]; if(F3D[art]) Object.defineProperty(SVG, k, {get: () => `<image href="${F3D[art]}" x="0" y="0" width="170" height="200" preserveAspectRatio="xMidYMax meet"/>`}); }
+
+
+// ===== Webbapp: sparas i telefonen, riktig tid =====
+const LAGER = 'fitchi-v1';
+const TEST = new URLSearchParams(location.search).has('test');
+if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
+document.body.classList.toggle('testlage', TEST);
+const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag'];
+function spara(){
+  if(!S.klar) return;
+  const o = {v:1, sist:Date.now(), dag:S.dag, klar:true, sit:[...S.sit],
+    pref:Object.fromEntries(Object.entries(S.pref).map(([k,v]) => [k, v instanceof Set ? {set:[...v]} : v])), data:S.data};
+  for(const k of SPARA) o[k] = S[k];
+  try{ localStorage.setItem(LAGER, JSON.stringify(o)); }catch(e){}
+}
+function ladda(){
+  let o = null; try{ o = JSON.parse(localStorage.getItem(LAGER) || 'null'); }catch(e){}
+  if(!o || !o.klar) return false;
+  for(const k of SPARA) if(o[k] !== undefined) S[k] = o[k];
+  S.sit = new Set(o.sit || []); S.data = Object.assign(S.data, o.data || {});
+  for(const [k,v] of Object.entries(o.pref || {})) S.pref[k] = v && v.set ? new Set(v.set) : v;
+  S.klar = true; S.dag = o.dag;
+  // tiden som gått: glöden sjunker ungefär 50 per dygn
+  const timmar = Math.max(0, (Date.now() - o.sist) / 36e5);
+  S.glod = Math.max(0, S.glod - timmar * 50/24);
+  const idag = dagNr(new Date()), dagar = Math.max(0, idag - (o.dag ?? idag));
+  S.data.borta = dagar >= 3 ? dagar : 0;
+  if(dagar > 0) nyRiktigDag(dagar);
+  return true;
+}
+function nyRiktigDag(dagar){
+  S.dag = dagNr(new Date());
+  S.uppdrag = null; S.byten = 2; S.protein = 0; S.vatten = 0; S.gront = 0;
+  for(const k of ['energi','styrka','lugn','naring']) for(let i=0;i<Math.min(dagar,5);i++) S.m[k] = Math.round(S.m[k]*0.8 + 10);
+  S.data.somn = 7; S.data.checkin = 'okej'; S.vila = false;
+  S.morgonKlar = S.glod <= 0;   // väcks ur kristallen först
+  S.sover = false;
+}
+// mätarna styrs av vad du gör, inte av testpanelen
+berakna = function(){ S.vila = false; };
+document.addEventListener('click', e => {
+  const sv = e.target.closest('[data-sov]'); if(!sv) return;
+  const d = {bra:18, okej:5, daligt:-18}[sv.dataset.sov]; S.m.lugn = Math.max(0, Math.min(100, S.m.lugn + d));
+  if(sv.dataset.sov === 'daligt') S.m.energi = Math.max(0, S.m.energi - 10);
+  setTimeout(() => { ritaHem(); spara(); }, 60);
+}, true);
+// första gången: onboarding. Därefter: rakt hem.
+document.getElementById('borja').addEventListener('click', () => { S.klar = true; S.dag = dagNr(new Date()); S.morgonKlar = true; S.glod = 70; setTimeout(spara, 100); });
+// spara efter varje tryck och när appen stängs
+let sparT; document.addEventListener('click', () => { clearTimeout(sparT); sparT = setTimeout(spara, 400); });
+document.addEventListener('visibilitychange', () => { if(document.hidden) spara(); else if(S.klar){ const idag = dagNr(new Date()); if(idag !== S.dag){ nyRiktigDag(idag - S.dag); ritaHem(); } } });
+addEventListener('pagehide', spara);
+// start
+if(ladda()){ document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn); visa('s-hem'); }
+else { S.m = {energi:62, styrka:55, lugn:60, naring:55}; S.data.somn = 7.4; S.data.steg = 7000; }
+// installera som app
+if('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+
+</script>
+</body>
+</html>
