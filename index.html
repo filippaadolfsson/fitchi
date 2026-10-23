@@ -1351,7 +1351,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag'];
 function spara(){
   if(!S.klar) return;
   loggaDag();
@@ -1688,6 +1688,188 @@ visaArt = function(forsta){
   $('#klackKraft').innerHTML = `${a.kraft}<br><span class="matchvarfor">${matchVarfor(S.art)}</span>`;
   $('#namn').placeholder = `Behåll ${a.forslag} eller ge ett eget namn`;
 };
+
+// ===== Kistan, prylar och andningsspelet =====
+const PRYLAR = {
+  kettlebell:{namn:'Kettlebell', s:'vanlig', e:'🏋️'}, yogamatta:{namn:'Yogamatta', s:'vanlig', e:'🧘'}, vattenflaska:{namn:'Vattenflaska', s:'vanlig', e:'💧'},
+  banan:{namn:'Banan', s:'vanlig', e:'🍌'}, handduk:{namn:'Handduk', s:'vanlig', e:'🧺'},
+  pokal:{namn:'Pokal', s:'ovanlig', e:'🏆'}, loparskor:{namn:'Löparskor', s:'ovanlig', e:'👟'}, badboll:{namn:'Badboll', s:'ovanlig', e:'🏐'}, radio:{namn:'Radio', s:'ovanlig', e:'📻'},
+  diamant:{namn:'Diamant', s:'sallsynt', e:'💎'}, foljeslagare:{namn:'Snigeln Sixten', s:'sallsynt', e:'🐌'}};
+const SALLNAMN = {vanlig:'Vanlig', ovanlig:'Ovanlig', sallsynt:'Sällsynt'};
+const PRYLBILD = ["badboll", "banan", "diamant", "foljeslagare", "handduk", "kettlebell", "loparskor", "pokal", "radio", "vattenflaska", "yogamatta"];
+const prylHtml = (id, h) => PRYLBILD.includes(id) ? `<img src="img/prylar/${id}.webp" alt="${PRYLAR[id].namn}" style="height:${h}px;width:auto;display:block">`
+  : `<span class="prylplats" style="width:${h}px;height:${h}px;font-size:${Math.round(h*.55)}px" role="img" aria-label="${PRYLAR[id].namn}">${PRYLAR[id].e}</span>`;
+{
+  const st = document.createElement('style'); st.textContent = `
+  .prylplats{display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle,#ffffff22,#ffffff08 70%)}
+  .hempryl{position:absolute;bottom:8px;left:calc(50% + 80px);z-index:2;appearance:none;border:0;background:none;padding:0;cursor:pointer;filter:drop-shadow(0 6px 6px #0006);transition:opacity .6s,filter .6s;animation:prylIn .5s cubic-bezier(.2,1.4,.4,1)}
+  .hempryl.sallsynt{animation:prylIn .5s cubic-bezier(.2,1.4,.4,1),sväva 3s ease-in-out .5s infinite}
+  .djurscen.sover .hempryl{filter:brightness(.55) saturate(.6)}
+  @keyframes prylIn{from{transform:scale(.2);opacity:0}}
+  @keyframes sväva{50%{transform:translateY(-6px)}}
+  .kistknapp{display:inline-flex;align-items:center;gap:5px}
+  .kistknapp svg{width:16px;height:16px}
+  .nycklar{display:flex;gap:6px;justify-content:space-between}
+  .nycklar div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--pa-scen-d)}
+  .nycklar i{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);font-style:normal;font-size:14px}
+  .nycklar i.har{background:#c8f169;box-shadow:none}
+  .nycklar .idag span{color:var(--pa-scen);font-weight:700}
+  .kistbild{display:flex;justify-content:center;padding:6px 0}
+  .kistbild.skakar svg{animation:kistSkak .5s ease-in-out 2}
+  @keyframes kistSkak{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+  .kistbild svg .lock{transition:transform .6s cubic-bezier(.3,1.4,.5,1);transform-origin:20px 52px}
+  .kistbild.oppen svg .lock{transform:rotate(-28deg) translate(-4px,-10px)}
+  .vinst{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;animation:prylIn .5s cubic-bezier(.2,1.4,.4,1)}
+  .prylgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .prylgrid button{appearance:none;border:0;border-radius:18px;padding:10px 6px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);display:flex;flex-direction:column;align-items:center;gap:4px;font:600 12px var(--text);cursor:pointer}
+  .prylgrid button[aria-pressed=true]{box-shadow:inset 0 0 0 2px #c8f169;background:#c8f1691a}
+  .prylgrid button.last{opacity:.35;cursor:default}
+  .prylgrid small{font-weight:500;font-size:10px;color:var(--pa-scen-d)}
+  .andas{display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 0 4px;text-align:center}
+  .andas .boll{position:relative;width:240px;height:240px;display:flex;align-items:flex-end;justify-content:center}
+  .andas .ring{position:absolute;inset:20px;border-radius:50%;background:radial-gradient(circle,#b48be044,#b48be000 70%);box-shadow:0 0 0 2px #d9b8f055;transform:scale(.7);transition:transform 4s ease-in-out}
+  .andas .fig{position:relative;height:210px;transform:scale(.9);transform-origin:50% 100%;transition:transform 4s ease-in-out}
+  .andas .fig img{height:100%;width:auto}
+  .andas.in .ring{transform:scale(1.05)} .andas.in .fig{transform:scale(1.04)}
+  .andas.ut .ring,.andas.ut .fig{transition-duration:6s}
+  .andas .fas{font:800 26px var(--display)}
+  .andas .rakn{font-size:13px;color:var(--pa-scen-d)}`;
+  document.head.appendChild(st);
+}
+// --- veckor och nycklar
+const veckoStart = d => d - ((new Date((d) * 864e5).getUTCDay() + 6) % 7);   // måndag
+function kistaNu(){
+  const idag = dagNr(new Date()), v = veckoStart(idag);
+  S.kista = S.kista || {vecka:v, dagar:[], oppnad:false};
+  if(S.kista.vecka !== v){
+    const gammal = S.kista;
+    S.kista = {vecka:v, dagar:[], oppnad:false, vantar: (!gammal.oppnad && gammal.dagar.length) ? gammal.dagar.length : (gammal.vantar || 0)};
+  }
+  return S.kista;
+}
+function nyckelIdag(){
+  const k = kistaNu(), idag = dagNr(new Date());
+  if(k.dagar.includes(idag)) return;
+  k.dagar.push(idag); spara(); ritaKistknapp();
+  setTimeout(() => toastG(`Nyckel till veckans kista! ${k.dagar.length} av 7`, 2400), 2200);
+}
+const kistNiva = n => n >= 5 ? 'guld' : n >= 3 ? 'silver' : 'tra';
+const KISTNAMN = {tra:'Träkista', silver:'Silverkista', guld:'Guldkista'};
+const KISTFARG = {tra:['#b0743e','#8a5a2f'], silver:['#d6dbe6','#9aa3b5'], guld:['#ffd36b','#d9a23a']};
+const kistSvg = (niva, w) => { const [a, b] = KISTFARG[niva]; return `<svg viewBox="0 0 120 100" width="${w}" height="${w*100/120}" aria-hidden="true">
+  <rect x="14" y="44" width="92" height="50" rx="10" fill="${b}"/><rect x="14" y="44" width="92" height="12" fill="#00000022"/>
+  <g class="lock"><path d="M14 46 Q14 14 60 14 Q106 14 106 46 Z" fill="${a}"/><rect x="14" y="40" width="92" height="8" rx="3" fill="${b}"/></g>
+  <rect x="52" y="44" width="16" height="22" rx="4" fill="#1e1230"/><path d="M60 48 L66 55 L60 64 L54 55 Z" fill="#c8f169"/></svg>`; };
+const nyckelSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="8" cy="8" r="4.5"/><path d="M11.2 11.2L20 20M16 16l2.5-2.5M18.5 18.5l2-2"/></svg>';
+function ritaKistknapp(){
+  const k = kistaNu(); let b = document.getElementById('kistknapp');
+  if(!b){ b = document.createElement('button'); b.id = 'kistknapp'; b.className = 'piller glas kistknapp'; b.setAttribute('aria-label', 'Veckans kista');
+    document.querySelector('#s-hem .horn .saldo').before(b); }
+  const kan = k.vantar || (new Date().getDay() === 0 && k.dagar.length && !k.oppnad);
+  b.innerHTML = `${nyckelSvg}<span>${kan ? 'Öppna!' : k.dagar.length + '/7'}</span>`;
+  b.style.boxShadow = kan ? 'inset 0 0 0 2px #c8f169' : '';
+}
+function visaKista(){
+  const k = kistaNu(), idag = dagNr(new Date()), dagnamn = ['mån','tis','ons','tor','fre','lör','sön'];
+  const vantar = k.vantar, sondag = new Date().getDay() === 0, kan = vantar || (sondag && k.dagar.length && !k.oppnad) || (TEST && k.dagar.length && !k.oppnad);
+  const n = vantar || k.dagar.length, niva = kistNiva(n);
+  oppnaArk(arkHuvud('Veckans kista', KISTNAMN[niva], vantar ? 'Förra veckans kista väntar på dig.' : 'Gör minst ett uppdrag eller pass om dagen så får kistan en nyckel. Fler nycklar ger en bättre kista. Den öppnas på söndag.')
+    + `<div class="kistbild" id="kistbild">${kistSvg(niva, 150)}</div>
+    ${vantar ? '' : `<div class="nycklar">${dagnamn.map((d, i) => { const dag = k.vecka + i; return `<div class="${dag===idag?'idag':''}"><i class="${k.dagar.includes(dag)?'har':''}">${k.dagar.includes(dag)?'🗝️':''}</i><span>${dag===idag?'idag':d}</span></div>`; }).join('')}</div>`}
+    <p class="liten" style="color:var(--pa-scen-d);text-align:center">1–2 nycklar: träkista med mynt · 3–4: silver, chans på pryl · 5–7: guld, säker pryl och chans på något sällsynt</p>
+    <div id="kistvinst"></div>
+    ${kan ? `<button class="knapp ljus" id="oppnaKista">Öppna kistan</button>` : `<button class="knapp sek" data-stang-ark>${k.oppnad ? 'Öppnad. Ny kista på måndag' : 'Stäng'}</button>`}`);
+}
+function slumpPryl(sallsynt){
+  const har = new Set(S.prylar || []); const lista = s => Object.keys(PRYLAR).filter(id => PRYLAR[id].s === s && !har.has(id));
+  if(sallsynt && lista('sallsynt').length) return lista('sallsynt')[Math.floor(Math.random()*lista('sallsynt').length)];
+  const pool = Math.random() < .35 && lista('ovanlig').length ? lista('ovanlig') : lista('vanlig').length ? lista('vanlig') : lista('ovanlig');
+  return pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
+}
+function fapryl(id){ if(!id) return; S.prylar = [...new Set([...(S.prylar || []), id])]; if(!S.framme) S.framme = id; }
+function oppnaKista(){
+  const k = kistaNu(), n = k.vantar || k.dagar.length, niva = kistNiva(n);
+  let mynt = {tra:40, silver:80, guld:150}[niva], pryl = null;
+  if(niva === 'guld') pryl = slumpPryl(Math.random() < .25);
+  if(niva === 'silver' && Math.random() < .4) pryl = slumpPryl(false);
+  if(!pryl && niva === 'guld') mynt += 100;
+  if(k.vantar) k.vantar = 0; else k.oppnad = true;
+  S.saldo += mynt; fapryl(pryl); spara();
+  const kb = $('#kistbild'); kb.classList.add('skakar');
+  setTimeout(() => { kb.classList.remove('skakar'); kb.classList.add('oppen');
+    $('#kistvinst').innerHTML = `<div class="vinst">${pryl ? prylHtml(pryl, 90) : ''}<b style="font:800 20px var(--display)">${pryl ? PRYLAR[pryl].namn + ' till ' + S.namn + '!' : 'Mynt!'}</b><span>+${mynt} mynt${pryl ? ' · ' + SALLNAMN[PRYLAR[pryl].s] : ''}</span></div>`;
+    $('#oppnaKista').outerHTML = `<button class="knapp ljus" data-stang-ark>${pryl ? 'Ställ fram den' : 'Toppen'}</button>`;
+    if(pryl) S.framme = pryl; ritaHem(); ritaKistknapp(); spara(); }, 1100);
+}
+// --- prylen bredvid fitchin
+function ritaPryl(){
+  const sc = document.getElementById('djurscen'); if(!sc) return;
+  let b = document.getElementById('hempryl');
+  if(!S.framme){ if(b) b.remove(); return; }
+  if(!b || b.dataset.id !== S.framme){ if(b) b.remove(); b = document.createElement('button'); b.id = 'hempryl'; b.dataset.id = S.framme;
+    b.className = 'hempryl ' + PRYLAR[S.framme].s; b.setAttribute('aria-label', 'Byt pryl'); b.innerHTML = prylHtml(S.framme, 64); sc.appendChild(b); }
+}
+function visaPrylar(){
+  const har = new Set(S.prylar || []);
+  oppnaArk(arkHuvud('Prylar', `${S.namn}s prylar`, `Du har ${har.size} av ${Object.keys(PRYLAR).length}. Välj vilken som ska stå bredvid ${S.namn}. Nya prylar hittar du i veckans kista.`)
+    + `<div class="prylgrid">${Object.entries(PRYLAR).map(([id, p]) => har.has(id)
+      ? `<button data-pryl="${id}" aria-pressed="${S.framme===id}">${prylHtml(id, 52)}${p.namn}<small>${SALLNAMN[p.s]}</small></button>`
+      : `<button class="last" disabled>${'<span class="prylplats" style="width:52px;height:52px;font-size:22px">?</span>'}???<small>${SALLNAMN[p.s]}</small></button>`).join('')}</div>
+    <button class="knapp sek" data-pryl="">Ingen pryl framme</button>`);
+}
+// --- andningsspelet (nivå 3)
+let andasTimer = null;
+function visaLeka(){
+  const last = S.niva < 3;
+  oppnaArk(arkHuvud('Leka', `Vad vill ni göra?`, '')
+    + `<div style="display:flex;flex-direction:column;gap:10px">
+      <button class="knapp ljus" data-lek="klappa">Klappa ${S.namn}</button>
+      <button class="knapp ${last?'sek':'ljus'}" data-lek="andas" ${last?'disabled':''}>Andas med ${S.namn} · 1 min${last?' · låses upp på nivå 3':''}</button></div>`);
+}
+function startaAndas(){
+  clearInterval(andasTimer);
+  const p = F3DP[S.art] || {}, bild = p.lugn || p.neutral || F3D[S.art];
+  oppnaArk(arkHuvud('Andas', `Andas med ${S.namn}`, 'Följ bollen. In genom näsan, ut genom munnen.')
+    + `<div class="andas" id="andas"><div class="boll"><div class="ring"></div><div class="fig"><img src="${bild}" alt=""></div></div>
+       <div class="fas" id="andasFas">Gör dig redo</div><div class="rakn" id="andasRakn">6 andetag</div></div>
+       <button class="knapp sek" id="andasAvbryt">Avsluta</button>`);
+  let andetag = 0; const a = $('#andas');
+  const steg = () => {
+    if(!$('#andas')) { clearInterval(andasTimer); return; }
+    if(andetag >= 6){ klarAndas(); return; }
+    a.classList.remove('ut'); a.classList.add('in'); $('#andasFas').textContent = 'Andas in'; $('#andasRakn').textContent = `Andetag ${andetag+1} av 6`;
+    setTimeout(() => { if(!$('#andas')) return; a.classList.remove('in'); a.classList.add('ut'); $('#andasFas').textContent = 'Andas ut'; }, 4000);
+    andetag++;
+  };
+  setTimeout(() => { steg(); andasTimer = setInterval(steg, 10000); }, 1200);
+}
+function klarAndas(){
+  clearInterval(andasTimer);
+  const idag = dagNr(new Date()), forsta = S.andasDag !== idag;
+  if(forsta){ S.andasDag = idag; S.m.lugn = Math.min(100, S.m.lugn + 12); S.xp += 10; while(S.xp >= 100){ S.xp -= 100; S.niva++; } }
+  spara();
+  $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>` + arkHuvud('Andas', 'Snyggt andat', forsta ? `${S.namn} känner sig lugnare. Lugn +12, +10 XP.` : `${S.namn} tyckte om det. Belöningen får ni en gång om dagen.`)
+    + `<button class="knapp ljus" data-stang-ark>Klar</button>`;
+  ritaHem();
+}
+document.addEventListener('click', e => {
+  const o = e.target.closest('[data-oms="leka"]'); if(o && !S.sover){ e.stopImmediatePropagation(); visaLeka(); return; }
+  const l = e.target.closest('[data-lek]');
+  if(l){ if(l.dataset.lek === 'klappa'){ stangArk(); klappa(); andraGlod(5, 'Ni lekte en stund.'); } else startaAndas(); return; }
+  if(e.target.closest('#andasAvbryt')){ clearInterval(andasTimer); stangArk(); return; }
+  if(e.target.closest('#kistknapp')){ visaKista(); return; }
+  if(e.target.closest('#oppnaKista')){ oppnaKista(); return; }
+  if(e.target.closest('#hempryl')){ visaPrylar(); return; }
+  const pr = e.target.closest('[data-pryl]'); if(pr){ S.framme = pr.dataset.pryl || null; spara(); ritaPryl(); visaPrylar(); return; }
+  // nyckel: första uppdraget eller passet för dagen
+  const k = e.target.closest('[data-klar]'); if(k && S.uppdrag && S.uppdrag[+k.dataset.klar] && !S.uppdrag[+k.dataset.klar].klar) nyckelIdag();
+  if(e.target.closest('#spara')) nyckelIdag();
+}, true);
+{ const _rh = ritaHem;
+  ritaHem = function(){ _rh.apply(this, arguments);
+    if(S.niva >= 2 && !S.forstaPryl && S.klar){ S.forstaPryl = true; fapryl('kettlebell'); S.framme = S.framme || 'kettlebell';
+      setTimeout(() => toastG(`Nivå 2: ${S.namn} fick sin första pryl, en kettlebell!`, 3200), 800); spara(); }
+    ritaPryl(); ritaKistknapp(); }; }
 
 // börja om från början (i Din resa)
 const _visaResa = visaResa;
