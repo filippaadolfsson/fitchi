@@ -15,6 +15,11 @@
                 android:max="100" android:progressDrawable="@drawable/widget_glod"/>
             <TextView android:id="@+id/w_info" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:textColor="#B3F7F2EA" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            <TextView android:id="@+id/w_rad" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#FFF7F2EA" android:textSize="12sp" android:layout_marginTop="10dp" android:maxLines="2"/>
+            <TextView android:id="@+id/w_nasta" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="#FFC8F169" android:textSize="12sp" android:textStyle="bold" android:layout_marginTop="6dp"
+                android:maxLines="2" android:ellipsize="end"/>
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

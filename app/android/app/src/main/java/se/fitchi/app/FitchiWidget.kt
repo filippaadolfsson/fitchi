@@ -49,6 +49,17 @@ class FitchiWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.w_humor, text)
             v.setProgressBar(R.id.w_glod, 100, glod.toInt(), false)
             v.setTextViewText(R.id.w_info, "Nivå $niva · glöd ${glod.toInt()}")
+            // dagens läge: bara om det är samma dag som appen senast var öppen
+            val idag = java.time.LocalDate.now().toEpochDay()
+            val sammaDag = p.getLong("dag", -1L) == idag
+            val delar = mutableListOf<String>()
+            val steg = p.getLong("steg", -1L)
+            if (sammaDag && steg >= 0) delar.add("👟 ${String.format(java.util.Locale("sv", "SE"), "%,d", steg).replace(',', ' ').replace('\u00a0', ' ')} steg")
+            if (sammaDag) delar.add("✓ ${p.getInt("klara", 0)}/${p.getInt("antal", 3)} uppdrag")
+            delar.add("🗝️ ${p.getInt("nycklar", 0)}/7")
+            v.setTextViewText(R.id.w_rad, delar.joinToString("   "))
+            val nasta = p.getString("nasta", "") ?: ""
+            v.setTextViewText(R.id.w_nasta, if (!sammaDag) "Nya uppdrag väntar idag" else if (nasta.isNotEmpty()) "Nästa: $nasta" else "Alla uppdrag klara! 🎉")
             val oppna = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             v.setOnClickPendingIntent(R.id.w_rot, PendingIntent.getActivity(context, 0, oppna, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
             return v

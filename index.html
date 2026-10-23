@@ -2058,7 +2058,9 @@ let widgetSenast = '';
 function widgetSync(){
   if(!HALSA || !HALSA.widget || !S.klar) return;
   try{ const [mood, txt] = humor(); const sov = S.sover || S.glod <= 0;
-    const data = {art: S.art, namn: S.namn, humor: sov ? 'sover' : (typeof posFor === 'function' ? posFor(mood) : mood), text: sov ? `${S.namn} sover gott` : txt, niva: S.niva, glod: Math.round(S.glod), sover: !!S.sover};
+    const data = {art: S.art, namn: S.namn, humor: sov ? 'sover' : (typeof posFor === 'function' ? posFor(mood) : mood), text: sov ? `${S.namn} sover gott` : txt, niva: S.niva, glod: Math.round(S.glod), sover: !!S.sover,
+      steg: S.data && S.data.halsa && typeof S.data.steg === 'number' ? S.data.steg : -1, klara: (S.uppdrag || []).filter(u => u.klar).length, antal: (S.uppdrag || []).length || 3,
+      nycklar: kistaNu().dagar.length, nasta: ((S.uppdrag || []).find(u => !u.klar) || {}).t || ''};
     const nyckel = JSON.stringify(data); if(nyckel === widgetSenast) return; widgetSenast = nyckel; HALSA.widget(data).catch(() => {}); }catch(e){}
 }
 document.addEventListener('visibilitychange', () => { if(document.hidden){ widgetSenast = ''; widgetSync(); } });
