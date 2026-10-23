@@ -830,7 +830,8 @@ function insikt(){
   if(d.borta >= 3) return null;
   if(S.vila) return `Du har tränat hårt ${d.pass} dagar och din HRV är lägre än vanligt (${d.hrv} ms). Ska dagens uppdrag bli återhämtning?`;
   if(d.somn < 6.5) return `Du har sovit ${String(d.somn).replace('.',',')} timmar. Lugn sjunker de nätter du sover under 7 timmar. Ska Fitchi påminna dig om att varva ner kl. 22 ikväll?`;
-  if(d.steg < 4000) return 'Det har blivit få steg de senaste dagarna. Ska uppdragen bli kortare men fler, så att det känns lättare att komma igång?';
+  if((d.stegIgar ?? 6000) < 4000) return 'Det har blivit få steg de senaste dagarna. Ska uppdragen bli kortare men fler, så att det känns lättare att komma igång?';
+  return null;
   if(S.pref.nar==='morgon') return 'Du sa att morgnar passar bäst, men de senaste två veckorna har du oftast tränat efter kl. 17. Ska uppdraget komma kl. 17 i stället?';
   if(S.pref.nar==='kvall') return 'Du sover sämre de kvällar du tränar hårt efter kl. 20. Ska Fitchi föreslå lugnare pass sena kvällar?';
   return 'Du klarar uppdragen oftast på vardagar men hoppar över dem på helger. Ska helgernas uppdrag bli kortare?';
@@ -853,7 +854,7 @@ const VARFOR = {energi:'Energi är lägst just nu', styrka:'Bygger din styrka', 
 const POANG = {energi:30, styrka:35, lugn:25, naring:20, gladje:20};
 function valjUppdrag(matare, utesluten){
   let min = {'5':5,'15':15,'30':30,'45':45}[S.pref.tid]; if(S.start==='igang') min = Math.min(min,10); if(S.start==='uppehall') min = Math.min(min,15);
-  if(S.data && (S.data.borta>=3 || S.data.steg<4000)) min = Math.min(min,10);
+  if(S.data && (S.data.borta>=3 || (S.data.stegIgar ?? 6000)<4000)) min = Math.min(min,10);
   let lista = BANK[matare].filter(([t]) => t !== utesluten);
   const pass = lista.filter(([,typ]) => typ && S.pref.typer.has(typ)); if(pass.length) lista = pass.concat(lista.filter(x => !pass.includes(x)).slice(0,1));
   const [t] = lista[Math.floor(Math.random()*Math.min(lista.length, 2))];
@@ -1434,7 +1435,7 @@ if(HALSA){
     if(h.dag !== idag){ h.dag = idag; h.stegBas = 0; h.stegGivna = 0; }
     // steg: energi och små belöningar för nya steg
     if(typeof d.steg === 'number'){
-      S.data.steg = d.steg;
+      S.data.steg = d.steg; if(typeof d.stegIgar === 'number') S.data.stegIgar = d.stegIgar;
       S.m.energi = Math.max(S.m.energi, Math.min(100, Math.round(d.steg/110 + 8)));
       const nya = Math.floor(d.steg/2000) - (h.stegGivna || 0);
       if(nya > 0 && S.glod > 0){ const g = Math.min(25, nya*5); S.glod = Math.min(100, S.glod + g); S.xp += nya*8; while(S.xp >= 100){ S.xp -= 100; S.niva++; }
@@ -1454,9 +1455,34 @@ if(HALSA){
     if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> puls nu${d.pulsNuMinSedan > 20 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min sen)</small>` : ''}</span>`);
     if(vp) delar.push(`<span><b>${vp}</b> ${d.vilopuls ? 'vilopuls' : 'lägsta puls'}</span>`);
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
+    stegUppdrag(d.steg);
     if($('#s-hem').classList.contains('aktiv') && !$('#slöja').classList.contains('oppen')) ritaHem();
     spara(); klarNu();
   }
+
+  // ===== Steguppdrag klaras automatiskt av klockan =====
+  const stegMal = u => { if(u.klar || u.m === 'gladje') return 0; const t = u.t.toLowerCase(), m = (t.match(/(\d+)\s*min/) || [])[1];
+    if(!m) return 0; if(t.includes('promenad')) return +m * 100; if(t.includes('löpning')) return +m * 160; return 0; };
+  function stegUppdrag(steg){
+    if(!S.uppdrag || typeof steg !== 'number') return;
+    S.uppdrag.forEach((u, i) => { const mal = stegMal(u); if(!mal) return;
+      if(u.stegStart === undefined || u.stegStart > steg) u.stegStart = steg;
+      u.stegNu = steg - u.stegStart; u.stegMal = mal;
+      if(u.stegNu >= mal && !u.klar){ setTimeout(() => { const k = document.querySelector(`[data-klar="${i}"]`);
+        if(k){ k.click(); setTimeout(() => toastG(`Klockan räknade ${u.stegNu.toLocaleString('sv-SE')} steg. "${u.t}" är klart!`, 3200), 1900); } }, 400); } });
+  }
+  const _ritaUppdrag = ritaUppdrag;
+  ritaUppdrag = function(nyIndex){
+    _ritaUppdrag(nyIndex);
+    document.querySelectorAll('#uppdrag3 .ukort').forEach((el, i) => { const u = S.uppdrag[i]; if(!u || u.klar || !stegMal(u)) return;
+      const pct = Math.min(100, Math.round(((u.stegNu || 0) / stegMal(u)) * 100));
+      const sm = el.querySelector('.ut small'); if(sm) sm.innerHTML = `${(u.stegNu || 0).toLocaleString('sv-SE')} av ${stegMal(u).toLocaleString('sv-SE')} steg · klockan räknar`;
+      el.querySelector('.ut').insertAdjacentHTML('beforeend', `<div style="height:5px;border-radius:99px;background:var(--linje);margin-top:6px;overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:var(--lime);border-radius:inherit"></i></div>`); });
+  };
+  // läs klockan varje minut medan appen är öppen
+  setInterval(() => { if(!document.hidden && S.klar && halsaKlar) halsaLas(); }, 60000);
+  document.addEventListener("visibilitychange", () => { if(!document.hidden && S.klar && halsaKlar) halsaLas(); });
+  if(TEST) window.__halsaLas = halsaLas;
   // morgonen: sömnen kommer från klockan i stället för frågan
   const _visaMorgon = visaMorgon;
   visaMorgon = function(){
