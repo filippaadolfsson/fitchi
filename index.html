@@ -2069,14 +2069,16 @@ document.addEventListener('visibilitychange', () => { if(document.hidden){ widge
 {
   const st = document.createElement('style'); st.textContent = `
   #s-hem .horn.statusrad{display:flex;align-items:center;gap:6px;padding:5px 12px 5px 6px;border-radius:999px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);backdrop-filter:blur(8px)}
-  .statusrad .piller{background:none!important;box-shadow:none!important;padding:4px 4px;flex:none}
+  .statusrad > *{background:none!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:0!important;border-radius:0!important}
+  .statusrad .piller{padding:4px 4px;flex:none}
+  .statusrad .sep{width:1px;height:20px;background:var(--glas-kant)!important;flex:none;margin:0 4px}
   .statusrad #niva{display:inline-flex!important;flex-direction:row!important;white-space:nowrap;appearance:none;border:0;background:none!important;box-shadow:none!important;align-items:center;gap:6px;font:800 14px var(--display);color:var(--pa-scen);cursor:pointer;padding-right:2px}
   .statusrad #niva svg{width:24px;height:31px;flex:none;filter:drop-shadow(0 0 6px #c8f16966)}
   .statusrad .glodrad{flex:1;min-width:60px;width:auto;margin:0;padding:0 4px;background:none!important;box-shadow:none!important;gap:6px}
   .statusrad .glodrad > svg,.statusrad .glodnamn{display:none}
-  .statusrad .glodbar{flex:1;height:8px}
+  .statusrad .glodbar{flex:1;height:8px;border-radius:99px!important;background:#ffffff1a!important}
   .statusrad .glodrad b{font:800 12px var(--display);color:var(--pa-scen-d);min-width:20px}
-  .statusrad #kistknapp{appearance:none;border:0;background:none!important;box-shadow:none!important;white-space:nowrap;cursor:pointer;border-left:1px solid var(--glas-kant);border-radius:0;padding-left:10px;margin-left:2px;font:800 14px var(--display);color:var(--pa-scen)}
+  .statusrad #kistknapp{appearance:none;white-space:nowrap;cursor:pointer;padding:4px;font:800 14px var(--display);color:var(--pa-scen)}
   .statusrad #kistknapp svg{width:15px;height:15px}
   .statusrad .saldo{font:800 14px var(--display);white-space:nowrap}`;
   document.head.appendChild(st);
@@ -2085,6 +2087,8 @@ document.addEventListener('visibilitychange', () => { if(document.hidden){ widge
 }
 function ritaStatus(){
   const n = document.getElementById('niva'); if(!n) return;
+  const k = document.getElementById('kistknapp');
+  if(k && !(k.previousElementSibling && k.previousElementSibling.classList.contains('sep'))){ const a = document.createElement('span'); a.className = 'sep'; a.setAttribute('aria-hidden', 'true'); k.before(a); const b = a.cloneNode(); k.after(b); }
   n.innerHTML = `<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M20 0 L40 20 L20 52 L0 20 Z" fill="#c8f169"/><path d="M20 0 L28 20 L20 52 L12 20 Z" fill="#e6ff9e" opacity=".6"/><text x="20" y="28" text-anchor="middle" font-size="17" font-weight="800" fill="#1e1230" font-family="Bricolage Grotesque, sans-serif">${S.niva}</text></svg>Nivå ${S.niva}`;
   n.setAttribute('aria-label', `Nivå ${S.niva}. Visa din resa`);
 }
