@@ -1336,9 +1336,9 @@ ritaHem = function(){ _ritaHem2(); const el = $('#hemOrkis'); el.dataset.pose = 
 // ===== 3D-fitchis =====
 const F3D = {};
 for(const k of ['bjorn','hare','uggla','utter','katt']) F3D[k] = `img/${k}.webp`;
-const F3DP = {"bjorn": {"lugn": "img/bruno/lugn.webp", "neutral": "img/bruno/neutral.webp", "pigg": "img/bruno/pigg.webp", "sover": "img/bruno/sover.webp", "stark": "img/bruno/stark.webp", "trott": "img/bruno/trott.webp"}, "hare": {"lugn": "img/hugo/lugn.webp", "neutral": "img/hugo/neutral.webp", "pigg": "img/hugo/pigg.webp", "sover": "img/hugo/sover.webp", "stark": "img/hugo/stark.webp", "trott": "img/hugo/trott.webp"}, "uggla": {"lugn": "img/luna/lugn.webp", "neutral": "img/luna/neutral.webp", "pigg": "img/luna/pigg.webp", "sover": "img/luna/sover.webp", "stark": "img/luna/stark.webp", "trott": "img/luna/trott.webp"}, "katt": {"lugn": "img/kit/lugn.webp", "neutral": "img/kit/neutral.webp", "pigg": "img/kit/pigg.webp", "sover": "img/kit/sover.webp", "stark": "img/kit/stark.webp", "trott": "img/kit/trott.webp"}};
+const F3DP = {"bjorn": {"lugn": "img/bruno/lugn.webp", "neutral": "img/bruno/neutral.webp", "pigg": "img/bruno/pigg.webp", "sover": "img/bruno/sover.webp", "stark": "img/bruno/stark.webp", "trott": "img/bruno/trott.webp"}, "hare": {"lugn": "img/hugo/lugn.webp", "neutral": "img/hugo/neutral.webp", "pigg": "img/hugo/pigg.webp", "sover": "img/hugo/sover.webp", "stark": "img/hugo/stark.webp", "trott": "img/hugo/trott.webp"}, "uggla": {"lugn": "img/luna/lugn.webp", "neutral": "img/luna/neutral.webp", "pigg": "img/luna/pigg.webp", "sover": "img/luna/sover.webp", "stark": "img/luna/stark.webp", "trott": "img/luna/trott.webp"}, "utter": {"lugn": "img/otto/lugn.webp", "neutral": "img/otto/neutral.webp", "pigg": "img/otto/pigg.webp", "sover": "img/otto/sover.webp", "stark": "img/otto/stark.webp", "trott": "img/otto/trott.webp"}, "katt": {"lugn": "img/kit/lugn.webp", "neutral": "img/kit/neutral.webp", "pigg": "img/kit/pigg.webp", "sover": "img/kit/sover.webp", "stark": "img/kit/stark.webp", "trott": "img/kit/trott.webp"}};
 ork = (mood, w) => { if(typeof posFor === 'function') mood = posFor(mood); const sov = (S.sover || S.glod <= 0) && w >= 120, key = sov ? 'sover' : mood, p = F3DP[S.art] || {}, src = p[key] || p[mood==='pigg' && !p.pigg ? 'neutral' : mood] || F3D[S.art];
-  const kl = (['neutral','pigg','stark','lugn','trott'].includes(key) && p[key]) ? ' vid' : key==='sover' && p.sover ? (["uggla", "katt"].includes(S.art) ? ' vid' : ' liggande') : '';
+  const kl = (['neutral','pigg','stark','lugn','trott'].includes(key) && p[key]) ? ' vid' : key==='sover' && p.sover ? (["uggla", "utter", "katt"].includes(S.art) ? ' vid' : ' liggande') : '';
   const SK = S.art==='bjorn' ? {neutral:922, pigg:920, stark:933, trott:893, lugn:823} : {}, hp = kl===' vid' && SK[key] ? Math.round(SK[key]/935*100) : 100;
   return `<span class="f3d orkis humor-${mood}${kl}" style="width:${w}px;height:${Math.round(w*200/170)}px"><img src="${src}" alt="" draggable="false" style="${hp<100?`height:${hp}%;top:auto;bottom:0`:''}"></span>`; };
 levande = (art, mood, attrs) => `<image href="${F3D[art]}" ${attrs} preserveAspectRatio="xMidYMax meet"/>`;
@@ -1642,7 +1642,7 @@ oppnaMatare = function(k){
   @media (prefers-reduced-motion:reduce){.match svg.puls path{animation:none;stroke-dashoffset:0}.match *{transition:none!important}}`;
   document.head.appendChild(st);
 }
-const PANNA = {bjorn:.092, hare:.40, uggla:.212, utter:.15, katt:.196};
+const PANNA = {bjorn:.092, hare:.40, uggla:.212, utter:.124, katt:.196};
 const DIA_SVG = '<svg viewBox="0 0 40 52" width="34" height="44"><path d="M20 0 L40 20 L20 52 L0 20 Z" fill="#c8f169"/><path d="M20 0 L28 20 L20 52 L12 20 Z" fill="#e6ff9e"/><path d="M0 20 H40" stroke="#4f6b12" stroke-width="2" opacity=".5"/></svg>';
 const MALORD = {styrka:'styrka', kondition:'kondition', lugn:'lugn', somn:'sömn', rorlighet:'rörlighet', ork:'ork', kost:'mat'};
 const MALART = {styrka:'bjorn', kondition:'hare', lugn:'uggla', somn:'uggla', rorlighet:'katt', ork:'utter', kost:'bjorn'};
