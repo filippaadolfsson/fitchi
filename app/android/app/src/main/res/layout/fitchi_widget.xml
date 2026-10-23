@@ -1,0 +1,20 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_rot" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/widget_bg" android:padding="12dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:id="@+id/w_bild" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:scaleType="fitCenter" android:adjustViewBounds="true" android:contentDescription="Din fitchi"/>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.15"
+            android:orientation="vertical" android:paddingStart="10dp">
+            <TextView android:id="@+id/w_namn" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#FFF7F2EA" android:textSize="18sp" android:textStyle="bold" android:maxLines="1"/>
+            <TextView android:id="@+id/w_humor" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#FFD9B8F0" android:textSize="13sp" android:maxLines="2" android:layout_marginTop="2dp"/>
+            <ProgressBar android:id="@+id/w_glod" style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent" android:layout_height="8dp" android:layout_marginTop="10dp"
+                android:max="100" android:progressDrawable="@drawable/widget_glod"/>
+            <TextView android:id="@+id/w_info" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#B3F7F2EA" android:textSize="11sp" android:layout_marginTop="4dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

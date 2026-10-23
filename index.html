@@ -1352,7 +1352,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar'];
 function spara(){
   if(!S.klar) return;
   loggaDag();
@@ -1465,6 +1465,7 @@ if(HALSA){
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     stegUppdrag(d.steg);
     if(Array.isArray(d.pass)) klockPass(d.pass);
+    if(d.stegDagar) S.stegDagar = Object.assign(S.stegDagar || {}, Object.fromEntries(Object.entries(d.stegDagar).map(([k, v]) => [+k, v])));
     if($('#s-hem').classList.contains('aktiv') && !$('#slöja').classList.contains('oppen')) ritaHem();
     spara(); klarNu();
   }
@@ -1561,6 +1562,9 @@ S.hist = S.hist || {}; S.passlogg = S.passlogg || [];
 function loggaDag(){
   S.hist = S.hist || {}; const idag = dagNr(new Date());
   S.hist[idag] = Object.fromEntries(Object.entries(S.m).map(([k,v]) => [k, Math.round(v)]));
+  S.dagbok = S.dagbok || {};
+  S.dagbok[idag] = {uppdrag: (S.uppdrag || []).filter(u => u.klar).length, somn: S.data && S.data.halsa ? S.data.somn : null, steg: S.data && S.data.halsa ? S.data.steg : null, protein: S.protein || 0};
+  for(const d of Object.keys(S.dagbok)) if(+d < idag - 20) delete S.dagbok[d];
   for(const d of Object.keys(S.hist)) if(+d < idag - 20) delete S.hist[d];
 }
 { const _sp = $('#spara').onclick;
@@ -1802,7 +1806,7 @@ function oppnaKista(){
   const kb = $('#kistbild'); kb.classList.add('skakar');
   setTimeout(() => { kb.classList.remove('skakar'); kb.classList.add('oppen');
     $('#kistvinst').innerHTML = `<div class="vinst">${pryl ? prylHtml(pryl, 90) : ''}<b style="font:800 20px var(--display)">${pryl ? PRYLAR[pryl].namn + ' till ' + S.namn + '!' : 'Mynt!'}</b><span>+${mynt} mynt${pryl ? ' · ' + SALLNAMN[PRYLAR[pryl].s] : ''}</span></div>`;
-    $('#oppnaKista').outerHTML = `<button class="knapp ljus" data-stang-ark>${pryl ? 'Ställ fram den' : 'Toppen'}</button>`;
+    $('#oppnaKista').outerHTML = `<button class="knapp ljus" id="visaVeckan">Se veckan med ${S.namn}</button><button class="knapp sek" data-stang-ark>${pryl ? 'Ställ fram prylen' : 'Stäng'}</button>`;
     if(pryl) S.framme = pryl; ritaHem(); ritaKistknapp(); spara(); }, 1100);
 }
 // --- prylen bredvid fitchin
@@ -1988,12 +1992,83 @@ function ritaDygn(){
 }
 setInterval(ritaDygn, 5 * 60000);
 
+// ===== Veckan med din fitchi =====
+{
+  const st = document.createElement('style'); st.textContent = `
+  .veckan{display:flex;flex-direction:column;gap:14px}
+  .veckan .citat{font:700 19px/25px var(--display);text-align:center;padding:0 8px}
+  .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .vgrid div{border-radius:18px;padding:12px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);display:flex;flex-direction:column;gap:2px}
+  .vgrid b{font:800 22px var(--display);color:var(--pa-scen)}
+  .vgrid span{font-size:12px;color:var(--pa-scen-d)}
+  .vmatare{display:flex;flex-direction:column;gap:8px}
+  .vmatare div{display:grid;grid-template-columns:62px 1fr 52px;align-items:center;gap:8px;font-size:13px}
+  .vmatare i{height:8px;border-radius:99px;background:#ffffff14;overflow:hidden;display:block}
+  .vmatare i em{display:block;height:100%;border-radius:inherit}
+  .vmatare small{text-align:right;color:var(--pa-scen-d)}`;
+  document.head.appendChild(st);
+}
+function veckoData(){
+  const idag = dagNr(new Date()), dagar = [...Array(7)].map((_, i) => idag - 6 + i);
+  const pass = (S.passlogg || []).filter(p => dagNr(new Date(p.tid)) > idag - 7);
+  const steg = dagar.map(d => (S.stegDagar || {})[d] ?? (S.dagbok || {})[d]?.steg ?? null);
+  const somn = dagar.map(d => (S.dagbok || {})[d]?.somn).filter(x => x);
+  const uppdrag = dagar.map(d => (S.dagbok || {})[d]?.uppdrag || 0);
+  const snitt = (k, ds) => { const v = ds.map(d => S.hist?.[d]?.[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const forra = dagar.map(d => d - 7);
+  const matare = ['energi','styrka','lugn','naring'].map(k => [k, snitt(k, dagar), snitt(k, forra)]);
+  const stegSum = steg.filter(x => x != null).reduce((a, b) => a + b, 0), harSteg = steg.some(x => x != null);
+  let bast = null; dagar.forEach((d, i) => { const v = steg[i] ?? 0; if(harSteg && (!bast || v > bast[1])) bast = [d, v]; });
+  return {dagar, pass, stegSum, harSteg, stegSnitt: harSteg ? Math.round(stegSum / steg.filter(x => x != null).length) : 0,
+    somnSnitt: somn.length ? somn.reduce((a, b) => a + b, 0) / somn.length : null, uppdrag: uppdrag.reduce((a, b) => a + b, 0),
+    nycklar: kistaNu().dagar.length, matare, bast};
+}
+function veckoCitat(v){
+  const n = v.pass.length, min = v.pass.reduce((a, p) => a + p.min, 0);
+  if(v.harSteg && v.stegSum >= 50000) return `Vi gick ${fmt(v.stegSum)} steg ihop! Mina ben har aldrig känts så pigga.`;
+  if(n >= 3) return `${n} pass och ${min} minuter rörelse. Jag känner mig starkare för varje dag!`;
+  if(v.somnSnitt && v.somnSnitt >= 7.5) return `Du sov ${String(Math.round(v.somnSnitt * 10) / 10).replace('.', ',')} timmar i snitt. Jag har aldrig varit så utvilad.`;
+  if(v.uppdrag >= 10) return `Vi klarade ${v.uppdrag} uppdrag ihop. Vilket gäng vi är!`;
+  if(v.harSteg && v.stegSum > 0) return `Vi gick ${fmt(v.stegSum)} steg ihop den här veckan. Varje steg räknas!`;
+  return `Tack för veckan! Nästa vecka tar vi det ett steg i taget, tillsammans.`;
+}
+function visaVeckan(){
+  const v = veckoData(), min = v.pass.reduce((a, p) => a + p.min, 0);
+  const NAMN = {energi:'Energi', styrka:'Styrka', lugn:'Lugn', naring:'Näring'};
+  const dagNamn = d => new Date(d * 864e5).toLocaleDateString('sv-SE', {weekday: 'long', timeZone: 'UTC'});
+  const rutor = [];
+  if(v.harSteg) rutor.push([fmt(v.stegSum), `steg · ${fmt(v.stegSnitt)} om dagen`]);
+  rutor.push([v.pass.length, `pass · ${min} minuter`]);
+  rutor.push([v.uppdrag, 'uppdrag klara']);
+  if(v.somnSnitt) rutor.push([String(Math.round(v.somnSnitt * 10) / 10).replace('.', ',') + ' h', 'sömn i snitt']);
+  rutor.push([v.nycklar + '/7', 'nycklar till kistan']);
+  if(v.bast && v.bast[1] > 0) rutor.push([dagNamn(v.bast[0]), `bästa dagen · ${fmt(v.bast[1])} steg`]);
+  oppnaArk(arkHuvud('Veckan med ' + S.namn, 'Det här gjorde vi', 'De senaste sju dagarna.')
+    + `<div class="veckan"><div style="display:flex;justify-content:center">${ork('pigg', 130)}</div>
+      <p class="citat">”${veckoCitat(v)}”</p>
+      <div class="vgrid">${rutor.map(([a, b]) => `<div><b>${a}</b><span>${b}</span></div>`).join('')}</div>
+      <div class="vmatare">${v.matare.filter(([, a]) => a != null).map(([k, a, f]) => { const diff = f != null ? Math.round(a - f) : null;
+        return `<div><span>${NAMN[k]}</span><i><em style="width:${Math.round(a)}%;background:var(--${k})"></em></i><small>${diff == null ? Math.round(a) : (diff >= 0 ? '↑ ' : '↓ ') + Math.abs(diff)}</small></div>`; }).join('')}</div>
+      <button class="knapp ljus" data-stang-ark>Toppen</button></div>`);
+}
+document.addEventListener('click', e => { if(e.target.closest('#visaVeckan')){ visaVeckan(); return; } }, true);
+
+// ===== Widget på hemskärmen (Android) =====
+let widgetSenast = '';
+function widgetSync(){
+  if(!HALSA || !HALSA.widget || !S.klar) return;
+  try{ const [mood, txt] = humor(); const sov = S.sover || S.glod <= 0;
+    const data = {art: S.art, namn: S.namn, humor: sov ? 'sover' : (typeof posFor === 'function' ? posFor(mood) : mood), text: sov ? `${S.namn} sover gott` : txt, niva: S.niva, glod: Math.round(S.glod), sover: !!S.sover};
+    const nyckel = JSON.stringify(data); if(nyckel === widgetSenast) return; widgetSenast = nyckel; HALSA.widget(data).catch(() => {}); }catch(e){}
+}
+document.addEventListener('visibilitychange', () => { if(document.hidden){ widgetSenast = ''; widgetSync(); } });
+
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
     if(S.niva >= 2 && !S.forstaPryl && S.klar){ S.forstaPryl = true; fapryl('kettlebell'); S.framme = S.framme || 'kettlebell';
       setTimeout(() => toastG(`Nivå 2: ${S.namn} fick sin första pryl, en kettlebell!`, 3200), 800); spara(); }
     if(S.dansar && !S.sover && $('#humor')) $('#humor').textContent = `${S.namn} dansar!`;
-    ritaDygn(); ritaPryl(); ritaKistknapp(); }; }
+    ritaDygn(); ritaPryl(); ritaKistknapp(); widgetSync(); }; }
 
 // ===== Träningspass från klockan =====
 const KALLNAMN = p => p === 'com.sec.android.app.shealth' ? 'Samsung Health' : 'klockan';
@@ -2193,6 +2268,7 @@ visaResa = function(){
     S.klar = false; location.replace(location.pathname);
   };
   $('#ark').appendChild(b);
+  { const vk = document.createElement('button'); vk.className = 'knapp ljus'; vk.id = 'visaVeckan'; vk.textContent = `Veckan med ${S.namn}`; b.before(vk); }
   if(NOTIS){ const n = document.createElement('button'); n.className = 'knapp sek'; n.id = 'notisVaxla'; n.textContent = S.notis ? 'Påminnelser: på · stäng av' : 'Påminnelser: av · slå på'; b.before(n); }
 };
 // start

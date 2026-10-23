@@ -4,4 +4,5 @@
     <string name="title_activity_main">Fitchi</string>
     <string name="package_name">se.fitchi.app</string>
     <string name="custom_url_scheme">se.fitchi.app</string>
+    <string name="widget_beskrivning">Din fitchi på hemskärmen</string>
 </resources>

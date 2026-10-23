@@ -83,6 +83,23 @@ class FitchiHalsaPlugin : Plugin() {
         }
     }
 
+    /** Appen skickar fitchins läge hit, widgeten på hemskärmen uppdateras. */
+    @PluginMethod
+    fun widget(call: PluginCall) {
+        val p = context.getSharedPreferences(FitchiWidget.PREFS, android.content.Context.MODE_PRIVATE).edit()
+        p.putString("art", call.getString("art", "bjorn"))
+        p.putString("namn", call.getString("namn", "Din fitchi"))
+        p.putString("humor", call.getString("humor", "neutral"))
+        p.putString("text", call.getString("text", ""))
+        p.putInt("niva", call.getInt("niva", 1) ?: 1)
+        p.putFloat("glod", (call.getDouble("glod", 70.0) ?: 70.0).toFloat())
+        p.putBoolean("sover", call.getBoolean("sover", false) ?: false)
+        p.putLong("tid", System.currentTimeMillis())
+        p.apply()
+        FitchiWidget.uppdateraAlla(context)
+        call.resolve()
+    }
+
     @PluginMethod
     fun begar(call: PluginCall) {
         if (tillganglig() != HealthConnectClient.SDK_AVAILABLE) {
@@ -141,6 +158,21 @@ class FitchiHalsaPlugin : Plugin() {
                     ret.put("steg", bast?.value ?: 0L)
                     ret.put("stegKallaPaket", bast?.key ?: "")
                     ret.put("stegIgar", igarApp.values.maxOrNull() ?: 0L)
+                    // Steg per dag senaste veckan (för veckosammanfattningen): per dag tas appen som räknat flest
+                    val veckaStart = idag.minus(6, ChronoUnit.DAYS)
+                    val perDag = mutableMapOf<Long, MutableMap<String, Long>>()
+                    var sida2: String? = null
+                    do {
+                        val svar = klient.readRecords(ReadRecordsRequest(StepsRecord::class, TimeRangeFilter.between(veckaStart, nu), pageToken = sida2))
+                        for (r in svar.records) {
+                            val dag = r.startTime.atZone(zon).toLocalDate().toEpochDay()
+                            val m = perDag.getOrPut(dag) { mutableMapOf() }
+                            m[r.metadata.dataOrigin.packageName] = (m[r.metadata.dataOrigin.packageName] ?: 0L) + r.count
+                        }
+                        sida2 = svar.pageToken
+                    } while (sida2 != null)
+                    val stegDagar = JSObject(); perDag.forEach { (d, m) -> stegDagar.put(d.toString(), m.values.maxOrNull() ?: 0L) }
+                    ret.put("stegDagar", stegDagar)
                 }
 
                 // Träningspass sedan i går (Samsung Health skickar sina pass hit)
