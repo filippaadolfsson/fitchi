@@ -1351,7 +1351,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord'];
 function spara(){
   if(!S.klar) return;
   loggaDag();
@@ -1824,7 +1824,8 @@ function visaLeka(){
   oppnaArk(arkHuvud('Leka', `Vad vill ni göra?`, '')
     + `<div style="display:flex;flex-direction:column;gap:10px">
       <button class="knapp ljus" data-lek="klappa">Klappa ${S.namn}</button>
-      <button class="knapp ${last?'sek':'ljus'}" data-lek="andas" ${last?'disabled':''}>Andas med ${S.namn} · 1 min${last?' · låses upp på nivå 3':''}</button></div>`);
+      <button class="knapp ${last?'sek':'ljus'}" data-lek="andas" ${last?'disabled':''}>Andas med ${S.namn} · 1 min${last?' · låses upp på nivå 3':''}</button>
+      <button class="knapp ${S.niva<7?'sek':'ljus'}" data-lek="fanga" ${S.niva<7?'disabled':''}>Fånga diamanter · 20 s${S.niva<7?' · låses upp på nivå 7':''}</button></div>`);
 }
 function startaAndas(){
   clearInterval(andasTimer);
@@ -1855,7 +1856,9 @@ function klarAndas(){
 document.addEventListener('click', e => {
   const o = e.target.closest('[data-oms="leka"]'); if(o && !S.sover){ e.stopImmediatePropagation(); visaLeka(); return; }
   const l = e.target.closest('[data-lek]');
-  if(l){ if(l.dataset.lek === 'klappa'){ stangArk(); klappa(); andraGlod(5, 'Ni lekte en stund.'); } else startaAndas(); return; }
+  if(l){ if(l.dataset.lek === 'klappa'){ stangArk(); klappa(); andraGlod(5, 'Ni lekte en stund.'); } else if(l.dataset.lek === 'fanga') startaFanga(); else startaAndas(); return; }
+  if(e.target.closest('#fangaIgen')){ startaFanga(); return; }
+  if(e.target.closest('#fangaAvbryt')){ fangaStopp = true; stangArk(); return; }
   if(e.target.closest('#andasAvbryt')){ clearInterval(andasTimer); stangArk(); return; }
   if(e.target.closest('#kistknapp')){ visaKista(); return; }
   if(e.target.closest('#oppnaKista')){ oppnaKista(); return; }
@@ -1865,6 +1868,77 @@ document.addEventListener('click', e => {
   const k = e.target.closest('[data-klar]'); if(k && S.uppdrag && S.uppdrag[+k.dataset.klar] && !S.uppdrag[+k.dataset.klar].klar) nyckelIdag();
   if(e.target.closest('#spara')) nyckelIdag();
 }, true);
+// --- minispel 2: fånga diamanter (nivå 7)
+NIVABEL.forEach(r => { if(r[0] === 3){ r[1] = 'Minispel: andas med din fitchi'; r[2] = 'andningsspelet'; } if(r[0] === 7){ r[1] = 'Minispel: fånga diamanter'; r[2] = 'diamantspelet'; } });
+{
+  const st = document.createElement('style'); st.textContent = `
+  .fanga{position:relative;height:430px;border-radius:24px;overflow:hidden;background:radial-gradient(ellipse at 50% 100%,#5a327455,#00000000 60%),#ffffff08;box-shadow:inset 0 0 0 1px var(--glas-kant);touch-action:none;user-select:none;-webkit-user-select:none}
+  .fanga .fig{position:absolute;left:50%;bottom:0;height:150px;transform:translateX(-50%);pointer-events:none;transition:transform .2s}
+  .fanga .fig.jubel{transform:translateX(-50%) translateY(-10px) scale(1.06)}
+  .fanga .fig img{height:100%;width:auto}
+  .fanga .d{position:absolute;width:46px;height:58px;margin:-29px 0 0 -23px;cursor:pointer;filter:drop-shadow(0 0 8px #c8f16999)}
+  .fanga .d.bonus{filter:drop-shadow(0 0 10px #d9b8f0)}
+  .fanga .d svg{width:100%;height:100%;pointer-events:none}
+  .fanga .pang{position:absolute;font:800 20px var(--display);color:#c8f169;pointer-events:none;animation:pang .6s ease-out forwards}
+  .fanga .pang.bonus{color:#d9b8f0}
+  @keyframes pang{to{transform:translateY(-36px);opacity:0}}
+  .fangatopp{display:flex;justify-content:space-between;align-items:center;font:800 18px var(--display);margin-bottom:10px}
+  .fangatid{height:6px;border-radius:99px;background:#ffffff14;overflow:hidden;margin-bottom:10px}
+  .fangatid i{display:block;height:100%;background:#c8f169;width:100%}`;
+  document.head.appendChild(st);
+}
+const DIA_LIME = '<svg viewBox="0 0 40 52"><path d="M20 0 L40 20 L20 52 L0 20 Z" fill="#c8f169"/><path d="M20 0 L28 20 L20 52 L12 20 Z" fill="#e6ff9e"/><path d="M0 20 H40" stroke="#4f6b12" stroke-width="2" opacity=".5"/></svg>';
+const DIA_LILA = '<svg viewBox="0 0 40 52"><path d="M20 0 L40 20 L20 52 L0 20 Z" fill="#b48be0"/><path d="M20 0 L28 20 L20 52 L12 20 Z" fill="#f0e2ff"/><path d="M0 20 H40" stroke="#4a2a6b" stroke-width="2" opacity=".5"/></svg>';
+let fangaStopp = false;
+function startaFanga(){
+  fangaStopp = true;
+  const p = F3DP[S.art] || {}, bild = p.pigg || p.neutral || F3D[S.art];
+  oppnaArk(arkHuvud('Minispel', 'Fånga diamanter', `Tryck på diamanterna innan de landar. Lila är värda 3. Du har 20 sekunder.`)
+    + `<div class="fangatopp"><span id="fangaPoang">0</span><span style="font:600 13px var(--text);color:var(--pa-scen-d)">Rekord: ${S.fangaRekord || 0}</span></div>
+       <div class="fangatid"><i id="fangaTid"></i></div>
+       <div class="fanga" id="fanga"><div class="fig" id="fangaFig"><img src="${bild}" alt=""></div></div>
+       <button class="knapp sek" id="fangaAvbryt">Avsluta</button>`);
+  const yta = $('#fanga'), fig = $('#fangaFig'), W = yta.clientWidth, H = yta.clientHeight;
+  let poang = 0, t0 = null, sist = 0, nasta = 0; const dia = [];
+  fangaStopp = false;
+  const traff = (d, ev) => { ev.preventDefault(); if(d.borta) return; d.borta = true; d.el.remove();
+    const v = d.bonus ? 3 : 1; poang += v; $('#fangaPoang').textContent = poang;
+    const pg = document.createElement('div'); pg.className = 'pang' + (d.bonus ? ' bonus' : ''); pg.textContent = '+' + v; pg.style.left = d.x + 'px'; pg.style.top = (d.y - 20) + 'px'; yta.appendChild(pg); setTimeout(() => pg.remove(), 650);
+    fig.classList.add('jubel'); setTimeout(() => fig.classList.remove('jubel'), 200);
+    try{ navigator.vibrate && navigator.vibrate(15); }catch(e){} };
+  const loop = ts => {
+    if(fangaStopp || !$('#fanga')) return;
+    if(t0 === null){ t0 = ts; sist = ts; }
+    const tid = (ts - t0) / 1000, dt = Math.min(.05, (ts - sist) / 1000); sist = ts;
+    $('#fangaTid').style.width = Math.max(0, 100 - tid * 5) + '%';
+    if(tid >= 20){ slutFanga(poang); return; }
+    if(tid >= nasta){
+      const bonus = Math.random() < .12, el = document.createElement('div'); el.className = 'd' + (bonus ? ' bonus' : ''); el.innerHTML = bonus ? DIA_LILA : DIA_LIME;
+      const d = {el, bonus, x: 30 + Math.random() * (W - 60), y: -30, v: (90 + tid * 9) * (bonus ? 1.35 : 1) * (0.85 + Math.random() * .3), vx: (Math.random() - .5) * 30};
+      el.addEventListener('pointerdown', ev => traff(d, ev)); yta.appendChild(el); dia.push(d);
+      nasta = tid + Math.max(.32, .8 - tid * .025);
+    }
+    for(const d of dia){ if(d.borta) continue; d.y += d.v * dt; d.x = Math.max(24, Math.min(W - 24, d.x + d.vx * dt));
+      d.el.style.transform = `translate(${d.x}px,${d.y}px) rotate(${Math.sin(d.y / 30) * 10}deg)`; d.el.style.left = '0'; d.el.style.top = '0';
+      if(d.y > H + 30){ d.borta = true; d.el.remove(); } }
+    requestAnimationFrame(loop);
+  };
+  setTimeout(() => requestAnimationFrame(loop), 600);
+}
+function slutFanga(poang){
+  fangaStopp = true;
+  const idag = dagNr(new Date()), forsta = S.fangaDag !== idag, rekord = poang > (S.fangaRekord || 0);
+  if(rekord) S.fangaRekord = poang;
+  let belon = '';
+  if(forsta && poang > 0){ S.fangaDag = idag; const mynt = Math.min(40, poang * 2); S.saldo += mynt; S.xp += 8; while(S.xp >= 100){ S.xp -= 100; S.niva++; }
+    S.m.energi = Math.min(100, S.m.energi + 8); belon = `+${mynt} mynt, +8 XP och energi +8.`; }
+  else belon = forsta ? '' : 'Belöningen får ni en gång om dagen, men rekord räknas alltid.';
+  spara(); ritaHem();
+  $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>` + arkHuvud('Minispel', `${poang} diamanter!`, `${rekord ? 'Nytt rekord! ' : ''}${belon}`)
+    + `<div style="display:flex;justify-content:center;padding:6px 0">${ork('pigg', 150)}</div>
+       <div style="display:flex;flex-direction:column;gap:10px"><button class="knapp ljus" id="fangaIgen">Spela igen</button><button class="knapp sek" data-stang-ark>Klar</button></div>`;
+}
+
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
     if(S.niva >= 2 && !S.forstaPryl && S.klar){ S.forstaPryl = true; fapryl('kettlebell'); S.framme = S.framme || 'kettlebell';
