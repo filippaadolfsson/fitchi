@@ -1352,7 +1352,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta'];
 function spara(){
   if(!S.klar) return;
   loggaDag();
@@ -1539,8 +1539,6 @@ if(!HALSA){
   const v = document.createElement('p'); v.className = 'exinfo'; v.innerHTML = `${ex}<span>Så här ser det ut när dina vänner är med. Vännerna och laget är påhittade under testet.</span>`;
   document.querySelector('#s-vanner h1').after(v);
   // butik: förmåner och samarbeten är exempel
-  const b = document.createElement('p'); b.className = 'exinfo'; b.innerHTML = `${ex}<span>Förmånerna och samarbetena är exempel under testet.</span>`;
-  document.querySelector('#s-butik .bento').before(b);
 }
 
 // formen: en gång i veckan räknas veckan som aktiv (minst 2 pass eller energi i snitt 60+) eller inte
@@ -2092,6 +2090,86 @@ function ritaStatus(){
   n.innerHTML = `<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M20 0 L40 20 L20 52 L0 20 Z" fill="#c8f169"/><path d="M20 0 L28 20 L20 52 L12 20 Z" fill="#e6ff9e" opacity=".6"/><text x="20" y="28" text-anchor="middle" font-size="17" font-weight="800" fill="#1e1230" font-family="Bricolage Grotesque, sans-serif">${S.niva}</text></svg>Nivå ${S.niva}`;
   n.setAttribute('aria-label', `Nivå ${S.niva}. Visa din resa`);
 }
+
+// ===== Butiken: prylar för mynt + förmåner =====
+const PRYLPRIS = {vanlig: 150, ovanlig: 400};
+{
+  const st = document.createElement('style'); st.textContent = `
+  .bhuvud{display:flex;justify-content:space-between;align-items:center}
+  .bsaldo{display:flex;flex-direction:column;align-items:flex-end;gap:0;line-height:1.1}
+  .bsaldo b{display:flex;align-items:center;gap:6px;font:800 20px var(--display);color:var(--pa-scen)}
+  .bsaldo small{font-size:11px;color:var(--pa-scen-d)}
+  .brubrik{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 -4px}
+  .brubrik h2{font:800 19px var(--display);color:var(--pa-scen)}
+  .brubrik span{font-size:12px;color:var(--pa-scen-d)}
+  .prylhylla{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px 24px;margin:0 -24px;scroll-snap-type:x mandatory;scroll-padding-left:24px;scrollbar-width:none}
+  .prylhylla::after{content:"";flex:0 0 6px}
+  .pkort{flex:0 0 132px;scroll-snap-align:start;border-radius:22px;padding:12px 10px;background:radial-gradient(circle at 50% 35%,#5a327466,#ffffff08 70%);box-shadow:inset 0 0 0 1px var(--glas-kant);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+  .pkort .pbild{height:78px;display:flex;align-items:center;justify-content:center}
+  .pkort .pbild img{max-height:78px;max-width:100px;width:auto;filter:drop-shadow(0 6px 8px #0007)}
+  .pkort b{font:700 14px var(--text);color:var(--pa-scen)}
+  .pkort small{font-size:11px;color:var(--pa-scen-d)}
+  .pkort button{appearance:none;border:0;border-radius:99px;padding:7px 14px;font:800 13px var(--display);display:inline-flex;align-items:center;gap:5px;cursor:pointer;background:#c8f169;color:#1e1230}
+  .pkort button.har{background:#ffffff14;color:var(--pa-scen-d);cursor:default}
+  .pkort button.dyr{background:#ffffff14;color:var(--pa-scen)}
+  .pkort.lasta .pbild img{filter:brightness(0) invert(1) opacity(.18)}
+  .formankort{border-radius:24px;overflow:hidden;background:#1a1226;box-shadow:inset 0 0 0 1px var(--glas-kant)}
+  .formankort .fbild{position:relative;height:170px;background:#222 center/cover no-repeat}
+  .formankort .fbild::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 45%,#1a1226)}
+  .formankort .fbadge{position:absolute;top:12px;right:12px;z-index:1;background:#dcfc0a;color:#111;font:800 22px var(--display);padding:6px 12px;border-radius:14px;transform:rotate(3deg)}
+  .formankort .fin{padding:4px 16px 16px;display:flex;flex-direction:column;gap:6px}
+  .formankort .etk{color:var(--pa-scen-d)}
+  .formankort h3{font:800 20px var(--display);color:var(--pa-scen);margin:0}
+  .formankort p{font-size:14px;line-height:20px;color:var(--pa-scen-d);margin:0}
+  .frad{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+  .frad .pris{display:flex;align-items:center;gap:6px;font:800 18px var(--display);color:var(--pa-scen)}
+  .litenforman{border-radius:22px;padding:14px 16px;background:#ffffff0a;box-shadow:inset 0 0 0 1px var(--glas-kant);display:flex;align-items:center;gap:12px}
+  .litenforman .ikon{width:46px;height:46px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;background:#b48be033;font-size:22px}
+  .litenforman div{flex:1;display:flex;flex-direction:column;gap:2px}
+  .litenforman b{font:700 15px var(--text);color:var(--pa-scen)}
+  .litenforman small{display:flex;align-items:center;gap:4px;font:800 13px var(--display);color:var(--pa-scen-d)}
+  .kodruta{border-radius:18px;padding:16px;text-align:center;background:#c8f1691a;box-shadow:inset 0 0 0 1.5px #c8f169aa;font:800 26px var(--display);letter-spacing:.08em;color:#c8f169}`;
+  document.head.appendChild(st);
+}
+const MYNT_SVG = (s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#f5c04a"/><circle cx="10" cy="10" r="5.5" fill="#e0a92e"/></svg>`;
+const FORMANER = {
+  dose: {namn: 'Dose Athletic', titel: '20 % på träningskläder', text: 'PureZ-plagg som inte luktar svett, ens efter tredje passet. Gäller hela sortimentet på doseathletic.com.', pris: 600, kod: 'FITCHI20'},
+  yoga: {namn: 'Yogastudion', titel: 'Gratis yogapass', text: 'Ett drop in-pass på en partnerstudio nära dig.', pris: 1500, kod: 'FITCHIYOGA'}};
+ritaButik = function(){
+  const sida = document.querySelector('#s-butik .pad'); if(!sida) return;
+  const har = new Set(S.prylar || []), saldo = S.saldo, losta = S.losta || {};
+  const kopbara = Object.entries(PRYLAR).filter(([, p]) => PRYLPRIS[p.s]);
+  const fk = (k, stor) => { const f = FORMANER[k], lost = losta[k];
+    const knapp = lost ? `<button class="lite" data-visakod="${k}">Visa koden</button>` : `<button class="lite" data-forman="${k}" ${saldo < f.pris ? 'style="background:#ffffff14;color:var(--pa-scen)"' : ''}>${saldo < f.pris ? `${fmt(f.pris - saldo)} mynt kvar` : 'Lös in'}</button>`;
+    return stor
+      ? `<div class="formankort"><div class="fbild" style="background-image:url('img/partner/dose.webp')"><span class="fbadge">−20 %</span></div><div class="fin"><span class="etk">Förmån · ${f.namn}</span><h3>${f.titel}</h3><p>${f.text}</p><div class="frad"><span class="pris">${MYNT_SVG(20)}${fmt(f.pris)}</span>${knapp}</div></div></div>`
+      : `<div class="litenforman"><span class="ikon">🧘</span><div><b>${f.titel}</b><small>${MYNT_SVG(14)}${fmt(f.pris)} · ${f.namn}</small></div>${knapp}</div>`; };
+  sida.innerHTML = `
+    <div class="bhuvud"><h1>Butik</h1><span class="bsaldo"><b>${MYNT_SVG(22)}${fmt(saldo)}</b><small>dina mynt</small></span></div>
+    <p class="exinfo"><span class="exempel">Exempel</span><span>Förmånerna och samarbetena är exempel under testet.</span></p>
+    <div class="brubrik"><h2>Prylar till ${S.namn}</h2><span>Sällsynta finns bara i kistan</span></div>
+    <div class="prylhylla">${kopbara.map(([id, p]) => { const ager = har.has(id), dyr = saldo < PRYLPRIS[p.s];
+      return `<div class="pkort"><div class="pbild">${prylHtml(id, 78)}</div><b>${p.namn}</b><small>${SALLNAMN[p.s]}</small>
+        ${ager ? `<button class="har" disabled>Din ✓</button>` : `<button class="${dyr ? 'dyr' : ''}" data-kopPryl="${id}">${MYNT_SVG(14)}${PRYLPRIS[p.s]}</button>`}</div>`; }).join('')}
+      ${Object.entries(PRYLAR).filter(([, p]) => !PRYLPRIS[p.s]).map(([id, p]) => `<div class="pkort ${har.has(id) ? '' : 'lasta'}"><div class="pbild">${prylHtml(id, 78)}</div><b>${har.has(id) ? p.namn : '???'}</b><small>Sällsynt</small><button class="har" disabled>${har.has(id) ? 'Din ✓' : 'Bara i kistan'}</button></div>`).join('')}</div>
+    <div class="brubrik"><h2>Förmåner</h2><span>Lös in med dina mynt</span></div>
+    ${fk('dose', true)}
+    ${fk('yoga', false)}
+    <div class="kort bred sambox"><span class="etk">Samarbete</span><h2 style="font-size:17px">Näring saknar protein idag</h2><p style="font-size:14px;line-height:20px">En proteinbar ger 20 g. Rabatt via Fitchi.</p><p class="liten">Eller: kesella med bär, 25 g.</p><button class="lite sek">Visa erbjudandet</button></div>`;
+};
+document.addEventListener('click', e => {
+  const kp = e.target.closest('[data-kopPryl]');
+  if(kp){ const id = kp.dataset.koppryl || kp.getAttribute('data-kopPryl'), p = PRYLAR[id], pris = PRYLPRIS[p.s];
+    if(S.saldo < pris){ toastG(`Du behöver ${fmt(pris - S.saldo)} mynt till. Ett pass till så är du nära.`, 2400); return; }
+    S.saldo -= pris; fapryl(id); S.framme = id; spara(); ritaButik(); ritaHem(); toastG(`${p.namn} står nu bredvid ${S.namn}!`, 2400); return; }
+  const fo = e.target.closest('[data-forman]');
+  if(fo){ const k = fo.dataset.forman, f = FORMANER[k];
+    if(S.saldo < f.pris){ toastG(`Du behöver ${fmt(f.pris - S.saldo)} mynt till.`, 2200); return; }
+    S.saldo -= f.pris; S.losta = Object.assign(S.losta || {}, {[k]: Date.now()}); spara(); ritaButik(); ritaHem(); visaKod(k); return; }
+  const vk = e.target.closest('[data-visakod]'); if(vk){ visaKod(vk.dataset.visakod); return; }
+}, true);
+function visaKod(k){ const f = FORMANER[k];
+  oppnaArk(arkHuvud('Förmån · ' + f.namn, f.titel, 'Exempel under testet. Koden fungerar inte på riktigt än.') + `<div class="kodruta">${f.kod}</div><button class="knapp ljus" data-stang-ark>Klar</button>`); }
 
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
