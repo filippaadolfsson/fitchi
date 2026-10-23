@@ -141,6 +141,14 @@ class FitchiHalsaPlugin : Plugin() {
                     val p = klient.aggregate(AggregateRequest(setOf(HeartRateRecord.BPM_AVG, HeartRateRecord.BPM_MIN), TimeRangeFilter.between(igar, nu)))
                     p[HeartRateRecord.BPM_AVG]?.let { ret.put("pulsSnitt", it) }
                     p[HeartRateRecord.BPM_MIN]?.let { ret.put("pulsMin", it) }
+                    // Senaste mätningen (puls just nu), senaste 3 timmarna
+                    val nyliga = klient.readRecords(
+                        ReadRecordsRequest(HeartRateRecord::class, TimeRangeFilter.between(nu.minus(3, ChronoUnit.HOURS), nu))
+                    ).records.flatMap { it.samples }.maxByOrNull { it.time }
+                    if (nyliga != null) {
+                        ret.put("pulsNu", nyliga.beatsPerMinute)
+                        ret.put("pulsNuMinSedan", Duration.between(nyliga.time, nu).toMinutes())
+                    }
                 }
                 ret.put("last", nu.toString())
                 call.resolve(ret)

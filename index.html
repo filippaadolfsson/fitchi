@@ -1451,7 +1451,8 @@ if(HALSA){
     const delar = [];
     if(typeof d.steg === 'number') delar.push(`<span><b>${d.steg.toLocaleString('sv-SE')}</b> steg</span>`);
     if(d.somnMin > 0) delar.push(`<span><b>${fmtH(d.somnMin)}</b> sömn</span>`);
-    if(vp) delar.push(`<span><b>${vp}</b> ${d.vilopuls ? 'vilopuls' : 'puls'}</span>`);
+    if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> puls nu${d.pulsNuMinSedan > 20 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min sen)</small>` : ''}</span>`);
+    if(vp) delar.push(`<span><b>${vp}</b> ${d.vilopuls ? 'vilopuls' : 'lägsta puls'}</span>`);
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     if($('#s-hem').classList.contains('aktiv') && !$('#slöja').classList.contains('oppen')) ritaHem();
     spara(); klarNu();
