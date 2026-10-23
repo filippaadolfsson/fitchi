@@ -25,11 +25,7 @@ android {
             keyPassword 'fitchitest'
         }
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions { jvmTarget = '17' }
+    kotlinOptions { jvmTarget = '21' }
     buildTypes {
         debug { signingConfig signingConfigs.test }
         release {
