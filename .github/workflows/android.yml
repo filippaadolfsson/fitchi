@@ -11,6 +11,8 @@ permissions:
 jobs:
   bygg:
     runs-on: ubuntu-latest
+    env:
+      HAR_NYCKEL: ${{ secrets.FITCHI_KEYSTORE_B64 != '' && 'ja' || 'nej' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +37,9 @@ jobs:
 
       - name: Bygg APK
         working-directory: app/android
+        env:
+          FITCHI_VERSION_CODE: ${{ github.run_number }}
+          FITCHI_VERSION_NAME: 0.9.${{ github.run_number }}
         run: |
           chmod +x gradlew
           set -o pipefail
@@ -53,6 +58,19 @@ jobs:
           git commit -m "Bygglogg ${{ github.sha }}"
           git push -f origin bygglogg
 
+      - name: Bygg Google Play-paket (AAB) om uppladdningsnyckeln finns
+        if: ${{ env.HAR_NYCKEL == 'ja' }}
+        working-directory: app/android
+        env:
+          FITCHI_VERSION_CODE: ${{ github.run_number }}
+          FITCHI_VERSION_NAME: 0.9.${{ github.run_number }}
+          FITCHI_KEYSTORE_LOSEN: ${{ secrets.FITCHI_KEYSTORE_LOSEN }}
+        run: |
+          echo "${{ secrets.FITCHI_KEYSTORE_B64 }}" | base64 -d > /tmp/fitchi-upload.jks
+          FITCHI_KEYSTORE=/tmp/fitchi-upload.jks ./gradlew bundleRelease --no-daemon
+          cp app/build/outputs/bundle/release/app-release.aab ../../fitchi.aab
+          rm /tmp/fitchi-upload.jks
+
       - name: Döp om filen
         run: cp app/android/app/build/outputs/apk/debug/app-debug.apk fitchi.apk
 
@@ -64,5 +82,8 @@ jobs:
           body: |
             Senaste testversionen av Fitchi för Android. Ladda ner **fitchi.apk** på telefonen och installera.
             Byggd från ${{ github.sha }}.
-          files: fitchi.apk
+          files: |
+            fitchi.apk
+            fitchi.aab
+          fail_on_unmatched_files: false
           make_latest: true

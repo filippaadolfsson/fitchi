@@ -8,8 +8,8 @@ android {
         applicationId "se.fitchi.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode (System.getenv('FITCHI_VERSION_CODE') ?: '1').toInteger()
+        versionName System.getenv('FITCHI_VERSION_NAME') ?: "0.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -24,11 +24,21 @@ android {
             keyAlias 'fitchi'
             keyPassword 'fitchitest'
         }
+        // uppladdningsnyckel för Google Play: läses från GitHub-secrets, finns aldrig i repot
+        if (System.getenv('FITCHI_KEYSTORE')) {
+            uppladdning {
+                storeFile file(System.getenv('FITCHI_KEYSTORE'))
+                storePassword System.getenv('FITCHI_KEYSTORE_LOSEN')
+                keyAlias 'fitchi-upload'
+                keyPassword System.getenv('FITCHI_KEYSTORE_LOSEN')
+            }
+        }
     }
     kotlinOptions { jvmTarget = '21' }
     buildTypes {
         debug { signingConfig signingConfigs.test }
         release {
+            if (System.getenv('FITCHI_KEYSTORE')) signingConfig signingConfigs.uppladdning
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
