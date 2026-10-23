@@ -1336,7 +1336,7 @@ ritaHem = function(){ _ritaHem2(); const el = $('#hemOrkis'); el.dataset.pose = 
 // ===== 3D-fitchis =====
 const F3D = {};
 for(const k of ['bjorn','hare','uggla','utter','katt']) F3D[k] = `img/${k}.webp`;
-const F3DP = {"bjorn": {"lugn": "img/bruno/lugn.webp", "neutral": "img/bruno/neutral.webp", "pigg": "img/bruno/pigg.webp", "sover": "img/bruno/sover.webp", "stark": "img/bruno/stark.webp", "trott": "img/bruno/trott.webp"}, "hare": {"lugn": "img/hugo/lugn.webp", "neutral": "img/hugo/neutral.webp", "pigg": "img/hugo/pigg.webp", "sover": "img/hugo/sover.webp", "stark": "img/hugo/stark.webp", "trott": "img/hugo/trott.webp"}, "uggla": {"lugn": "img/luna/lugn.webp", "neutral": "img/luna/neutral.webp", "pigg": "img/luna/pigg.webp", "sover": "img/luna/sover.webp", "stark": "img/luna/stark.webp", "trott": "img/luna/trott.webp"}, "utter": {"lugn": "img/otto/lugn.webp", "neutral": "img/otto/neutral.webp", "pigg": "img/otto/pigg.webp", "sover": "img/otto/sover.webp", "stark": "img/otto/stark.webp", "trott": "img/otto/trott.webp"}, "katt": {"lugn": "img/kit/lugn.webp", "neutral": "img/kit/neutral.webp", "pigg": "img/kit/pigg.webp", "sover": "img/kit/sover.webp", "stark": "img/kit/stark.webp", "trott": "img/kit/trott.webp"}};
+const F3DP = {"bjorn": {"dansa": "img/bruno/dansa.webp", "lugn": "img/bruno/lugn.webp", "neutral": "img/bruno/neutral.webp", "pigg": "img/bruno/pigg.webp", "sover": "img/bruno/sover.webp", "stark": "img/bruno/stark.webp", "trott": "img/bruno/trott.webp"}, "hare": {"dansa": "img/hugo/dansa.webp", "lugn": "img/hugo/lugn.webp", "neutral": "img/hugo/neutral.webp", "pigg": "img/hugo/pigg.webp", "sover": "img/hugo/sover.webp", "stark": "img/hugo/stark.webp", "trott": "img/hugo/trott.webp"}, "uggla": {"dansa": "img/luna/dansa.webp", "lugn": "img/luna/lugn.webp", "neutral": "img/luna/neutral.webp", "pigg": "img/luna/pigg.webp", "sover": "img/luna/sover.webp", "stark": "img/luna/stark.webp", "trott": "img/luna/trott.webp"}, "utter": {"dansa": "img/otto/dansa.webp", "lugn": "img/otto/lugn.webp", "neutral": "img/otto/neutral.webp", "pigg": "img/otto/pigg.webp", "sover": "img/otto/sover.webp", "stark": "img/otto/stark.webp", "trott": "img/otto/trott.webp"}, "katt": {"dansa": "img/kit/dansa.webp", "lugn": "img/kit/lugn.webp", "neutral": "img/kit/neutral.webp", "pigg": "img/kit/pigg.webp", "sover": "img/kit/sover.webp", "stark": "img/kit/stark.webp", "trott": "img/kit/trott.webp"}};
 ork = (mood, w) => { if(typeof posFor === 'function') mood = posFor(mood); const sov = (S.sover || S.glod <= 0) && w >= 120, key = sov ? 'sover' : mood, p = F3DP[S.art] || {}, src = p[key] || p[mood==='pigg' && !p.pigg ? 'neutral' : mood] || F3D[S.art];
   const kl = (['neutral','pigg','stark','lugn','trott'].includes(key) && p[key]) ? ' vid' : key==='sover' && p.sover ? (["uggla", "utter", "katt"].includes(S.art) ? ' vid' : ' liggande') : '';
   const SK = S.art==='bjorn' ? {neutral:922, pigg:920, stark:933, trott:893, lugn:823} : {}, hp = kl===' vid' && SK[key] ? Math.round(SK[key]/935*100) : 100;
@@ -1825,6 +1825,7 @@ function visaLeka(){
     + `<div style="display:flex;flex-direction:column;gap:10px">
       <button class="knapp ljus" data-lek="klappa">Klappa ${S.namn}</button>
       <button class="knapp ${last?'sek':'ljus'}" data-lek="andas" ${last?'disabled':''}>Andas med ${S.namn} · 1 min${last?' · låses upp på nivå 3':''}</button>
+      <button class="knapp ${S.niva<5?'sek':'ljus'}" data-lek="dansa" ${S.niva<5?'disabled':''}>Dansa${S.niva<5?' · låses upp på nivå 5':''}</button>
       <button class="knapp ${S.niva<7?'sek':'ljus'}" data-lek="fanga" ${S.niva<7?'disabled':''}>Fånga diamanter · 20 s${S.niva<7?' · låses upp på nivå 7':''}</button></div>`);
 }
 function startaAndas(){
@@ -1856,7 +1857,7 @@ function klarAndas(){
 document.addEventListener('click', e => {
   const o = e.target.closest('[data-oms="leka"]'); if(o && !S.sover){ e.stopImmediatePropagation(); visaLeka(); return; }
   const l = e.target.closest('[data-lek]');
-  if(l){ if(l.dataset.lek === 'klappa'){ stangArk(); klappa(); andraGlod(5, 'Ni lekte en stund.'); } else if(l.dataset.lek === 'fanga') startaFanga(); else startaAndas(); return; }
+  if(l){ if(l.dataset.lek === 'klappa'){ stangArk(); klappa(); andraGlod(5, 'Ni lekte en stund.'); } else if(l.dataset.lek === 'fanga') startaFanga(); else if(l.dataset.lek === 'dansa'){ stangArk(); dansa(16000); andraGlod(5, `${S.namn} dansar!`); } else startaAndas(); return; }
   if(e.target.closest('#fangaIgen')){ startaFanga(); return; }
   if(e.target.closest('#fangaAvbryt')){ fangaStopp = true; stangArk(); return; }
   if(e.target.closest('#andasAvbryt')){ clearInterval(andasTimer); stangArk(); return; }
@@ -1869,7 +1870,7 @@ document.addEventListener('click', e => {
   if(e.target.closest('#spara')) nyckelIdag();
 }, true);
 // --- minispel 2: fånga diamanter (nivå 7)
-NIVABEL.forEach(r => { if(r[0] === 3){ r[1] = 'Minispel: andas med din fitchi'; r[2] = 'andningsspelet'; } if(r[0] === 7){ r[1] = 'Minispel: fånga diamanter'; r[2] = 'diamantspelet'; } });
+NIVABEL.forEach(r => { if(r[0] === 3){ r[1] = 'Minispel: andas med din fitchi'; r[2] = 'andningsspelet'; } if(r[0] === 7){ r[1] = 'Minispel: fånga diamanter'; r[2] = 'diamantspelet'; } if(r[0] === 5){ r[1] = 'Nytt beteende: dansen'; r[2] = 'dansen'; } if(r[0] === 12){ r[1] = 'Vänner, lag och lagutmaningar'; r[2] = 'vänner och lag'; } });
 {
   const st = document.createElement('style'); st.textContent = `
   .fanga{position:relative;height:430px;border-radius:24px;overflow:hidden;background:radial-gradient(ellipse at 50% 100%,#5a327455,#00000000 60%),#ffffff08;box-shadow:inset 0 0 0 1px var(--glas-kant);touch-action:none;user-select:none;-webkit-user-select:none}
@@ -1939,10 +1940,28 @@ function slutFanga(poang){
        <div style="display:flex;flex-direction:column;gap:10px"><button class="knapp ljus" id="fangaIgen">Spela igen</button><button class="knapp sek" data-stang-ark>Klar</button></div>`;
 }
 
+// --- dansen (nivå 5)
+const DANSHP = {"bjorn": 103, "hare": 100.6, "uggla": 100.6, "utter": 100, "katt": 100.3};
+let dansTimer = null;
+{ const _ork = ork;
+  ork = (mood, w) => { const p = F3DP[S.art] || {};
+    if(S.dansar && !S.sover && S.glod > 0 && p.dansa && w >= 150)
+      return `<span class="f3d orkis humor-dansa vid" style="width:${w}px;height:${Math.round(w*200/170)}px"><img src="${p.dansa}" alt="" draggable="false" style="height:${DANSHP[S.art] || 100}%;top:auto;bottom:0"></span>`;
+    return _ork(mood, w); }; }
+function dansa(ms){
+  if(!(F3DP[S.art] || {}).dansa) return;
+  clearTimeout(dansTimer); S.dansar = true; ritaHem();
+  dansTimer = setTimeout(() => { S.dansar = false; ritaHem(); }, ms);
+}
+document.addEventListener('click', e => { if(S.dansar && e.target.closest('#hemOrkis')){ clearTimeout(dansTimer); S.dansar = false; setTimeout(ritaHem, 50); } }, true);
+// ibland dansar fitchin av sig själv när den är pigg och glöden är hög
+setTimeout(() => { if(S.klar && S.niva >= 5 && !S.sover && S.glod >= 70 && S.m.energi >= 65 && Math.random() < .35 && !$('#slöja').classList.contains('oppen')) dansa(9000); }, 2500);
+
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
     if(S.niva >= 2 && !S.forstaPryl && S.klar){ S.forstaPryl = true; fapryl('kettlebell'); S.framme = S.framme || 'kettlebell';
       setTimeout(() => toastG(`Nivå 2: ${S.namn} fick sin första pryl, en kettlebell!`, 3200), 800); spara(); }
+    if(S.dansar && !S.sover && $('#humor')) $('#humor').textContent = `${S.namn} dansar!`;
     ritaPryl(); ritaKistknapp(); }; }
 
 // börja om från början (i Din resa)
