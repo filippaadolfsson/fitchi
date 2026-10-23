@@ -1351,7 +1351,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis'];
 function spara(){
   if(!S.klar) return;
   loggaDag();
@@ -1431,7 +1431,9 @@ if(HALSA){
       const s = await HALSA.status();
       if(!s.tillganglig){ visaKoppla('Health Connect saknas', 'Telefonen har inte Health Connect. Fitchi fungerar ändå, men utan data från klockan.', null); klarNu(); return; }
       if(s.antal === 0){ visaKoppla('Koppla din klocka', 'Låt Fitchi läsa steg, sömn och puls från Samsung Health. Datan stannar i telefonen.', 'Koppla Samsung Health'); klarNu(); return; }
-      kort.hidden = true; halsaLas();
+      kort.hidden = true;
+      if(s.trening === false) visaKoppla('Nytt: träningspass från klockan', 'Låt Fitchi se dina pass i Samsung Health, så fylls rätt mätare och uppdrag bockas av automatiskt.', 'Ge Fitchi tillgång');
+      halsaLas();
     }catch(e){ console.log('halsa', e); klarNu(); }
   }
   async function halsaLas(){
@@ -1461,6 +1463,7 @@ if(HALSA){
     if(vp) delar.push(`<span><b>${vp}</b> ${d.vilopuls ? 'vilopuls' : 'lägsta puls'}</span>`);
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     stegUppdrag(d.steg);
+    if(Array.isArray(d.pass)) klockPass(d.pass);
     if($('#s-hem').classList.contains('aktiv') && !$('#slöja').classList.contains('oppen')) ritaHem();
     spara(); klarNu();
   }
@@ -1991,6 +1994,81 @@ setInterval(ritaDygn, 5 * 60000);
     if(S.dansar && !S.sover && $('#humor')) $('#humor').textContent = `${S.namn} dansar!`;
     ritaDygn(); ritaPryl(); ritaKistknapp(); }; }
 
+// ===== Träningspass från klockan =====
+const KALLNAMN = p => p === 'com.sec.android.app.shealth' ? 'Samsung Health' : 'klockan';
+function klockPass(lista){
+  S.klockpass = S.klockpass || [];
+  const idag0 = new Date(); idag0.setHours(0, 0, 0, 0);
+  const nya = lista.filter(p => !S.klockpass.includes(p.id) && p.start >= idag0.getTime() - (S.klockpass.length ? 864e5 : 0)).sort((a, b) => a.start - b.start);
+  if(!nya.length) return;
+  for(const p of nya){
+    S.klockpass.push(p.id);
+    const typ = TYPER_ALLA.find(t => t[0] === p.typ) || TYPER_ALLA.find(t => t[0] === 'annat') || TYPER_ALLA[0], mat = typ[2], min = Math.min(180, p.min);
+    const okning = Math.min(100 - S.m[mat], Math.round(min * 0.9));
+    S.m[mat] += okning; if(mat !== 'energi') S.m.energi = Math.min(100, S.m.energi + Math.round(min * 0.3));
+    const mynt = 20 + Math.min(60, min), xp = Math.min(35, Math.round(min * 0.8));
+    S.saldo += mynt; S.xp += xp; while(S.xp >= 100){ S.xp -= 100; S.niva++; }
+    S.glod = Math.min(100, S.glod + Math.min(25, 5 + Math.round(min / 2)));
+    S.passlogg = (S.passlogg || []).concat({tid: p.start, typ: typ[0], namn: typ[1], min, m: mat, kalla: 'klocka'}).slice(-60);
+    if(dagNr(new Date(p.start)) === dagNr(new Date())) nyckelIdag();
+    // bocka av uppdrag som passet uppfyller (samma mätare och minst lika många minuter)
+    (S.uppdrag || []).forEach((u, i) => { if(u.klar || u.m !== mat || u.stegMal) return; const krav = +((u.t.match(/(\d+)\s*min/) || [])[1] || 0);
+      if(krav && krav <= min) setTimeout(() => { const k = document.querySelector(`[data-klar="${i}"]`); if(k) k.click(); }, 900); });
+    setTimeout(() => toastG(`${KALLNAMN(p.kalla)} såg ett pass: ${typ[1]}, ${min} min. ${MNAMN[mat][0].toUpperCase() + MNAMN[mat].slice(1)} +${okning}, +${mynt} mynt`, 3600), 1200);
+  }
+  S.klockpass = S.klockpass.slice(-120);
+  spara(); ritaHem();
+}
+
+// ===== Påminnelser (bara i Android-appen) =====
+const NOTIS = HALSA && window.Capacitor.Plugins.LocalNotifications ? window.Capacitor.Plugins.LocalNotifications : null;
+function nastaKl(h, m, dagar){ const d = new Date(); d.setHours(h, m || 0, 0, 0); if(dagar) d.setDate(d.getDate() + dagar); else if(d <= new Date()) d.setDate(d.getDate() + 1); return d; }
+async function planeraNotiser(){
+  if(!NOTIS) return;
+  try{
+    const p = await NOTIS.getPending(); if(p.notifications && p.notifications.length) await NOTIS.cancel({notifications: p.notifications.map(n => ({id: n.id}))});
+    if(!S.notis || !S.klar) return;
+    const n = S.namn, lista = [], nu = new Date(), dag = d => d.toDateString(), upptagen = {};
+    const lagg = (id, d, title, body) => { if(d <= nu) return; const k = dag(d); upptagen[k] = (upptagen[k] || 0) + 1; if(upptagen[k] > 2) return; lista.push({id, title, body, schedule: {at: d, allowWhileIdle: true}}); };
+    // söndag: kistan (ersätter morgonen den dagen)
+    const sondag = new Date(); sondag.setHours(10, 0, 0, 0); sondag.setDate(sondag.getDate() + ((7 - sondag.getDay()) % 7)); if(sondag <= nu) sondag.setDate(sondag.getDate() + 7);
+    const k = kistaNu();
+    lagg(3, sondag, 'Veckans kista kan öppnas! 🗝️', `${k.dagar.length} av 7 nycklar. Se vad ${n} får.`);
+    // morgon
+    const m0 = nastaKl(8, 0), m1 = new Date(m0); m1.setDate(m1.getDate() + 1);
+    [m0, m1].forEach((m, i) => { if(m.getDay() !== 0) lagg(1 + i * 10, m, `☀️ ${n} har vaknat`, 'Hur sov du? Kika in och starta dagen tillsammans.'); });
+    // glöden börjar bli låg
+    if(S.glod > 0){
+      let d = new Date(nu.getTime() + Math.max(1, (S.glod - 30) / 50 * 24) * 36e5);
+      if(d.getHours() < 9 || d.getHours() >= 20){ d.setHours(d.getHours() >= 20 ? 24 + 12 : 12, 0, 0, 0); }
+      lagg(2, d, `${n} saknar dig lite`, 'Glöden har börjat falna. Ett litet uppdrag räcker för att den ska lysa igen.');
+    }
+    // kväll
+    if(!S.sover) lagg(4, nastaKl(21, 0), `🌙 Dags att natta ${n}?`, 'Säg godnatt så sover ni båda gott.');
+    if(lista.length) await NOTIS.schedule({notifications: lista});
+  }catch(e){ console.log('notis', e); }
+}
+async function fragaNotis(){
+  oppnaArk(arkHuvud('Påminnelser', `Får ${S.namn} påminna dig?`, `Högst två små påminnelser om dagen: på morgonen, när glöden börjar falna, när det är kväll och när veckans kista kan öppnas. Du kan stänga av dem i Din resa.`)
+    + `<div style="display:flex;flex-direction:column;gap:10px"><button class="knapp ljus" id="notisJa">Ja, gärna</button><button class="knapp sek" id="notisNej">Inte nu</button></div>`);
+}
+async function slaPaNotis(){
+  try{ const r = await NOTIS.requestPermissions(); S.notis = r.display === 'granted'; }catch(e){ S.notis = false; }
+  spara(); planeraNotiser(); toastG(S.notis ? `${S.namn} påminner dig ibland.` : 'Påminnelser är avstängda i telefonens inställningar.', 2600);
+}
+document.addEventListener('click', e => {
+  if(e.target.closest('#notisJa')){ stangArk(); slaPaNotis(); return; }
+  if(e.target.closest('#notisNej')){ S.notis = false; spara(); stangArk(); return; }
+  if(e.target.closest('#notisVaxla')){ if(S.notis){ S.notis = false; spara(); planeraNotiser(); toastG('Påminnelserna är avstängda.'); stangArk(); } else { stangArk(); slaPaNotis(); } return; }
+}, true);
+if(NOTIS){
+  document.addEventListener('visibilitychange', () => { if(document.hidden) planeraNotiser(); });
+  planeraNotiser();
+  let forsok = 0; const fraga = setInterval(() => { forsok++;
+    if(S.notis !== undefined || forsok > 40){ clearInterval(fraga); return; }
+    if(S.klar && !$('#slöja').classList.contains('oppen') && $('#s-hem').classList.contains('aktiv')){ clearInterval(fraga); fragaNotis(); } }, 3000);
+}
+
 // börja om från början (i Din resa)
 const _visaResa = visaResa;
 visaResa = function(){
@@ -2002,6 +2080,7 @@ visaResa = function(){
     S.klar = false; location.replace(location.pathname);
   };
   $('#ark').appendChild(b);
+  if(NOTIS){ const n = document.createElement('button'); n.className = 'knapp sek'; n.id = 'notisVaxla'; n.textContent = S.notis ? 'Påminnelser: på · stäng av' : 'Påminnelser: av · slå på'; b.before(n); }
 };
 // start
 if(ladda()){ formVeckor(); document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn); visa('s-hem'); }

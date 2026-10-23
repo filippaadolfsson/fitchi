@@ -2,5 +2,13 @@
   "appId": "se.fitchi.app",
   "appName": "Fitchi",
   "webDir": "www",
-  "android": { "backgroundColor": "#120c1c" }
+  "android": {
+    "backgroundColor": "#120c1c"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_fitchi",
+      "iconColor": "#c8f169"
+    }
+  }
 }

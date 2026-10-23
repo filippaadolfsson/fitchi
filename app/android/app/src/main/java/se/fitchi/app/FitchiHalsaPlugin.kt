@@ -4,6 +4,7 @@ import androidx.activity.result.ActivityResult
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -37,8 +38,26 @@ class FitchiHalsaPlugin : Plugin() {
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
         HealthPermission.getReadPermission(HeartRateRecord::class),
-        HealthPermission.getReadPermission(RestingHeartRateRecord::class)
+        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+        HealthPermission.getReadPermission(ExerciseSessionRecord::class)
     )
+
+    /** Health Connects träningstyp -> Fitchis passtyp (samma nycklar som i appen). */
+    private fun kategori(t: Int): String = when (t) {
+        ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING, ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING,
+        ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS, ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING,
+        ExerciseSessionRecord.EXERCISE_TYPE_BOOT_CAMP -> "styrka"
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> "lopning"
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING, ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> "promenad"
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING, ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> "cykel"
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL, ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> "simning"
+        ExerciseSessionRecord.EXERCISE_TYPE_YOGA, ExerciseSessionRecord.EXERCISE_TYPE_PILATES,
+        ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING, ExerciseSessionRecord.EXERCISE_TYPE_GUIDED_BREATHING -> "yoga"
+        ExerciseSessionRecord.EXERCISE_TYPE_DANCING -> "dans"
+        ExerciseSessionRecord.EXERCISE_TYPE_TENNIS, ExerciseSessionRecord.EXERCISE_TYPE_SQUASH, ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON,
+        ExerciseSessionRecord.EXERCISE_TYPE_RACQUETBALL, ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS -> "padel"
+        else -> "annat"
+    }
 
     private fun tillganglig(): Int = HealthConnectClient.getSdkStatus(context)
 
@@ -56,6 +75,7 @@ class FitchiHalsaPlugin : Plugin() {
                 val givna = HealthConnectClient.getOrCreate(context).permissionController.getGrantedPermissions()
                 ret.put("behorighet", givna.containsAll(behorigheter))
                 ret.put("antal", givna.intersect(behorigheter).size)
+                ret.put("trening", givna.contains(HealthPermission.getReadPermission(ExerciseSessionRecord::class)))
                 call.resolve(ret)
             } catch (e: Exception) {
                 call.reject("Kunde inte läsa behörigheter: ${e.message}")
@@ -121,6 +141,27 @@ class FitchiHalsaPlugin : Plugin() {
                     ret.put("steg", bast?.value ?: 0L)
                     ret.put("stegKallaPaket", bast?.key ?: "")
                     ret.put("stegIgar", igarApp.values.maxOrNull() ?: 0L)
+                }
+
+                // Träningspass sedan i går (Samsung Health skickar sina pass hit)
+                if (givna.contains(HealthPermission.getReadPermission(ExerciseSessionRecord::class))) {
+                    val pass = com.getcapacitor.JSArray()
+                    val svar = klient.readRecords(ReadRecordsRequest(ExerciseSessionRecord::class, TimeRangeFilter.between(igar, nu)))
+                    for (r in svar.records) {
+                        val min = Duration.between(r.startTime, r.endTime).toMinutes()
+                        if (min < 5) continue
+                        val o = JSObject()
+                        o.put("id", r.metadata.id)
+                        o.put("typ", kategori(r.exerciseType))
+                        o.put("htyp", r.exerciseType)
+                        o.put("titel", r.title ?: "")
+                        o.put("min", min)
+                        o.put("start", r.startTime.toEpochMilli())
+                        o.put("slut", r.endTime.toEpochMilli())
+                        o.put("kalla", r.metadata.dataOrigin.packageName)
+                        pass.put(o)
+                    }
+                    ret.put("pass", pass)
                 }
 
                 // Senaste nattens sömn: sessioner som slutar efter kl 18 igår

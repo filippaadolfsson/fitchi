@@ -16,7 +16,7 @@ class BehorighetActivity : AppCompatActivity() {
             text = """
                 Fitchi och din hälsodata
 
-                Fitchi läser dina steg, din sömn och din puls från Health Connect, så att din fitchi kan spegla hur du mår utan att du behöver logga något.
+                Fitchi läser dina steg, din sömn, din puls och dina träningspass från Health Connect, så att din fitchi kan spegla hur du mår utan att du behöver logga något.
 
                 • Datan stannar i din telefon. Den skickas inte till någon server.
                 • Den används bara för spelet: humör, glöd, XP och uppdrag.
