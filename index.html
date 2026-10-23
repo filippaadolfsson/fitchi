@@ -1351,7 +1351,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat'];
 function spara(){
   if(!S.klar) return;
   loggaDag();
@@ -2068,6 +2068,118 @@ if(NOTIS){
     if(S.notis !== undefined || forsok > 40){ clearInterval(fraga); return; }
     if(S.klar && !$('#slöja').classList.contains('oppen') && $('#s-hem').classList.contains('aktiv')){ clearInterval(fraga); fragaNotis(); } }, 3000);
 }
+
+// ===== Mat: scanna streckkod eller logga själv =====
+{
+  const st = document.createElement('style'); st.textContent = `
+  .matknappar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .matknappar .knapp{margin:0}
+  .egenrad{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+  .egenrad button{flex:none;appearance:none;border:0;border-radius:16px;padding:10px 12px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 13px var(--text);text-align:left;cursor:pointer}
+  .egenrad small{display:block;font-weight:500;font-size:11px;color:var(--pa-scen-d)}
+  .matform{display:flex;flex-direction:column;gap:12px}
+  .matform label{display:flex;flex-direction:column;gap:6px;font:600 13px var(--text);color:var(--pa-scen-d)}
+  .matform input[type=text],.matform input[type=number]{appearance:none;border:0;border-radius:14px;padding:12px 14px;background:#ffffff12;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 16px var(--text)}
+  .valrad2{display:flex;gap:8px;flex-wrap:wrap}
+  .valrad2 button{appearance:none;border:0;border-radius:99px;padding:8px 12px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 13px var(--text);cursor:pointer}
+  .valrad2 button[aria-pressed=true]{background:#c8f169;color:#1e1230;box-shadow:none}
+  .matform label.kryss{display:flex;flex-direction:row;align-items:center;gap:10px;font:600 14px var(--text);color:var(--pa-scen);text-align:left}
+  .kryss input{width:20px;height:20px;accent-color:#c8f169}
+  .scanvy{position:relative;border-radius:20px;overflow:hidden;background:#000;aspect-ratio:3/4}
+  .scanvy video{width:100%;height:100%;object-fit:cover}
+  .scanvy i{position:absolute;left:12%;right:12%;top:42%;height:16%;border:3px solid #c8f169;border-radius:14px;box-shadow:0 0 0 999px #0007}
+  .produkt{display:flex;flex-direction:column;gap:4px}
+  .produkt b{font:800 20px var(--display)}
+  .stor{font:800 30px var(--display);color:#c8f169}`;
+  document.head.appendChild(st);
+}
+const SCANNER = HALSA && window.Capacitor.Plugins.BarcodeScanner ? window.Capacitor.Plugins.BarcodeScanner : null;
+{ const f = $('#foto'); if(f){ const w = document.createElement('div'); w.className = 'matknappar';
+    w.innerHTML = `<button class="knapp" id="scanna" style="background:var(--vit);color:var(--natt);box-shadow:0 1px 2px #1c142010">Scanna streckkod</button><button class="knapp" id="loggaMat" style="background:var(--vit);color:var(--natt);box-shadow:0 1px 2px #1c142010">Logga själv</button>`;
+    f.replaceWith(w);
+    const e = document.createElement('div'); e.id = 'egenWrap'; e.innerHTML = `<p class="liten" style="margin:4px 0 8px">Dina senaste</p><div class="egenrad" id="egenrad"></div>`; w.after(e); } }
+function ritaEgen(){ const w = $('#egenWrap'); if(!w) return; const l = S.egenMat || []; w.hidden = !l.length;
+  $('#egenrad').innerHTML = l.map((m, i) => `<button data-egen="${i}">${m.namn}<small>${m.protein} g protein${m.gront ? ' · grönt' : ''}${m.vatten ? ' · vatten' : ''}</small></button>`).join(''); }
+{ const _rm = ritaMat; ritaMat = function(){ _rm.apply(this, arguments); ritaEgen(); }; }
+function laggMat(m, spara2){
+  S.protein += Math.round(m.protein || 0); S.gront += m.gront || 0; S.vatten += m.vatten || 0; S.saldo += 5;
+  if(spara2){ const l = (S.egenMat || []).filter(x => x.namn.toLowerCase() !== m.namn.toLowerCase()); l.unshift({namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0}); S.egenMat = l.slice(0, 8); }
+  stangArk(); ritaMat(); andraGlod(10, `Du matade ${S.namn}.`); spara();
+  setTimeout(() => toastG(`${m.namn} tillagt${m.protein ? ', ' + Math.round(m.protein) + ' g protein' : ''}. +5 mynt`, 2400), 400);
+}
+// --- logga själv
+function visaLoggaSjalv(forval){
+  const f = forval || {};
+  oppnaArk(arkHuvud('Logga mat', 'Vad åt du?', 'Skriv vad det var och ungefär hur mycket protein. Det sparas så att du kan välja det med ett klick nästa gång.')
+    + `<div class="matform">
+      <label>Namn<input type="text" id="mNamn" maxlength="30" value="${(f.namn || '').replace(/"/g, '&quot;')}" placeholder="T.ex. Havregrynsgröt med kvarg"></label>
+      <label>Protein (gram)<input type="number" id="mProt" inputmode="numeric" min="0" max="150" value="${f.protein ?? ''}" placeholder="0"></label>
+      <div class="valrad2" id="mSnabbP">${[5,10,15,20,30].map(n => `<button data-p="${n}">${n} g</button>`).join('')}</div>
+      <label class="kryss"><input type="checkbox" id="mGront" ${f.gront ? 'checked' : ''}>Innehöll en näve grönsaker, frukt eller bär</label>
+      <label class="kryss"><input type="checkbox" id="mVatten" ${f.vatten ? 'checked' : ''}>Drack ett glas vatten till</label>
+      <button class="knapp ljus" id="mLagg">Lägg till</button></div>`);
+}
+// --- scanna
+let scanStopp = null;
+async function scanna(){
+  if(SCANNER){
+    try{
+      const a = await SCANNER.isGoogleBarcodeScannerModuleAvailable();
+      if(!a.available){ toastG('Laddar ner skannern från Google, ett ögonblick …', 3000); await SCANNER.installGoogleBarcodeScannerModule(); }
+      const r = await SCANNER.scan({formats: ['EAN_13', 'EAN_8', 'UPC_A', 'UPC_E']});
+      const kod = r.barcodes && r.barcodes[0] && r.barcodes[0].rawValue; if(kod) slaUpp(kod);
+    }catch(e){ console.log('scan', e); if(!/cancel/i.test(String(e.message || e))) visaKodInmatning('Kameran gick inte att starta. Skriv in siffrorna under streckkoden i stället.'); }
+    return;
+  }
+  if(!('BarcodeDetector' in window) || !navigator.mediaDevices){ visaKodInmatning('Den här webbläsaren kan inte läsa streckkoder med kameran. Skriv in siffrorna under streckkoden, eller använd Android-appen.'); return; }
+  oppnaArk(arkHuvud('Scanna', 'Rikta kameran mot streckkoden', '') + `<div class="scanvy"><video id="scanVideo" playsinline muted></video><i></i></div><button class="knapp sek" id="kodSjalv">Skriv in koden i stället</button>`);
+  try{
+    const ström = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
+    const v = $('#scanVideo'); v.srcObject = ström; await v.play();
+    const det = new BarcodeDetector({formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e']}); let igang = true;
+    scanStopp = () => { igang = false; ström.getTracks().forEach(t => t.stop()); };
+    const leta = async () => { if(!igang || !$('#scanVideo')){ scanStopp(); return; }
+      try{ const k = await det.detect(v); if(k.length){ scanStopp(); try{ navigator.vibrate && navigator.vibrate(30); }catch(e){} slaUpp(k[0].rawValue); return; } }catch(e){}
+      setTimeout(leta, 250); };
+    leta();
+  }catch(e){ visaKodInmatning('Fick inte använda kameran. Skriv in siffrorna under streckkoden i stället.'); }
+}
+function visaKodInmatning(text){
+  if(scanStopp) scanStopp();
+  oppnaArk(arkHuvud('Streckkod', 'Skriv in koden', text) + `<div class="matform"><label>Siffrorna under streckkoden<input type="number" id="kodIn" inputmode="numeric" placeholder="7310865004703"></label><button class="knapp ljus" id="kodSok">Sök</button></div>`);
+}
+async function slaUpp(kod){
+  oppnaArk(arkHuvud('Streckkod', 'Letar …', `Kod ${kod}`) + '<p class="liten" style="color:var(--pa-scen-d)">Söker i Open Food Facts, en öppen databas med livsmedel.</p>');
+  let p = null;
+  try{ const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(kod)}.json?fields=product_name,product_name_sv,brands,nutriments,serving_quantity,product_quantity,categories_tags`);
+    const j = await r.json(); if(j.status === 1 || j.product) p = j.product; }catch(e){ console.log('off', e); }
+  if(!p || p.nutriments == null){
+    oppnaArk(arkHuvud('Streckkod', 'Hittade inte varan', 'Den finns inte i databasen än, eller så saknas näringsvärden. Logga den själv så sparas den till nästa gång.') + `<button class="knapp ljus" id="loggaMat">Logga själv</button>`); return; }
+  const namn = (p.product_name_sv || p.product_name || 'Okänd vara').trim() + (p.brands ? ` (${p.brands.split(',')[0].trim()})` : '');
+  const per100 = +p.nutriments.proteins_100g || 0, kat = p.categories_tags || [];
+  const gront = kat.some(k => /en:(vegetables|fruits|legumes|berries|salads)/.test(k)), vatten = kat.some(k => /en:(waters|mineral-waters)/.test(k));
+  const port = [];
+  if(+p.serving_quantity) port.push([`1 portion (${Math.round(p.serving_quantity)} g)`, +p.serving_quantity]);
+  port.push(['100 g', 100], ['200 g', 200]);
+  if(+p.product_quantity && +p.product_quantity !== 100 && +p.product_quantity !== 200) port.push([`Hela (${Math.round(p.product_quantity)} g)`, +p.product_quantity]);
+  window.__produkt = {namn: namn.slice(0, 40), per100, gront, vatten, gram: port[0][1]};
+  oppnaArk(arkHuvud('Streckkod', 'Hittad!', '') + `<div class="matform"><div class="produkt"><b>${namn}</b><span class="liten" style="color:var(--pa-scen-d)">${per100 ? per100.toLocaleString('sv-SE') + ' g protein per 100 g' : 'Inget protein angivet'}${gront ? ' · räknas som grönt' : ''}${vatten ? ' · räknas som vatten' : ''}</span></div>
+    <label>Hur mycket åt du?</label><div class="valrad2" id="portVal">${port.map(([t, g], i) => `<button data-gram="${g}" aria-pressed="${i === 0}">${t}</button>`).join('')}</div>
+    <div><span class="stor" id="portProt">${Math.round(per100 * port[0][1] / 100)} g</span> <span class="liten" style="color:var(--pa-scen-d)">protein</span></div>
+    <button class="knapp ljus" id="prodLagg">Lägg till</button></div>`);
+}
+document.addEventListener('click', e => {
+  if(e.target.closest('#scanna')){ scanna(); return; }
+  if(e.target.closest('#loggaMat')){ visaLoggaSjalv(); return; }
+  if(e.target.closest('#kodSjalv')){ visaKodInmatning(''); return; }
+  if(e.target.closest('#kodSok')){ const k = ($('#kodIn').value || '').trim(); if(k.length >= 8) slaUpp(k); return; }
+  const sp = e.target.closest('[data-p]'); if(sp){ $('#mProt').value = sp.dataset.p; return; }
+  if(e.target.closest('#mLagg')){ const namn = ($('#mNamn').value || '').trim() || 'Måltid'; laggMat({namn, protein: +$('#mProt').value || 0, gront: $('#mGront').checked ? 1 : 0, vatten: $('#mVatten').checked ? 1 : 0}, true); return; }
+  const pg = e.target.closest('[data-gram]'); if(pg){ document.querySelectorAll('[data-gram]').forEach(b => b.setAttribute('aria-pressed', b === pg)); window.__produkt.gram = +pg.dataset.gram; $('#portProt').textContent = Math.round(window.__produkt.per100 * window.__produkt.gram / 100) + ' g'; return; }
+  if(e.target.closest('#prodLagg')){ const p = window.__produkt; laggMat({namn: p.namn, protein: p.per100 * p.gram / 100, gront: p.gront && p.gram >= 80 ? 1 : 0, vatten: p.vatten ? Math.max(1, Math.round(p.gram / 250)) : 0}, true); return; }
+  const eg = e.target.closest('[data-egen]'); if(eg){ const m = S.egenMat[+eg.dataset.egen]; laggMat(m, true); return; }
+  if(scanStopp && (e.target.id === 'slöja' || e.target.closest('#stang'))) scanStopp();
+}, true);
 
 // börja om från början (i Din resa)
 const _visaResa = visaResa;
