@@ -2065,12 +2065,36 @@ function widgetSync(){
 }
 document.addEventListener('visibilitychange', () => { if(document.hidden){ widgetSenast = ''; widgetSync(); } });
 
+// ===== Toppen: en samlad statusrad (nivå · glöd · nycklar · mynt) =====
+{
+  const st = document.createElement('style'); st.textContent = `
+  #s-hem .horn.statusrad{display:flex;align-items:center;gap:6px;padding:5px 12px 5px 6px;border-radius:999px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);backdrop-filter:blur(8px)}
+  .statusrad .piller{background:none!important;box-shadow:none!important;padding:4px 4px;flex:none}
+  .statusrad #niva{display:inline-flex!important;flex-direction:row!important;white-space:nowrap;appearance:none;border:0;background:none!important;box-shadow:none!important;align-items:center;gap:6px;font:800 14px var(--display);color:var(--pa-scen);cursor:pointer;padding-right:2px}
+  .statusrad #niva svg{width:24px;height:31px;flex:none;filter:drop-shadow(0 0 6px #c8f16966)}
+  .statusrad .glodrad{flex:1;min-width:60px;width:auto;margin:0;padding:0 4px;background:none!important;box-shadow:none!important;gap:6px}
+  .statusrad .glodrad > svg,.statusrad .glodnamn{display:none}
+  .statusrad .glodbar{flex:1;height:8px}
+  .statusrad .glodrad b{font:800 12px var(--display);color:var(--pa-scen-d);min-width:20px}
+  .statusrad #kistknapp{appearance:none;border:0;background:none!important;box-shadow:none!important;white-space:nowrap;cursor:pointer;border-left:1px solid var(--glas-kant);border-radius:0;padding-left:10px;margin-left:2px;font:800 14px var(--display);color:var(--pa-scen)}
+  .statusrad #kistknapp svg{width:15px;height:15px}
+  .statusrad .saldo{font:800 14px var(--display);white-space:nowrap}`;
+  document.head.appendChild(st);
+  const horn = document.querySelector('#s-hem .horn'), glod = document.getElementById('glodrad'), niva = document.getElementById('niva');
+  if(horn && glod && niva){ horn.classList.add('statusrad'); niva.after(glod); }
+}
+function ritaStatus(){
+  const n = document.getElementById('niva'); if(!n) return;
+  n.innerHTML = `<svg viewBox="0 0 40 52" aria-hidden="true"><path d="M20 0 L40 20 L20 52 L0 20 Z" fill="#c8f169"/><path d="M20 0 L28 20 L20 52 L12 20 Z" fill="#e6ff9e" opacity=".6"/><text x="20" y="28" text-anchor="middle" font-size="17" font-weight="800" fill="#1e1230" font-family="Bricolage Grotesque, sans-serif">${S.niva}</text></svg>Nivå ${S.niva}`;
+  n.setAttribute('aria-label', `Nivå ${S.niva}. Visa din resa`);
+}
+
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
     if(S.niva >= 2 && !S.forstaPryl && S.klar){ S.forstaPryl = true; fapryl('kettlebell'); S.framme = S.framme || 'kettlebell';
       setTimeout(() => toastG(`Nivå 2: ${S.namn} fick sin första pryl, en kettlebell!`, 3200), 800); spara(); }
     if(S.dansar && !S.sover && $('#humor')) $('#humor').textContent = `${S.namn} dansar!`;
-    ritaDygn(); ritaPryl(); ritaKistknapp(); widgetSync(); }; }
+    ritaDygn(); ritaPryl(); ritaKistknapp(); ritaStatus(); widgetSync(); }; }
 
 // ===== Träningspass från klockan =====
 const KALLNAMN = p => p === 'com.sec.android.app.shealth' ? 'Samsung Health' : 'klockan';
