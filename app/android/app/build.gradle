@@ -8,7 +8,7 @@ android {
         applicationId "se.fitchi.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode (System.getenv('FITCHI_VERSION_CODE') ?: '1').toInteger()
+        versionCode Integer.parseInt(System.getenv('FITCHI_VERSION_CODE') ?: '1')
         versionName System.getenv('FITCHI_VERSION_NAME') ?: "0.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
