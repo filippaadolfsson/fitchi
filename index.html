@@ -2350,7 +2350,8 @@ async function slaUpp(kod){
   oppnaArk(arkHuvud('Streckkod', 'Hittad!', '') + `<div class="matform"><div class="produkt"><b>${namn}</b><span class="liten" style="color:var(--pa-scen-d)">${per100 ? per100.toLocaleString('sv-SE') + ' g protein per 100 g' : 'Inget protein angivet'}${gront ? ' · räknas som grönt' : ''}${vatten ? ' · räknas som vatten' : ''}</span></div>
     <label>Hur mycket åt du?</label><div class="valrad2" id="portVal">${port.map(([t, g], i) => `<button data-gram="${g}" aria-pressed="${i === 0}">${t}</button>`).join('')}</div>
     <div><span class="stor" id="portProt">${Math.round(per100 * port[0][1] / 100)} g</span> <span class="liten" style="color:var(--pa-scen-d)">protein</span></div>
-    <button class="knapp ljus" id="prodLagg">Lägg till</button></div>`);
+    <button class="knapp ljus" id="prodLagg">Lägg till</button>
+    <p class="liten" style="color:var(--pa-scen-d);text-align:center">Data från <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:inherit">Open Food Facts</a>, licens ODbL.</p></div>`);
 }
 document.addEventListener('click', e => {
   if(e.target.closest('#scanna')){ scanna(); return; }
@@ -2419,7 +2420,8 @@ visaResa = function(){
         ${NOTIS ? `<button id="notisVaxla"><span>Påminnelser<br><small>Högst två om dagen</small></span><span class="vaxel ${S.notis ? 'pa' : ''}"></span></button>` : ''}
         <button id="borjaOm"><span>Börja om från början<br><small>Raderar din fitchi och allt du har samlat</small></span><span>›</span></button>
       </div>
-      <p class="resafot">Nivåer går aldrig förlorade. Varje nivå ger mynt, och nya nivåer låser upp beteenden, minispel och prylar.</p></div>`);
+      <p class="resafot">Nivåer går aldrig förlorade. Varje nivå ger mynt, och nya nivåer låser upp beteenden, minispel och prylar.</p>
+      <p class="resafot">Fitchi är en app för vardagsvanor, inte en medicinsk tjänst. Livsmedelsdata från Open Food Facts (ODbL).</p></div>`);
 };
 document.addEventListener('click', e => {
   if(e.target.closest('#resaAllt')){ resaAllt = true; const y = $('#ark').scrollTop; visaResa(); $('#ark').scrollTop = y; return; }
