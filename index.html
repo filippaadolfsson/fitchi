@@ -562,7 +562,7 @@ body.testlage .panel,body.testlage .hint{display:flex}
 <!-- 5 Hem -->
 <section class="skarm" id="s-hem" aria-label="Hem">
   <div class="topp scen">
-    <div class="horn"><button class="piller glas resa" id="niva" data-resa aria-label="Visa din resa">Nivå 7</button><span class="piller glas saldo"><span class="mynt" aria-hidden="true"></span><span id="saldo">1 240</span></span></div>
+    <div class="horn"><button class="piller glas resa" id="niva" data-resa aria-label="Visa din resa">Nivå 7</button><span class="piller glas saldo"><span class="mynt" aria-hidden="true"></span><span id="saldo">50</span></span></div>
     <div class="glodrad glas" id="glodrad" role="meter" aria-label="Glöd" aria-valuemin="0" aria-valuemax="100"><svg viewBox="0 0 20 26" width="14" height="18" aria-hidden="true"><path d="M10 1 L19 10 L10 25 L1 10 Z" fill="var(--lime)"/></svg><span class="glodnamn">Glöd</span><div class="glodbar"><i id="glodbar"></i></div><b id="glodtal">60</b></div>
     <div class="djurscen varld" id="djurscen"><div class="mark" aria-hidden="true"></div>
       <div class="vandrare" id="vandrare"><div class="skugga" aria-hidden="true"></div><div class="vand" id="vand"><button id="hemOrkis" class="djurknapp studs"></button></div><div class="partiklar" id="partiklar" aria-hidden="true"></div><div class="zz" aria-hidden="true"><i>z</i><i>z</i><i>Z</i></div></div></div>
@@ -652,7 +652,7 @@ body.testlage .panel,body.testlage .hint{display:flex}
 <!-- 8 Butik -->
 <section class="skarm" id="s-butik" aria-label="Myntbutik">
   <div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-bottom:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center"><h1>Butik</h1><span class="piller saldo" style="background:var(--vit);box-shadow:0 1px 2px #1c142010"><span class="mynt" aria-hidden="true"></span><span id="saldo2">1 240</span></span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><h1>Butik</h1><span class="piller saldo" style="background:var(--vit);box-shadow:0 1px 2px #1c142010"><span class="mynt" aria-hidden="true"></span><span id="saldo2">50</span></span></div>
     <div class="bento">
       <div class="kort bred" style="background:var(--scen);color:var(--pa-scen);flex-direction:row;align-items:center;gap:10px"><div id="butikOrkis" style="flex:none"></div><div style="display:flex;flex-direction:column;gap:4px"><span class="etk" style="color:var(--pa-scen-d)">Till <span class="vnamn">Bruno</span></span><h2 style="font-size:19px">Solhatt</h2><span class="pris" style="color:var(--mynt)"><span class="mynt"></span>300</span><button class="lite" style="background:var(--pa-scen);color:var(--scen)" data-kop="300" data-namn="Solhatten">Köp</button></div></div>
       <div class="kort"><span class="etk">Förmån</span><h2 style="font-size:17px">20 % på löparskor</h2><span class="pris"><span class="mynt"></span>800</span><button class="lite" data-kop="800" data-namn="Rabattkoden">Lös in</button></div>
@@ -687,7 +687,7 @@ body.testlage .panel,body.testlage .hint{display:flex}
 <script>
 function levande(a,p,attrs){ return ''; }
 const SVG = {"bjorn-neutral": "", "bjorn-pigg": "", "bjorn-stark": "", "bjorn-lugn": "", "bjorn-trott": "", "hare-neutral": "", "hare-pigg": "", "hare-stark": "", "hare-lugn": "", "hare-trott": "", "uggla-neutral": "", "uggla-pigg": "", "uggla-stark": "", "uggla-lugn": "", "uggla-trott": "", "utter-neutral": "", "utter-pigg": "", "utter-stark": "", "utter-lugn": "", "utter-trott": "", "katt-neutral": "", "katt-pigg": "", "katt-stark": "", "katt-lugn": "", "katt-trott": ""};
-const S = {namn:'Bruno', art:'bjorn', sit:new Set(), typ:'promenad', min:20, saldo:1240, xp:65, niva:7,
+const S = {namn:'Bruno', art:'bjorn', sit:new Set(), typ:'promenad', min:20, saldo:50, xp:0, niva:1,
   m:{energi:62, styrka:55, lugn:38, naring:70}};
 S.pref = {mal:new Set(['ork','lugn']), typer:new Set(['promenad','styrka']), tid:'15', nar:'morgon', kost:'alla', mathjalp:new Set(['protein']), pepp:'varm', plattform:'iphone'};
 const $ = s => document.querySelector(s);
@@ -911,7 +911,7 @@ function ritaHem(){
   $('#ringar').innerHTML = RINGAR.map(([k,n]) => `<button class="chip glas" data-matare="${k}" aria-label="${n}: ${Math.round(S.m[k])} av 100. Visa detaljer">${ring(S.m[k],k)}<span>${n}</span></button>`).join('');
   ritaUppdrag();
   $('#saldo').textContent = fmt(S.saldo); $('#niva').textContent = 'Nivå ' + S.niva;
-  $('#xpbar').style.width = S.xp + '%'; $('#xptext').textContent = `${100-S.xp} % till nivå ${S.niva+1}`;
+  $('#xpbar').style.width = S.xp + '%'; $('#xptext').textContent = `${Math.round(S.xp)} av 100 XP mot nivå ${S.niva+1}`;
 }
 
 // Logga
@@ -1215,7 +1215,7 @@ ritaHem = function(){
   _ritaHem();
   $('#niva').textContent = `Nivå ${S.niva}`;
   const nasta = NIVABEL.find(([n]) => n > S.niva);
-  $('#xptext').textContent = `${100-S.xp} % till nivå ${S.niva+1}` + (nasta ? ` · ${nasta[2]} på nivå ${nasta[0]}` : '');
+  $('#xptext').textContent = `${Math.round(S.xp)} av 100 XP mot nivå ${S.niva+1}` + (nasta ? ` · ${nasta[2]} på nivå ${nasta[0]}` : '');
   ritaGlod();
   if(S.niva > S.senastNiva){ const fran = S.senastNiva; S.senastNiva = S.niva; setTimeout(() => visaNivaUpp(fran), 350); }
   else if(!S.morgonKlar && S.glod > 0) setTimeout(visaMorgon, 350);
@@ -1477,9 +1477,21 @@ if(HALSA){
   setTimeout(() => { if(S.klar) halsaKolla(); }, 600);
 }
 
+// börja om från början (i Din resa)
+const _visaResa = visaResa;
+visaResa = function(){
+  _visaResa();
+  const b = document.createElement('button'); b.className = 'knapp sek'; b.id = 'borjaOm'; b.textContent = 'Börja om från början';
+  b.onclick = () => {
+    if(b.dataset.saker !== '1'){ b.dataset.saker = '1'; b.textContent = 'Tryck igen för att radera allt och börja om'; b.style.color = '#ff8a80'; return; }
+    try{ localStorage.removeItem(LAGER); }catch(e){}
+    S.klar = false; location.replace(location.pathname);
+  };
+  $('#ark').appendChild(b);
+};
 // start
 if(ladda()){ document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn); visa('s-hem'); }
-else { S.m = {energi:62, styrka:55, lugn:60, naring:55}; S.data.somn = 7.4; S.data.steg = 7000; }
+else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data.steg = 0; S.protein = 0; S.vatten = 0; S.gront = 0; S.glod = 70; }
 
 </script>
 </body>
