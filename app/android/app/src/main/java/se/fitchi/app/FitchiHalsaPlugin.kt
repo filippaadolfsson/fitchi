@@ -8,7 +8,6 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -102,24 +101,26 @@ class FitchiHalsaPlugin : Plugin() {
 
                 // Steg idag och igår
                 if (givna.contains(HealthPermission.getReadPermission(StepsRecord::class))) {
-                    // Vilka appar skriver steg idag? Telefon, klocka och andra appar kan räkna samma steg.
-                    val perApp = mutableMapOf<String, Long>()
-                    var sida: String? = null
-                    do {
-                        val svar = klient.readRecords(ReadRecordsRequest(StepsRecord::class, TimeRangeFilter.between(idag, nu), pageToken = sida))
-                        for (r in svar.records) perApp[r.metadata.dataOrigin.packageName] = (perApp[r.metadata.dataOrigin.packageName] ?: 0L) + r.count
-                        sida = svar.pageToken
-                    } while (sida != null)
-                    val kallor = JSObject(); perApp.forEach { (k, v) -> kallor.put(k, v) }
+                    // Steg per app. Telefonens egen stegräknare och Samsung Health (telefon + klocka)
+                    // räknar delvis samma steg, så vi lägger inte ihop dem utan tar den app som räknat flest.
+                    suspend fun perApp(fran: Instant, till: Instant): Map<String, Long> {
+                        val m = mutableMapOf<String, Long>()
+                        var sida: String? = null
+                        do {
+                            val svar = klient.readRecords(ReadRecordsRequest(StepsRecord::class, TimeRangeFilter.between(fran, till), pageToken = sida))
+                            for (r in svar.records) m[r.metadata.dataOrigin.packageName] = (m[r.metadata.dataOrigin.packageName] ?: 0L) + r.count
+                            sida = svar.pageToken
+                        } while (sida != null)
+                        return m
+                    }
+                    val idagApp = perApp(idag, nu)
+                    val igarApp = perApp(igar, idag)
+                    val kallor = JSObject(); idagApp.forEach { (k, v) -> kallor.put(k, v) }
                     ret.put("stegKallor", kallor)
-                    // Samsung Health räknar redan ihop telefon och klocka, så använd bara dess siffra när den finns
-                    val samsung = "com.sec.android.app.shealth"
-                    val bara = if (perApp.containsKey(samsung)) setOf(DataOrigin(samsung)) else emptySet()
-                    ret.put("stegKalla", if (bara.isEmpty()) "Health Connect" else "Samsung Health")
-                    val a = klient.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(idag, nu), bara))
-                    ret.put("steg", a[StepsRecord.COUNT_TOTAL] ?: 0L)
-                    val b = klient.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(igar, idag), bara))
-                    ret.put("stegIgar", b[StepsRecord.COUNT_TOTAL] ?: 0L)
+                    val bast = idagApp.maxByOrNull { it.value }
+                    ret.put("steg", bast?.value ?: 0L)
+                    ret.put("stegKallaPaket", bast?.key ?: "")
+                    ret.put("stegIgar", igarApp.values.maxOrNull() ?: 0L)
                 }
 
                 // Senaste nattens sömn: sessioner som slutar efter kl 18 igår
