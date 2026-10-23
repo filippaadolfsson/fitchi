@@ -1354,7 +1354,7 @@ const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e
 const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag'];
 function spara(){
   if(!S.klar) return;
-  const o = {v:1, sist:Date.now(), dag:S.dag, klar:true, sit:[...S.sit],
+  const o = {v:1, v2:true, sist:Date.now(), dag:S.dag, klar:true, sit:[...S.sit],
     pref:Object.fromEntries(Object.entries(S.pref).map(([k,v]) => [k, v instanceof Set ? {set:[...v]} : v])), data:S.data};
   for(const k of SPARA) o[k] = S[k];
   try{ localStorage.setItem(LAGER, JSON.stringify(o)); }catch(e){}
@@ -1362,6 +1362,7 @@ function spara(){
 function ladda(){
   let o = null; try{ o = JSON.parse(localStorage.getItem(LAGER) || 'null'); }catch(e){}
   if(!o || !o.klar) return false;
+  if(!o.v2 && o.niva >= 7 && o.saldo >= 1000){ try{ localStorage.removeItem(LAGER); }catch(e){} return false; } // gammal demo-sparning
   for(const k of SPARA) if(o[k] !== undefined) S[k] = o[k];
   S.sit = new Set(o.sit || []); S.data = Object.assign(S.data, o.data || {});
   for(const [k,v] of Object.entries(o.pref || {})) S.pref[k] = v && v.set ? new Set(v.set) : v;
@@ -1501,6 +1502,36 @@ if(HALSA){
   document.addEventListener('visibilitychange', () => { if(!document.hidden && S.klar) halsaKolla(); });
   document.getElementById('borja').addEventListener('click', () => setTimeout(halsaKolla, 1200));
   setTimeout(() => { if(S.klar) halsaKolla(); }, 600);
+}
+
+// ===== Webbappen (utan klocka): tydliga exempel där riktig data saknas =====
+{
+  const st = document.createElement('style'); st.textContent = `
+  .exempel{display:inline-block;font:800 10px/1 var(--text);letter-spacing:.06em;text-transform:uppercase;padding:4px 7px;border-radius:99px;background:#c8f169;color:#1e1230;vertical-align:middle}
+  .exrad{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .exrad .chips{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;opacity:.6}
+  .exrad .chips span{font:600 12px var(--text);padding:6px 10px;border-radius:99px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen)}
+  .exrad small{font-size:12px;line-height:16px;color:var(--pa-scen-d, var(--dampad));text-align:center;max-width:300px}
+  .exinfo{display:flex;gap:8px;align-items:center;font-size:13px;line-height:18px;color:var(--dampad)}`;
+  document.head.appendChild(st);
+}
+if(!HALSA){
+  const ex = '<span class="exempel">Exempel</span>';
+  // hem: så här ser klockans data ut
+  const rad = document.createElement('div'); rad.className = 'exrad';
+  rad.innerHTML = `<div class="chips"><span><b>6 240</b> steg</span><span><b>7 h 20 min</b> sömn</span><span><b>58</b> vilopuls</span></div>
+    <small>${ex}&nbsp; I Android-appen hämtas steg, sömn och puls från klockan och promenaduppdrag bockas av automatiskt. Här bockar du av själv.</small>`;
+  document.querySelector('#s-hem .xp').after(rad);
+}
+// vänner och butik är exempel både i webbappen och Android-appen
+{
+  const ex = '<span class="exempel">Exempel</span>';
+  // vänner: alla är påhittade
+  const v = document.createElement('p'); v.className = 'exinfo'; v.innerHTML = `${ex}<span>Så här ser det ut när dina vänner är med. Vännerna och laget är påhittade under testet.</span>`;
+  document.querySelector('#s-vanner h1').after(v);
+  // butik: förmåner och samarbeten är exempel
+  const b = document.createElement('p'); b.className = 'exinfo'; b.innerHTML = `${ex}<span>Förmånerna och samarbetena är exempel under testet.</span>`;
+  document.querySelector('#s-butik .bento').before(b);
 }
 
 // börja om från början (i Din resa)
