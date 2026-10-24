@@ -1352,7 +1352,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag'];
 function spara(){
   if(!S.klar) return;
   loggaDag();
@@ -1535,9 +1535,6 @@ if(!HALSA){
 // vänner och butik är exempel både i webbappen och Android-appen
 {
   const ex = '<span class="exempel">Exempel</span>';
-  // vänner: alla är påhittade
-  const v = document.createElement('p'); v.className = 'exinfo'; v.innerHTML = `${ex}<span>Så här ser det ut när dina vänner är med. Vännerna och laget är påhittade under testet.</span>`;
-  document.querySelector('#s-vanner h1').after(v);
   // butik: förmåner och samarbeten är exempel
 }
 
@@ -2291,6 +2288,128 @@ document.addEventListener('click', e => {
   const pb = e.target.closest('#passTaBort'); if(pb){ const p = hittaPass(pb.dataset.id); if(p){ angraPass(p); S.passlogg = S.passlogg.filter(x => x !== p); spara(); stangArk(); ritaPassIdag(); ritaHem(); toastG(`${p.namn} borttaget.`); } return; }
 }, true);
 { const _visa = visa; visa = function(id){ _visa.apply(this, arguments); if(id === 's-logga') ritaPassIdag(); if(id === 's-mat') ritaMatlogg(); }; }
+
+// ===== Riktiga vänner (Supabase) =====
+const SB_URL = 'https://bpyntoollqdnnpkqzmvk.supabase.co', SB_KEY = 'sb_publishable_rjH3w7E3xa2vrgCyB4LKAA_jMBK9lOz';
+const DELA_URL = 'https://filippaadolfsson.github.io/fitchi/';
+let sbSession = null, minProfil = null, vanLista = [], vanLaddar = false, vanFel = '';
+try{ sbSession = JSON.parse(localStorage.getItem('fitchi-sb') || 'null'); }catch(e){}
+const sbSpara = () => { try{ localStorage.setItem('fitchi-sb', JSON.stringify(sbSession)); }catch(e){} };
+async function sbToken(){
+  if(sbSession && sbSession.expires_at && sbSession.expires_at * 1000 > Date.now() + 60000) return sbSession.access_token;
+  try{
+    let r;
+    if(sbSession && sbSession.refresh_token) r = await fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {apikey: SB_KEY, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: sbSession.refresh_token})});
+    if(!r || !r.ok) r = await fetch(SB_URL + '/auth/v1/signup', {method: 'POST', headers: {apikey: SB_KEY, 'Content-Type': 'application/json'}, body: '{}'});
+    const j = await r.json(); if(!j.access_token) throw new Error(j.msg || j.error_description || 'Kunde inte ansluta');
+    sbSession = {access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at || Math.floor(Date.now() / 1000) + (j.expires_in || 3600), uid: j.user && j.user.id};
+    sbSpara(); return sbSession.access_token;
+  }catch(e){ console.log('supabase', e); return null; }
+}
+async function sb(vag, opt = {}){
+  const t = await sbToken(); if(!t) throw new Error('offline');
+  const r = await fetch(SB_URL + vag, {...opt, headers: {apikey: SB_KEY, Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', ...(opt.headers || {})}});
+  if(!r.ok){ const txt = await r.text(); throw new Error(txt || r.status); }
+  return r.status === 204 ? null : r.json().catch(() => null);
+}
+const idagStr = () => new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Stockholm'});
+function minaKortdata(){ const [mood] = humor(); return {namn: (S.namn || 'Fitchi').slice(0, 20), art: S.art, humor: (S.sover || S.glod <= 0) ? 'sover' : (typeof posFor === 'function' ? posFor(mood) : mood), niva: S.niva, uppdrag: (S.uppdrag || []).filter(u => u.klar).length, aktiv_dag: (S.uppdrag || []).some(u => u.klar) || (S.passlogg || []).some(p => dagNr(new Date(p.tid)) === dagNr(new Date())) ? idagStr() : null}; }
+let synkSenast = '';
+async function synkaProfil(tvinga){
+  if(!S.klar) return;
+  const d = minaKortdata(), nyckel = JSON.stringify(d); if(!tvinga && nyckel === synkSenast && minProfil) return; synkSenast = nyckel;
+  try{
+    await sbToken(); if(!sbSession) return;
+    const r = await sb('/rest/v1/profiler?on_conflict=id', {method: 'POST', headers: {Prefer: 'resolution=merge-duplicates,return=representation'}, body: JSON.stringify({id: sbSession.uid, ...d})});
+    minProfil = r && r[0]; S.moln = true;
+  }catch(e){ console.log('synk', e); synkSenast = ''; }
+}
+async function hamtaVanner(){
+  if(!sbSession || !sbSession.uid) return;
+  const v = await sb('/rest/v1/vanner?select=b&a=eq.' + sbSession.uid);
+  const ids = (v || []).map(x => x.b);
+  vanLista = ids.length ? await sb('/rest/v1/profiler?select=id,namn,art,humor,niva,uppdrag,aktiv_dag&id=in.(' + ids.join(',') + ')') : [];
+  const pp = await sb('/rest/v1/pepp?select=till&fran=eq.' + sbSession.uid + '&dag=eq.' + idagStr());
+  S.peppIdag = (pp || []).map(x => x.till);
+}
+async function kollaPepp(){
+  try{
+    await sbToken(); if(!sbSession) return;
+    const p = await sb('/rest/v1/pepp?select=id,fran&sedd=eq.false&till=eq.' + sbSession.uid);
+    if(!p || !p.length) return;
+    let namn = [];
+    try{ const fr = await sb('/rest/v1/profiler?select=id,namn&id=in.(' + [...new Set(p.map(x => x.fran))].join(',') + ')'); namn = fr.map(x => x.namn); }catch(e){}
+    await sb('/rest/v1/pepp?id=in.(' + p.map(x => x.id).join(',') + ')', {method: 'PATCH', body: JSON.stringify({sedd: true})});
+    andraGlod(5 * p.length);
+    toastG(`${namn.length ? namn.join(' och ') : 'En vän'} peppade dig 💪 Glöd +${5 * p.length}`, 3200);
+  }catch(e){ console.log('pepp', e); }
+}
+{
+  const st = document.createElement('style'); st.textContent = `
+  .minkod{border-radius:24px;padding:16px;background:var(--scen);color:var(--pa-scen);display:flex;flex-direction:column;gap:10px}
+  .minkod .kod{font:800 26px var(--display);letter-spacing:.06em;color:#c8f169}
+  .minkod .rad3{display:flex;gap:8px}
+  .minkod .rad3 button{flex:1}
+  .laggtill{display:flex;gap:8px}
+  .laggtill input{flex:1;min-width:0;appearance:none;border:0;border-radius:14px;padding:12px 14px;background:var(--vit);box-shadow:inset 0 0 0 1px var(--linje);color:var(--natt);font:700 16px var(--text);text-transform:uppercase;letter-spacing:.04em}
+  .vkort{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:20px;background:var(--vit);box-shadow:inset 0 0 0 1px var(--linje)}
+  .vkort .vbild{width:56px;height:60px;flex:none;display:flex;align-items:flex-end;justify-content:center}
+  .vkort .vbild img{max-height:60px;max-width:56px}
+  .vkort .vinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .vkort .vinfo b{font:800 16px var(--display);color:var(--natt)}
+  .vkort .vinfo small{font-size:12px;color:var(--dampad)}
+  .vkort .vinfo small.aktiv{color:#5c8a1a;font-weight:700}
+  .vtom{text-align:center;padding:18px 12px;border-radius:20px;background:var(--vit);box-shadow:inset 0 0 0 1px var(--linje);color:var(--dampad);font-size:14px;line-height:20px}`;
+  document.head.appendChild(st);
+}
+const HUMORTEXT = {neutral: 'mår bra', pigg: 'är pigg', stark: 'känner sig stark', trott: 'är trött', lugn: 'är lugn', sover: 'sover'};
+ritaVanner = function(){
+  const sida = document.querySelector('#s-vanner .pad'); if(!sida) return;
+  const kod = minProfil && minProfil.kod;
+  sida.innerHTML = `<h1>Vänner</h1>
+    <div class="minkod"><span class="etk" style="color:var(--pa-scen-d)">Din vänkod</span><span class="kod">${kod || (vanFel ? '—' : '…')}</span>
+      <span class="liten" style="color:var(--pa-scen-d)">Dela koden så kan dina vänner lägga till dig. Ni ser varandras fitchi, humör och nivå.</span>
+      <div class="rad3"><button class="knapp ljus" id="delaKod" ${kod ? '' : 'disabled'}>Bjud in en vän</button></div></div>
+    <div class="laggtill"><input id="vanKodIn" placeholder="Väns kod" maxlength="16" autocapitalize="characters"><button class="knapp" id="vanLagg" style="width:auto;padding:0 18px">Lägg till</button></div>
+    ${vanFel ? `<div class="vtom">${vanFel}</div>` : ''}
+    <div class="lista" id="vanLista">${vanLaddar && !vanLista.length ? '<div class="vtom">Hämtar dina vänner …</div>' : vanLista.length ? vanLista.map(v => {
+      const aktiv = v.aktiv_dag === idagStr(), peppad = (S.peppIdag || []).includes(v.id);
+      return `<div class="vkort"><span class="vbild"><img src="${F3D[v.art] || F3D.bjorn}" alt=""></span><span class="vinfo"><b>${v.namn}</b><small>Nivå ${v.niva} · ${v.namn} ${HUMORTEXT[v.humor] || 'mår bra'}</small><small class="${aktiv ? 'aktiv' : ''}">${aktiv ? `Aktiv idag · ${v.uppdrag} av 3 uppdrag` : 'Inte aktiv idag än'}</small></span>
+        <button class="pepp" data-peppa="${v.id}" aria-pressed="${peppad}" ${peppad ? 'disabled' : ''}>${peppad ? 'Peppad' : 'Peppa'}</button></div>`; }).join('')
+      : '<div class="vtom">Inga vänner än. Bjud in någon med din kod – det är roligare att hålla igång tillsammans.</div>'}</div>
+    <p class="liten" style="text-align:center">Vänner ser bara din fitchi, humör, nivå och om du har varit aktiv idag. Aldrig steg, sömn, puls eller mat.</p>`;
+};
+async function laddaVanner(){
+  vanLaddar = true; vanFel = ''; if($('#s-vanner').classList.contains('aktiv')) ritaVanner();
+  try{ await synkaProfil(true); if(!minProfil) throw new Error('offline'); await hamtaVanner(); }
+  catch(e){ vanFel = 'Kunde inte nå vännerna just nu. Kontrollera internet och försök igen.'; }
+  vanLaddar = false; if($('#s-vanner').classList.contains('aktiv')) ritaVanner();
+}
+async function laggTillVan(kod){
+  kod = (kod || '').trim().toUpperCase(); if(kod.length < 6) return toastG('Skriv hela koden, t.ex. HUGO-7K2M.');
+  try{ await synkaProfil(true); const r = await sb('/rest/v1/rpc/lagg_till_van', {method: 'POST', body: JSON.stringify({vankod: kod})});
+    if(!r || !r.ok) return toastG((r && r.fel) || 'Hittade ingen med den koden.', 2600);
+    await hamtaVanner(); ritaVanner(); const v = vanLista.find(x => x.id === r.id); toastG(`Du och ${v ? v.namn : 'din vän'} är nu vänner!`, 2600);
+  }catch(e){ toastG('Kunde inte lägga till vännen just nu.', 2400); }
+}
+document.addEventListener('click', async e => {
+  if(e.target.closest('#vanLagg')){ laggTillVan($('#vanKodIn').value); return; }
+  if(e.target.closest('#delaKod')){ const kod = minProfil && minProfil.kod; if(!kod) return;
+    const text = `Bli min vän i Fitchi! Min kod är ${kod}.`, url = DELA_URL + '?van=' + encodeURIComponent(kod);
+    try{ if(navigator.share){ await navigator.share({title: 'Fitchi', text, url}); return; } }catch(err){ if(err && err.name === 'AbortError') return; }
+    try{ await navigator.clipboard.writeText(`${text} ${url}`); toastG('Inbjudan kopierad – klistra in i sms eller chatt.', 2600); }catch(err){ toastG(`Din kod: ${kod}`, 3000); }
+    return; }
+  const pp = e.target.closest('[data-peppa]'); if(pp && !pp.disabled){ pp.disabled = true; pp.textContent = 'Peppad'; pp.setAttribute('aria-pressed', 'true');
+    try{ await sb('/rest/v1/pepp', {method: 'POST', body: JSON.stringify({fran: sbSession.uid, till: pp.dataset.peppa})}); S.peppIdag = [...(S.peppIdag || []), pp.dataset.peppa]; spara(); klappa(); }
+    catch(err){ pp.disabled = false; pp.textContent = 'Peppa'; toastG('Kunde inte peppa just nu.'); }
+    return; }
+}, true);
+{ const _visa2 = visa; visa = function(id){ _visa2.apply(this, arguments); if(id === 's-vanner'){ ritaVanner(); laddaVanner(); } }; }
+// inbjudningslänk ?van=KOD
+{ const vk = new URLSearchParams(location.search).get('van'); if(vk){ history.replaceState(null, '', location.pathname); const forsok = () => S.klar ? laggTillVan(vk) : setTimeout(forsok, 3000); setTimeout(forsok, 2500); } }
+// synka kortet och kolla pepp när appen öppnas
+setTimeout(() => { if(S.klar){ synkaProfil(); kollaPepp(); } }, 3500);
+document.addEventListener('visibilitychange', () => { if(!document.hidden && S.klar){ kollaPepp(); } else if(document.hidden){ synkaProfil(); } });
 
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
