@@ -1885,7 +1885,7 @@ function oppnaKista(){
 function ritaPryl(){
   const sc = document.getElementById('djurscen'); if(!sc) return;
   let b = document.getElementById('hempryl');
-  if(!S.framme){ if(b) b.remove(); return; }
+  if(!S.framme){ if(b) b.remove(); return; } // ställs fram igen från butiken
   if(!b || b.dataset.id !== S.framme){ if(b) b.remove(); b = document.createElement('button'); b.id = 'hempryl'; b.dataset.id = S.framme;
     b.className = 'hempryl ' + PRYLAR[S.framme].s; b.setAttribute('aria-label', 'Byt pryl'); b.innerHTML = prylHtml(S.framme, 64); sc.appendChild(b); }
 }
@@ -1944,7 +1944,8 @@ document.addEventListener('click', e => {
   if(e.target.closest('#kistknapp')){ visaKista(); return; }
   if(e.target.closest('#oppnaKista')){ oppnaKista(); return; }
   if(e.target.closest('#hempryl')){ visaPrylar(); return; }
-  const pr = e.target.closest('[data-pryl]'); if(pr){ S.framme = pr.dataset.pryl || null; spara(); ritaPryl(); visaPrylar(); return; }
+  const pr = e.target.closest('[data-pryl]'); if(pr){ S.framme = pr.dataset.pryl || null; spara(); ritaPryl();
+    if(pr.closest('.prylhylla')){ ritaButik(); toastG(`${PRYLAR[S.framme].namn} står nu bredvid ${S.namn}!`, 2200); } else visaPrylar(); return; }
   // nyckel: första uppdraget eller passet för dagen
   const k = e.target.closest('[data-klar]'); if(k && S.uppdrag && S.uppdrag[+k.dataset.klar] && !S.uppdrag[+k.dataset.klar].klar) nyckelIdag();
   if(e.target.closest('#spara')) nyckelIdag();
@@ -2185,6 +2186,7 @@ const PRYLPRIS = {vanlig: 150, ovanlig: 400};
   .pkort small{font-size:11px;color:var(--pa-scen-d)}
   .pkort button{appearance:none;border:0;border-radius:99px;padding:7px 14px;font:800 13px var(--display);display:inline-flex;align-items:center;gap:5px;cursor:pointer;background:#c8f169;color:#1e1230}
   .pkort button.har{background:#ffffff14;color:var(--pa-scen-d);cursor:default}
+  .pkort button.har[data-pryl]{background:#ffffff26;color:#fff;cursor:pointer}
   .pkort button.dyr{background:#ffffff14;color:var(--pa-scen)}
   .pkort.lasta .pbild img{filter:brightness(0) invert(1) opacity(.18)}
   .formankort{border-radius:24px;overflow:hidden;background:#1a1226;box-shadow:inset 0 0 0 1px var(--glas-kant)}
@@ -2224,8 +2226,8 @@ ritaButik = function(){
     <div class="brubrik"><h2>Prylar till ${S.namn}</h2><span>Sällsynta finns bara i kistan</span></div>
     <div class="prylhylla">${kopbara.map(([id, p]) => { const ager = har.has(id), dyr = saldo < PRYLPRIS[p.s];
       return `<div class="pkort"><div class="pbild">${prylHtml(id, 78)}</div><b>${p.namn}</b><small>${SALLNAMN[p.s]}</small>
-        ${ager ? `<button class="har" disabled>Din ✓</button>` : `<button class="${dyr ? 'dyr' : ''}" data-kopPryl="${id}">${MYNT_SVG(14)}${PRYLPRIS[p.s]}</button>`}</div>`; }).join('')}
-      ${Object.entries(PRYLAR).filter(([, p]) => !PRYLPRIS[p.s]).map(([id, p]) => `<div class="pkort ${har.has(id) ? '' : 'lasta'}"><div class="pbild">${prylHtml(id, 78)}</div><b>${har.has(id) ? p.namn : '???'}</b><small>Sällsynt</small><button class="har" disabled>${har.has(id) ? 'Din ✓' : 'Bara i kistan'}</button></div>`).join('')}</div>
+        ${ager ? (S.framme === id ? `<button class="har" disabled>Framme ✓</button>` : `<button class="har" data-pryl="${id}">Ställ fram</button>`) : `<button class="${dyr ? 'dyr' : ''}" data-kopPryl="${id}">${MYNT_SVG(14)}${PRYLPRIS[p.s]}</button>`}</div>`; }).join('')}
+      ${Object.entries(PRYLAR).filter(([, p]) => !PRYLPRIS[p.s]).map(([id, p]) => `<div class="pkort ${har.has(id) ? '' : 'lasta'}"><div class="pbild">${prylHtml(id, 78)}</div><b>${har.has(id) ? p.namn : '???'}</b><small>Sällsynt</small>${!har.has(id) ? '<button class="har" disabled>Bara i kistan</button>' : S.framme === id ? '<button class="har" disabled>Framme ✓</button>' : `<button class="har" data-pryl="${id}">Ställ fram</button>`}</div>`).join('')}</div>
     <div class="brubrik"><h2>Förmåner</h2><span>Lös in med dina mynt</span></div>
     ${fk('dose', true)}
     ${fk('yoga', false)}
