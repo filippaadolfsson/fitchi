@@ -679,7 +679,7 @@ body.testlage .panel,body.testlage .hint{display:flex}
   <div class="grupp"><span class="gt">Form över veckor</span><div class="formrad" id="formrad"></div>
     <div class="scen-knappar"><button id="veckaAktiv">+1 aktiv vecka</button><button id="veckaInaktiv">+1 inaktiv vecka</button><button id="manadAktiv">+1 aktiv månad</button><button id="paus">Pausläge: av</button></div>
     <p class="liten" id="formInfo"></p></div>
-  <details class="logik"><summary style="cursor:pointer;font-weight:600">Hur räknas det?</summary><p style="margin-top:6px">Energi = steg + pass senaste veckan. Styrka = styrkepass + protein. Lugn = sömn + HRV + vilopuls + incheckning. Näring = protein + vatten + grönsaker. Tränat hårt flera dagar och låg HRV ger en vilodag. Borta i 3 dagar eller mer ger ett varmt välkommen tillbaka och lättare uppdrag. Formen bygger på snittet över flera veckor: ett steg upp per cirka 3 aktiva veckor, ett steg ner per cirka 5 inaktiva, och tillbaka till tidigare nivå går dubbelt så snabbt (muskelminne). Prylar försvinner aldrig.</p></details>
+  <details class="logik"><summary style="cursor:pointer;font-weight:600">Hur räknas det?</summary><p style="margin-top:6px">Energi = steg + pass senaste veckan. Styrka = styrkepass + protein. Vila = sömn + HRV + vilopuls + incheckning. Näring = protein + vatten + grönsaker. Tränat hårt flera dagar och låg HRV ger en vilodag. Borta i 3 dagar eller mer ger ett varmt välkommen tillbaka och lättare uppdrag. Formen bygger på snittet över flera veckor: ett steg upp per cirka 3 aktiva veckor, ett steg ner per cirka 5 inaktiva, och tillbaka till tidigare nivå går dubbelt så snabbt (muskelminne). Prylar försvinner aldrig.</p></details>
 </aside>
 </div>
 <p class="hint">Tips: gå igenom matchningen, eller använd testpanelen för att hoppa direkt till startvyn med olika scenarier.</p>
@@ -804,7 +804,7 @@ ritaKallor();
 $('#kallor').addEventListener('click', e => { const b = e.target.closest('.val'); if(b) b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')!=='true'); });
 
 // Hem
-const RINGAR = [['energi','energi'],['styrka','styrka'],['lugn','lugn'],['naring','näring']];
+const RINGAR = [['energi','energi'],['styrka','styrka'],['lugn','vila'],['naring','näring']];
 function ring(v, col){ const r=15, c=2*Math.PI*r, d=c*v/100;
   return `<svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="${r}" fill="none" stroke="var(--glas-kant)" stroke-width="4"/><circle class="v" cx="19" cy="19" r="${r}" fill="none" stroke="var(--${col})" stroke-width="4" stroke-linecap="round" stroke-dasharray="${d.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 19 19)"/><text x="19" y="23" text-anchor="middle" fill="var(--pa-scen)" font-family="Bricolage Grotesque" font-weight="800" font-size="12">${Math.round(v)}</text></svg>`; }
 function humor(){
@@ -816,7 +816,7 @@ function humor(){
   return m.energi >= 70 ? ['pigg', `${S.namn} är pigg`] : ['pigg', `${S.namn} mår bra`];
 }
 function uppdrag(){
-  if(S.sit.has('stress')) return ['10 min andning ute','Lugn är viktigast just nu. Vila räknas också som framsteg.','lugn'];
+  if(S.sit.has('stress')) return ['10 min andning ute','Vila är viktigast just nu. Vila räknas också som framsteg.','lugn'];
   if(S.sit.has('stilla')) return ['5 min rörelsepaus','Res dig och rör på dig en stund. Varje paus räknas.','energi'];
   if(S.sit.has('aterstart')) return ['10 min rörlighet','Små, mjuka rörelser. Vi bygger upp det i lugn takt.','energi'];
   const NAMN = {promenad:'promenad',styrka:'styrka',lopning:'löpning',yoga:'yoga',padel:'padel',dans:'dans',cykel:'cykling',hemma:'hemmaträning',simning:'simning'};
@@ -829,7 +829,7 @@ function insikt(){
   const d = S.data;
   if(d.borta >= 3) return null;
   if(S.vila) return `Du har tränat hårt ${d.pass} dagar och din HRV är lägre än vanligt (${d.hrv} ms). Ska dagens uppdrag bli återhämtning?`;
-  if(d.somn < 6.5) return `Du har sovit ${String(d.somn).replace('.',',')} timmar. Lugn sjunker de nätter du sover under 7 timmar. Ska Fitchi påminna dig om att varva ner kl. 22 ikväll?`;
+  if(d.somn < 6.5) return `Du har sovit ${String(d.somn).replace('.',',')} timmar. Vilan sjunker de nätter du sover under 7 timmar. Ska Fitchi påminna dig om att varva ner kl. 22 ikväll?`;
   if((d.stegIgar ?? 6000) < 4000) return 'Det har blivit få steg de senaste dagarna. Ska uppdragen bli kortare men fler, så att det känns lättare att komma igång?';
   return null;
   if(S.pref.nar==='morgon') return 'Du sa att morgnar passar bäst, men de senaste två veckorna har du oftast tränat efter kl. 17. Ska uppdraget komma kl. 17 i stället?';
@@ -850,7 +850,7 @@ const BANK = {
   lugn:[['5 min meditation',''],['10 min andningsövning',''],['{m} min yoga','yoga'],['Promenad i dagsljus utan mobil',''],['Skärmfritt efter kl. 21','']],
   naring:[['Proteinrik frukost',''],['Två glas vatten till lunch',''],['En näve grönt till middagen',''],['Ät något med protein innan kl. 15','']],
   gladje:[['Unna dig något gott, helt utan dåligt samvete',''],['Ring eller sms:a någon du gillar',''],['Gör något bara för skojs skull',''],['Lyssna på en låt du älskar, högt',''],['Sätt dig i solen en stund','']]};
-const VARFOR = {energi:'Energi är lägst just nu', styrka:'Bygger din styrka', lugn:'Lugn behöver lite kärlek', naring:'Näring är under målet', gladje:'För att livet ska vara kul också'};
+const VARFOR = {energi:'Energi är lägst just nu', styrka:'Bygger din styrka', lugn:'Du behöver vila', naring:'Näring är under målet', gladje:'För att livet ska vara kul också'};
 const POANG = {energi:30, styrka:35, lugn:25, naring:20, gladje:20};
 function valjUppdrag(matare, utesluten){
   let min = {'5':5,'15':15,'30':30,'45':45}[S.pref.tid]; if(S.start==='igang' || S.sit.has('tid') || S.sit.has('aterstart')) min = Math.min(min,10); if(S.start==='uppehall') min = Math.min(min,15);
@@ -918,7 +918,7 @@ function ritaHem(){
 // Logga
 const TYPER_ALLA = [['promenad','Promenad','energi','#c8f169'],['styrka','Styrka','styrka','#ff7a5c'],['yoga','Yoga eller vila','lugn','#d9b8f0'],['lopning','Löpning','energi','#c8f169'],['padel','Padel','energi','#c8f169'],['dans','Dans','energi','#c8f169'],['cykel','Cykel','energi','#c8f169'],['hemma','Hemmaträning','styrka','#ff7a5c'],['simning','Simning','energi','#c8f169'],['annat','Annat','energi','#c8f169']];
 const TYPER = [...TYPER_ALLA].sort((a,b) => (S.pref.typer.has(b[0])?1:0)-(S.pref.typer.has(a[0])?1:0));
-function ritaTyper(){ TYPER.sort((a,b) => (S.pref.typer.has(b[0])?1:0)-(S.pref.typer.has(a[0])?1:0)); $('#typer').innerHTML = TYPER.map(([k,t,m]) => `<button class="typ" aria-pressed="${k===S.typ}" data-typ="${k}">${t}<small>Fyller ${m==='naring'?'näring':m}</small></button>`).join(''); }
+function ritaTyper(){ TYPER.sort((a,b) => (S.pref.typer.has(b[0])?1:0)-(S.pref.typer.has(a[0])?1:0)); $('#typer').innerHTML = TYPER.map(([k,t,m]) => `<button class="typ" aria-pressed="${k===S.typ}" data-typ="${k}">${t}<small>Fyller ${m==='naring'?'näring':m==='lugn'?'vila':m}</small></button>`).join(''); }
 ritaTyper();
 $('#typer').addEventListener('click', e => { const b = e.target.closest('[data-typ]'); if(!b) return; S.typ = b.dataset.typ;
   document.querySelectorAll('[data-typ]').forEach(x => x.setAttribute('aria-pressed', x===b)); });
@@ -1069,9 +1069,9 @@ const MATARE = {
     kallor:[['Styrkepass','2 av 3 denna vecka','Loggat'],['Protein','54 av 90 g','Mat'],['Senaste pass','Ben och rygg, 35 min','I tisdags']],
     vecka:[30,30,70,65,60,58,55], insikt:'Styrka håller sig uppe när du kör minst två pass i veckan.',
     uppdrag:[['15 min styrka hemma',30],['3 x 10 knäböj',15],['Proteinrik frukost',10]]},
-  lugn:{namn:'Lugn', om:'Sömn, vilopuls, HRV och hur du själv känner dig.',
+  lugn:{namn:'Vila', om:'Sömn, vilopuls, HRV och hur du själv känner dig.',
     kallor:[['Sömn','6 h 10 min','Apple Hälsa'],['Vilopuls','58 slag/min','Apple Watch'],['HRV','42 ms, lägre än vanligt','Apple Watch'],['Din incheckning','Lite stressad','I morse']],
-    vecka:[60,58,45,52,40,35,38], insikt:'Lugn sjunker de nätter du sover under 7 timmar. Ikväll kan vara ett bra tillfälle för en tidig kväll.',
+    vecka:[60,58,45,52,40,35,38], insikt:'Vilan sjunker de nätter du sover under 7 timmar. Ikväll kan vara ett bra tillfälle för en tidig kväll.',
     uppdrag:[['10 min andning',20],['Promenad i dagsljus',20],['Skärmfritt efter kl. 21',25]], checkin:true},
   naring:{namn:'Näring', om:'Protein, grönsaker, vatten och regelbundna måltider. Aldrig kalorier.',
     kallor:[['Protein','54 av 90 g','Mat'],['Grönsaker','2 av 5 portioner','Mat'],['Vatten','4 av 8 glas','Mat'],['Måltider','2 av 3 idag','Mat']],
@@ -1120,7 +1120,7 @@ function vecka(aktiv){
   S.formNytt = upp.length ? {typ:'upp', m:upp} : ner.length ? {typ:'ner', m:ner} : null;
   S.data.borta = aktiv ? 0 : Math.min(14, S.data.borta + 7);
 }
-const MNAMN = {styrka:'styrka',energi:'energi',lugn:'lugn',naring:'näring'};
+const MNAMN = {styrka:'styrka',energi:'energi',lugn:'vila',naring:'näring'};
 const UPPTEXT = {styrka:'muskler växer', energi:'spänst ökar', lugn:'sken blir starkare', naring:'päls glänser mer'};
 
 // Testpanel
@@ -1151,7 +1151,7 @@ function ritaPanel(){
   ritaUtlas();
 }
 function ritaUtlas(){
-  $('#utlas').innerHTML = [['energi','energi'],['styrka','styrka'],['lugn','lugn'],['naring','näring']].map(([k,n]) => `<div><b style="color:var(--${k})">${S.m[k]}</b><span>${n}</span></div>`).join('');
+  $('#utlas').innerHTML = [['energi','energi'],['styrka','styrka'],['lugn','vila'],['naring','näring']].map(([k,n]) => `<div><b style="color:var(--${k})">${S.m[k]}</b><span>${n}</span></div>`).join('');
   const [mood, txt] = humor(); $('#utlasHumor').textContent = `Humör: ${mood}. "${txt}"`;
   const f = formSteg();
   $('#formrad').innerHTML = Object.keys(f).map(k => `<div class="frad"><span>${MNAMN[k]}</span><span class="prickar">${[0,1,2,3].map(i => `<i class="${i < f[k] ? 'p' : ''}${i < Math.floor(S.formTopp[k]) && i >= f[k] ? ' minne' : ''}"></i>`).join('')}</span><b>steg ${f[k]}</b></div>`).join('');
@@ -1672,7 +1672,7 @@ oppnaMatare = function(k){
       if(d.somn) rader.push(['Sömn', fmtH(d.somn), 'Samsung Health']);
       if(d.puls) rader.push([d.vilopulsTyp || 'Vilopuls', d.puls + ' slag/min', 'Samsung Health']);
       if(d.pulsNu) rader.push(['Puls nu', d.pulsNu + ' slag/min', 'Samsung Health']);
-      if(d.somn) insikt = d.somn < 7 ? 'Du sov under 7 timmar i natt. En tidig kväll ger mer lugn i morgon.' : 'Du sov över 7 timmar i natt. Det märks på lugnet.';
+      if(d.somn) insikt = d.somn < 7 ? 'Du sov under 7 timmar i natt. En tidig kväll ger mer vila i morgon.' : 'Du sov över 7 timmar i natt. Det märks på vilan.';
     } else {
       rader.push(['Sömn', '7 h 20 min', ex], ['Vilopuls', '58 slag/min', ex]);
       if(d.sovSvar) rader.push(['Hur du sov', {bra:'Bra', okej:'Okej', daligt:'Dåligt'}[d.sovSvar], 'Ditt svar i morse']);
@@ -1717,7 +1717,7 @@ oppnaMatare = function(k){
   // passlista: senaste 7 dagarna, tryck för att ändra
   if(k !== 'naring' && v){
     const lista = [...passVecka].sort((a, b) => b.tid - a.tid), visa5 = lista.slice(0, 5);
-    const namnK = {styrka: 'styrkepass', energi: 'konditionspass', lugn: 'lugna pass'}[k];
+    const namnK = {styrka: 'styrkepass', energi: 'konditionspass', lugn: 'vilsamma pass'}[k];
     const rad = p => `<button class="prad" data-passpost="${p.id || p.tid}"><span><b>${p.namn} · ${p.min} min</b><small>${dagNamn(p.tid).replace(/^idag$/, 'idag')}${dagNr(new Date(p.tid)) !== idag ? ' ' + kl(p.tid) : ''} · ${p.kalla === 'klocka' ? 'Från klockan' : 'Loggat'}</small></span><span class="penna" aria-hidden="true">✎</span></button>`;
     const sek = document.createElement('div'); sek.id = 'passSek';
     sek.innerHTML = `<p class="rubrik-liten" style="margin-bottom:8px">Pass senaste 7 dagarna</p>` + (lista.length
@@ -1955,10 +1955,10 @@ function visaLeka(){
     const chip = last ? `<span class="lchip last">🔒 Nivå ${niva}</span>` : klarIdag ? `<span class="lchip klar">Klart idag ✓</span>` : `<span class="lchip">${{klappa: 'Klappa', andas: 'Andas', dansa: 'Dansa', fanga: 'Spela'}[id]}</span>`;
     return `<button class="lekkort${last ? ' last' : ''}" data-lek="${id}" ${last ? 'disabled' : ''}><span class="lik" style="background:${farg}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LEKIK[id]}</svg></span>`
       + `<span class="ltx"><b>${titel}</b><small>${text}</small>${bar}</span>${chip}</button>`; };
-  oppnaArk(arkHuvud('Leka', 'Vad vill ni göra?', `Lek med ${n} för glöd, lugn och mynt.`)
+  oppnaArk(arkHuvud('Leka', 'Vad vill ni göra?', `Lek med ${n} för glöd, vila och mynt.`)
     + `<div class="lekar">`
     + kort('klappa', 1, 'var(--naring, #f2d48a)', `Klappa ${n}`, `Ge ${n} lite kärlek – det syns direkt`, false)
-    + kort('andas', 3, 'var(--lugn, #b48be0)', 'Andas tillsammans', '1 minut lugn andning · +12 lugn', S.andasDag === idag)
+    + kort('andas', 3, 'var(--lugn, #b48be0)', 'Andas tillsammans', '1 minut lugn andning · +12 vila', S.andasDag === idag)
     + kort('dansa', 5, 'var(--styrka, #ff7a5c)', 'Dansa', `${n} dansar loss en stund`, false)
     + kort('fanga', 7, 'var(--lime, #c8f169)', 'Fånga hjärtstenar', 'Minispel, 20 sekunder · upp till 40 mynt', S.fangaDag === idag)
     + `</div>`);
@@ -1997,7 +1997,7 @@ function klarAndas(){
   const idag = dagNr(new Date()), forsta = S.andasDag !== idag;
   if(forsta){ S.andasDag = idag; S.m.lugn = Math.min(100, S.m.lugn + 12); S.xp += 10; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; } }
   spara();
-  $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>` + arkHuvud('Andas', 'Snyggt andat', forsta ? `${S.namn} känner sig lugnare. Lugn +12, +10 XP.` : `${S.namn} tyckte om det. Belöningen får ni en gång om dagen.`)
+  $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>` + arkHuvud('Andas', 'Snyggt andat', forsta ? `${S.namn} känner sig lugnare. Vila +12, +10 XP.` : `${S.namn} tyckte om det. Belöningen får ni en gång om dagen.`)
     + `<button class="knapp ljus" data-stang-ark>Klar</button>`;
   ritaHem();
 }
@@ -2174,7 +2174,7 @@ function veckoCitat(v){
 }
 function visaVeckan(){
   const v = veckoData(), min = v.pass.reduce((a, p) => a + p.min, 0);
-  const NAMN = {energi:'Energi', styrka:'Styrka', lugn:'Lugn', naring:'Näring'};
+  const NAMN = {energi:'Energi', styrka:'Styrka', lugn:'Vila', naring:'Näring'};
   const dagNamn = d => new Date(d * 864e5).toLocaleDateString('sv-SE', {weekday: 'long', timeZone: 'UTC'});
   const rutor = [];
   if(v.harSteg) rutor.push([fmt(v.stegSum), `steg · ${fmt(v.stegSnitt)} om dagen`]);
@@ -2843,7 +2843,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     } else toastG('Bra! Försök lägga undan mobilen kl. 22 ikväll.', 2600); };
   const TIPS = [
     {id: 'somnKort', nar: () => halsa() && S.data.somn > 0 && S.data.somn < 7 && kl() >= 14,
-     text: () => `Du sov ${String(S.data.somn).replace('.', ',')} timmar i natt. Lugnet sjunker de nätter du sover under 7 timmar. Ska ${S.namn} påminna dig om att varva ner kl. 22 ikväll?`,
+     text: () => `Du sov ${String(S.data.somn).replace('.', ',')} timmar i natt. Vilan sjunker de nätter du sover under 7 timmar. Ska ${S.namn} påminna dig om att varva ner kl. 22 ikväll?`,
      ja: 'Ja, påminn mig', gor: kvallsNotis, varfor: 'Bygger på nattens sömn från Health Connect.'},
     {id: 'somnBra', nar: () => halsa() && S.data.somn >= 7.5 && kl() < 14,
      text: () => `Du sov ${String(S.data.somn).replace('.', ',')} timmar i natt – bra läge för ett lite tuffare pass idag.`,
@@ -2855,8 +2855,8 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
      text: () => `${fmt(S.data.steg)} steg idag – bara ${fmt(8000 - S.data.steg)} kvar till 8 000. En kvällspromenad?`,
      ja: 'Ja, lägg till', gor: () => lagUppdrag({m: 'energi', t: '15 min kvällspromenad', p: 20}, 'Kvällspromenaden är tillagd.'), varfor: 'Bygger på dagens steg från Health Connect.'},
     {id: 'lugnLagt', nar: () => S.m.lugn < 40 && (S.niva || 1) >= 3,
-     text: () => `${S.namn}s lugn är lågt just nu. Vill du andas en minut tillsammans?`,
-     ja: 'Ja, andas', gor: () => { if(typeof startaAndas === 'function') startaAndas(); }, varfor: 'Bygger på lugn-mätaren.'},
+     text: () => `${S.namn}s vila är låg just nu. Vill du andas en minut tillsammans?`,
+     ja: 'Ja, andas', gor: () => { if(typeof startaAndas === 'function') startaAndas(); }, varfor: 'Bygger på vila-mätaren.'},
     {id: 'energiLag', nar: () => S.m.energi < 35 && kl() >= 9 && kl() < 20,
      text: () => `Energin är låg. Fem minuters rörelse – en trappa, en kort promenad – brukar ge mer än en kaffe.`,
      ja: 'Lägg till uppdrag', gor: () => lagUppdrag({m: 'energi', t: '5 min rörelsepaus', p: 15}, 'Rörelsepausen är tillagd.'), varfor: 'Bygger på energi-mätaren.'},
