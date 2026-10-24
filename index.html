@@ -1352,7 +1352,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag'];
 function spara(){
   if(!S.klar) return;
   loggaDag();
@@ -1381,7 +1381,7 @@ function ladda(){
 function nyRiktigDag(dagar){
   S.dag = dagNr(new Date());
   formVeckor();
-  S.uppdrag = null; S.byten = 2; S.protein = 0; S.vatten = 0; S.gront = 0;
+  S.uppdrag = null; S.byten = 2; S.protein = 0; S.vatten = 0; S.gront = 0; S.matlogg = []; S.matloggDag = S.dag;
   for(const k of ['energi','styrka','lugn','naring']) for(let i=0;i<Math.min(dagar,5);i++) S.m[k] = Math.round(S.m[k]*0.8 + 10);
   S.data.somn = 7; S.data.checkin = 'okej'; S.vila = false;
   S.morgonKlar = S.glod <= 0;   // väcks ur kristallen först
@@ -1567,7 +1567,10 @@ function loggaDag(){
 }
 { const _sp = $('#spara').onclick;
   $('#spara').onclick = () => { const t = TYPER.find(x => x[0]===S.typ);
-    S.passlogg = (S.passlogg || []).concat({tid:Date.now(), typ:S.typ, namn:t[1], min:S.min, m:t[2]}).slice(-60); _sp(); }; }
+    const fore = {m: {...S.m}, saldo: S.saldo, glod: S.glod};
+    const post = {id: 'p' + Date.now(), tid: Date.now(), typ: S.typ, namn: t[1], min: S.min, m: t[2]};
+    S.passlogg = (S.passlogg || []).concat(post).slice(-60); _sp();
+    post.eff = {m: Object.fromEntries(Object.keys(S.m).map(k => [k, Math.round(S.m[k] - fore.m[k])])), mynt: S.saldo - fore.saldo, xp: Math.min(35, Math.round(S.min * 0.8)), glod: Math.round(S.glod - fore.glod)}; spara(); }; }
 document.addEventListener('click', e => { const k = e.target.closest('[data-kansla]'); if(k){ S.data.kansla = k.dataset.kansla; S.data.kanslaDag = dagNr(new Date()); setTimeout(spara, 100); } }, true);
 const _oppnaMatare = oppnaMatare;
 oppnaMatare = function(k){
@@ -2171,6 +2174,124 @@ document.addEventListener('click', e => {
 function visaKod(k){ const f = FORMANER[k];
   oppnaArk(arkHuvud('Förmån · ' + f.namn, f.titel, 'Exempel under testet. Koden fungerar inte på riktigt än.') + `<div class="kodruta">${f.kod}</div><button class="knapp ljus" data-stang-ark>Klar</button>`); }
 
+// ===== Redigera och ta bort loggad mat och aktiviteter =====
+function matloggNu(){
+  const idag = dagNr(new Date());
+  if(S.matloggDag !== idag){ S.matlogg = []; S.matloggDag = idag; }
+  S.matlogg = S.matlogg || [];
+  // det som loggades innan loggen fanns blir en egen rad som går att ändra
+  const sum = k => S.matlogg.reduce((a, x) => a + (x[k] || 0), 0);
+  const p = (S.protein || 0) - sum('protein'), g = (S.gront || 0) - sum('gront'), v = (S.vatten || 0) - sum('vatten');
+  if(p > 0 || g > 0 || v > 0) S.matlogg.unshift({id: 'tidigare', tid: Date.now(), namn: 'Tidigare idag', protein: Math.max(0, p), gront: Math.max(0, g), vatten: Math.max(0, v), mynt: 0});
+  return S.matlogg;
+}
+const naringAv = () => { const mal = 90; return Math.round((Math.min(100, (S.protein || 0) / mal * 100) + Math.min(100, (S.gront || 0) * 20) + Math.min(100, (S.vatten || 0) * 12.5)) / 3); };
+function raknaOmMat(){
+  const fore = naringAv(), l = S.matlogg || [];
+  S.protein = l.reduce((a, x) => a + (x.protein || 0), 0); S.gront = l.reduce((a, x) => a + (x.gront || 0), 0); S.vatten = l.reduce((a, x) => a + (x.vatten || 0), 0);
+  const efter = naringAv(); if(efter < fore) S.m.naring = Math.max(0, S.m.naring - (fore - efter));
+}
+// snabbvalen i mallen loggas också
+document.addEventListener('click', e => { const b = e.target.closest('#snabb [data-snabb]'); if(!b) return;
+  const [t, , p, v, g] = SNABB[+b.dataset.snabb]; matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: t, protein: p, gront: g, vatten: v, mynt: 5}); setTimeout(() => { ritaMatlogg(); spara(); }, 50); }, true);
+{
+  const st = document.createElement('style'); st.textContent = `
+  .loggrubrik{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 8px}
+  .loggrubrik p{margin:0}
+  .loggrubrik button{appearance:none;border:0;background:none;color:var(--pa-scen-d);font:600 13px var(--text);text-decoration:underline;cursor:pointer;padding:0}
+  .logglista{display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:#ffffff0a;box-shadow:inset 0 0 0 1px var(--glas-kant)}
+  .logglista button{appearance:none;border:0;background:none;width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;color:var(--pa-scen);text-align:left;cursor:pointer;font:600 14px var(--text)}
+  .logglista button+button{border-top:1px solid var(--glas-kant)}
+  .logglista button span{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .logglista small{font-weight:500;font-size:12px;color:var(--pa-scen-d)}
+  .logglista i{font-style:normal;font-size:12px;color:var(--pa-scen-d)}
+  .logglista .penna{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:#ffffff12;color:var(--pa-scen-d);font-size:14px}
+  .egenrad.redigera button{box-shadow:inset 0 0 0 1.5px #c8f169aa}
+  .raknare{display:flex;align-items:center;gap:12px}
+  .raknare button{appearance:none;border:0;width:40px;height:40px;border-radius:50%;background:#ffffff14;color:var(--pa-scen);font:700 20px var(--text);cursor:pointer}
+  .raknare b{font:800 20px var(--display);min-width:24px;text-align:center;color:var(--pa-scen)}
+  .tabort{appearance:none;border:0;background:none;color:#ff8a80;font:700 15px var(--text);padding:12px;cursor:pointer}
+  #loggaPassIdag{margin-top:4px}`;
+  document.head.appendChild(st);
+}
+const klocka = t => new Date(t).toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'});
+const matDetalj = x => [x.protein ? x.protein + ' g protein' : '', x.gront ? x.gront + ' grönt' : '', x.vatten ? x.vatten + ' glas vatten' : ''].filter(Boolean).join(' · ') || 'Inget räknat';
+let egenRedigera = false;
+function ritaMatlogg(){
+  let w = document.getElementById('matloggWrap');
+  if(!w){ const e = document.getElementById('egenWrap'); if(!e) return; w = document.createElement('div'); w.id = 'matloggWrap'; e.after(w); }
+  const l = matloggNu();
+  w.hidden = !l.length;
+  w.innerHTML = `<div class="loggrubrik"><p class="liten">Loggat idag</p></div><div class="logglista">${[...l].reverse().map(x =>
+    `<button data-matpost="${x.id}"><span>${x.namn}<small>${matDetalj(x)}</small></span><i>${x.id === 'tidigare' ? '' : klocka(x.tid)}</i><span class="penna" aria-hidden="true">✎</span></button>`).join('')}</div>`;
+  const eg = document.getElementById('egenWrap');
+  if(eg && (S.egenMat || []).length){ const p = eg.querySelector('p'); if(p && !eg.querySelector('.loggrubrik')){ const r = document.createElement('div'); r.className = 'loggrubrik'; r.innerHTML = `<p class="liten">Dina senaste</p><button id="egenAndra">Ändra</button>`; p.replaceWith(r); }
+    const k = document.getElementById('egenAndra'); if(k) k.textContent = egenRedigera ? 'Klar' : 'Ändra';
+    const rad = document.getElementById('egenrad'); if(rad) rad.classList.toggle('redigera', egenRedigera); }
+}
+{ const _rm2 = ritaMat; ritaMat = function(){ _rm2.apply(this, arguments); ritaMatlogg(); }; }
+function matForm(titel, x, knappar){
+  oppnaArk(arkHuvud('Mat', titel, '') + `<div class="matform">
+    <label>Namn<input type="text" id="eNamn" maxlength="30" value="${(x.namn || '').replace(/"/g, '&quot;')}"></label>
+    <label>Protein (gram)<input type="number" id="eProt" inputmode="numeric" min="0" max="300" value="${x.protein || 0}"></label>
+    <label>Grönt (portioner)</label><div class="raknare"><button data-rakn="eGront" data-d="-1">−</button><b id="eGront">${x.gront || 0}</b><button data-rakn="eGront" data-d="1">+</button></div>
+    <label>Vatten (glas)</label><div class="raknare"><button data-rakn="eVatten" data-d="-1">−</button><b id="eVatten">${x.vatten || 0}</b><button data-rakn="eVatten" data-d="1">+</button></div>
+    ${knappar}</div>`);
+}
+const formVarden = () => ({namn: ($('#eNamn').value || '').trim() || 'Måltid', protein: Math.max(0, Math.round(+$('#eProt').value || 0)), gront: +$('#eGront').textContent, vatten: +$('#eVatten').textContent});
+// --- pass idag
+function ritaPassIdag(){
+  const sida = document.querySelector('#s-logga .pad'); if(!sida) return;
+  let w = document.getElementById('loggaPassIdag'); if(!w){ w = document.createElement('div'); w.id = 'loggaPassIdag'; sida.appendChild(w); }
+  const idag = dagNr(new Date()), l = (S.passlogg || []).filter(p => dagNr(new Date(p.tid)) === idag && !p.borttagen);
+  w.hidden = !l.length;
+  w.innerHTML = `<p class="liten" style="margin-bottom:8px">Loggat idag</p><div class="logglista">${[...l].reverse().map(p =>
+    `<button data-passpost="${p.id || p.tid}"><span>${p.namn}<small>${p.min} min${p.kalla === 'klocka' ? ' · från klockan' : ''}</small></span><i>${klocka(p.tid)}</i><span class="penna" aria-hidden="true">✎</span></button>`).join('')}</div>`;
+}
+const hittaPass = id => (S.passlogg || []).find(p => String(p.id || p.tid) === String(id));
+function angraPass(p){
+  const e = p.eff; if(!e) return;
+  for(const [k, v] of Object.entries(e.m || {})) S.m[k] = Math.max(0, Math.min(100, S.m[k] - v));
+  S.saldo = Math.max(0, S.saldo - (e.mynt || 0)); S.xp = Math.max(0, S.xp - (e.xp || 0)); S.glod = Math.max(0, S.glod - (e.glod || 0));
+}
+function tillampaPass(p){
+  const typ = TYPER_ALLA.find(t => t[0] === p.typ) || TYPER_ALLA[0], mat = typ[2], min = p.min;
+  const okning = Math.min(100 - S.m[mat], Math.round(min * 0.9)); S.m[mat] += okning;
+  const extra = mat !== 'energi' ? Math.min(100 - S.m.energi, Math.round(min * 0.3)) : 0; S.m.energi += extra;
+  const mynt = 20 + Math.min(60, min), xp = Math.min(35, Math.round(min * 0.8)), g = Math.min(100 - S.glod, Math.min(25, 5 + Math.round(min / 2)));
+  S.saldo += mynt; S.xp += xp; S.glod += g; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
+  p.m = mat; p.namn = typ[1]; p.eff = {m: {[mat]: okning, ...(extra ? {energi: extra} : {})}, mynt, xp, glod: g};
+}
+function passForm(p){
+  oppnaArk(arkHuvud('Aktivitet', 'Ändra pass', p.kalla === 'klocka' ? 'Passet kom från klockan. Ändringen gäller bara i Fitchi.' : '') + `<div class="matform">
+    <label>Typ</label><div class="valrad2" id="pTyp">${TYPER_ALLA.map(t => `<button data-ptyp="${t[0]}" aria-pressed="${t[0] === p.typ}">${t[1]}</button>`).join('')}</div>
+    <label>Minuter</label><div class="raknare"><button data-rakn="pMin" data-d="-5">−</button><b id="pMin">${p.min}</b><button data-rakn="pMin" data-d="5">+</button></div>
+    <button class="knapp ljus" id="passSpara" data-id="${p.id || p.tid}">Spara</button>
+    <button class="tabort" id="passTaBort" data-id="${p.id || p.tid}">Ta bort passet</button></div>`);
+}
+document.addEventListener('click', e => {
+  const r = e.target.closest('[data-rakn]'); if(r){ const el = document.getElementById(r.dataset.rakn); const max = r.dataset.rakn === 'pMin' ? 300 : 20, min = r.dataset.rakn === 'pMin' ? 5 : 0;
+    el.textContent = Math.max(min, Math.min(max, +el.textContent + +r.dataset.d)); return; }
+  // mat
+  const mp = e.target.closest('[data-matpost]'); if(mp){ const x = matloggNu().find(y => y.id === mp.dataset.matpost); if(!x) return;
+    matForm('Ändra', x, `<button class="knapp ljus" id="matSpara" data-id="${x.id}">Spara</button><button class="tabort" id="matTaBort" data-id="${x.id}">Ta bort</button>`); return; }
+  const ms = e.target.closest('#matSpara'); if(ms){ const x = matloggNu().find(y => y.id === ms.dataset.id); if(x){ Object.assign(x, formVarden()); raknaOmMat(); spara(); stangArk(); ritaMat(); toastG('Ändrat.'); } return; }
+  const mt = e.target.closest('#matTaBort'); if(mt){ const l = matloggNu(), i = l.findIndex(y => y.id === mt.dataset.id); if(i >= 0){ const x = l.splice(i, 1)[0]; S.saldo = Math.max(0, S.saldo - (x.mynt || 0)); raknaOmMat(); spara(); stangArk(); ritaMat(); ritaHem(); toastG(`${x.namn} borttaget.`); } return; }
+  // dina senaste
+  if(e.target.closest('#egenAndra')){ egenRedigera = !egenRedigera; ritaMatlogg(); return; }
+  const eg = e.target.closest('[data-egen]');
+  if(eg && egenRedigera){ e.stopImmediatePropagation(); const i = +eg.dataset.egen, x = S.egenMat[i];
+    matForm('Ändra sparad mat', x, `<button class="knapp ljus" id="egenSpara" data-i="${i}">Spara</button><button class="tabort" id="egenTaBort" data-i="${i}">Ta bort från Dina senaste</button>`); return; }
+  const es = e.target.closest('#egenSpara'); if(es){ S.egenMat[+es.dataset.i] = formVarden(); spara(); stangArk(); ritaMat(); toastG('Sparat.'); return; }
+  const et = e.target.closest('#egenTaBort'); if(et){ S.egenMat.splice(+et.dataset.i, 1); if(!S.egenMat.length) egenRedigera = false; spara(); stangArk(); ritaMat(); return; }
+  // pass
+  const pp = e.target.closest('[data-passpost]'); if(pp){ const p = hittaPass(pp.dataset.passpost); if(p) passForm(p); return; }
+  const pt = e.target.closest('[data-ptyp]'); if(pt){ document.querySelectorAll('[data-ptyp]').forEach(b => b.setAttribute('aria-pressed', b === pt)); return; }
+  const ps = e.target.closest('#passSpara'); if(ps){ const p = hittaPass(ps.dataset.id); if(p){ angraPass(p); p.typ = (document.querySelector('[data-ptyp][aria-pressed=true]') || {}).dataset?.ptyp || p.typ; p.min = +$('#pMin').textContent; tillampaPass(p); spara(); stangArk(); ritaPassIdag(); ritaHem(); toastG('Passet är ändrat.'); } return; }
+  const pb = e.target.closest('#passTaBort'); if(pb){ const p = hittaPass(pb.dataset.id); if(p){ angraPass(p); S.passlogg = S.passlogg.filter(x => x !== p); spara(); stangArk(); ritaPassIdag(); ritaHem(); toastG(`${p.namn} borttaget.`); } return; }
+}, true);
+{ const _visa = visa; visa = function(id){ _visa.apply(this, arguments); if(id === 's-logga') ritaPassIdag(); if(id === 's-mat') ritaMatlogg(); }; }
+
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
     if(S.niva >= 2 && !S.forstaPryl && S.klar){ S.forstaPryl = true; fapryl('kettlebell'); S.framme = S.framme || 'kettlebell';
@@ -2193,7 +2314,7 @@ function klockPass(lista){
     const mynt = 20 + Math.min(60, min), xp = Math.min(35, Math.round(min * 0.8));
     S.saldo += mynt; S.xp += xp; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
     S.glod = Math.min(100, S.glod + Math.min(25, 5 + Math.round(min / 2)));
-    S.passlogg = (S.passlogg || []).concat({tid: p.start, typ: typ[0], namn: typ[1], min, m: mat, kalla: 'klocka'}).slice(-60);
+    S.passlogg = (S.passlogg || []).concat({id: 'k' + p.id, tid: p.start, typ: typ[0], namn: typ[1], min, m: mat, kalla: 'klocka', eff: {m: {[mat]: okning, ...(mat !== 'energi' ? {energi: Math.round(min * 0.3)} : {})}, mynt, xp, glod: 0}}).slice(-60);
     if(dagNr(new Date(p.start)) === dagNr(new Date())) nyckelIdag();
     // bocka av uppdrag som passet uppfyller (samma mätare och minst lika många minuter)
     (S.uppdrag || []).forEach((u, i) => { if(u.klar || u.m !== mat || u.stegMal) return; const krav = +((u.t.match(/(\d+)\s*min/) || [])[1] || 0);
@@ -2286,6 +2407,7 @@ function ritaEgen(){ const w = $('#egenWrap'); if(!w) return; const l = S.egenMa
   $('#egenrad').innerHTML = l.map((m, i) => `<button data-egen="${i}">${m.namn}<small>${m.protein} g protein${m.gront ? ' · grönt' : ''}${m.vatten ? ' · vatten' : ''}</small></button>`).join(''); }
 { const _rm = ritaMat; ritaMat = function(){ _rm.apply(this, arguments); ritaEgen(); }; }
 function laggMat(m, spara2){
+  matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0, mynt: 5});
   S.protein += Math.round(m.protein || 0); S.gront += m.gront || 0; S.vatten += m.vatten || 0; S.saldo += 5;
   if(spara2){ const l = (S.egenMat || []).filter(x => x.namn.toLowerCase() !== m.namn.toLowerCase()); l.unshift({namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0}); S.egenMat = l.slice(0, 8); }
   stangArk(); ritaMat(); andraGlod(10, `Du matade ${S.namn}.`); spara();
@@ -2362,7 +2484,7 @@ document.addEventListener('click', e => {
   if(e.target.closest('#mLagg')){ const namn = ($('#mNamn').value || '').trim() || 'Måltid'; laggMat({namn, protein: +$('#mProt').value || 0, gront: $('#mGront').checked ? 1 : 0, vatten: $('#mVatten').checked ? 1 : 0}, true); return; }
   const pg = e.target.closest('[data-gram]'); if(pg){ document.querySelectorAll('[data-gram]').forEach(b => b.setAttribute('aria-pressed', b === pg)); window.__produkt.gram = +pg.dataset.gram; $('#portProt').textContent = Math.round(window.__produkt.per100 * window.__produkt.gram / 100) + ' g'; return; }
   if(e.target.closest('#prodLagg')){ const p = window.__produkt; laggMat({namn: p.namn, protein: p.per100 * p.gram / 100, gront: p.gront && p.gram >= 80 ? 1 : 0, vatten: p.vatten ? Math.max(1, Math.round(p.gram / 250)) : 0}, true); return; }
-  const eg = e.target.closest('[data-egen]'); if(eg){ const m = S.egenMat[+eg.dataset.egen]; laggMat(m, true); return; }
+  const eg = e.target.closest('[data-egen]'); if(eg && !egenRedigera){ const m = S.egenMat[+eg.dataset.egen]; laggMat(m, true); return; }
   if(scanStopp && (e.target.id === 'slöja' || e.target.closest('#stang'))) scanStopp();
 }, true);
 
