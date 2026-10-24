@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Fitchi</string>
     <string name="title_activity_main">Fitchi</string>
-    <string name="package_name">se.fitchi.app</string>
-    <string name="custom_url_scheme">se.fitchi.app</string>
+    <string name="package_name">app.fitchi</string>
+    <string name="custom_url_scheme">app.fitchi</string>
     <string name="widget_beskrivning">Din fitchi på hemskärmen</string>
 </resources>

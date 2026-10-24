@@ -2713,7 +2713,7 @@ visaResa = function(){
       <button class="knapp ljus" id="visaVeckan">Veckan med ${S.namn}</button>
       <div class="installningar">
         ${NOTIS ? `<button id="notisVaxla"><span>Påminnelser<br><small>Högst två om dagen</small></span><span class="vaxel ${S.notis ? 'pa' : ''}"></span></button>` : ''}
-        <button id="borjaOm"><span>Börja om från början<br><small>Raderar din fitchi och allt du har samlat</small></span><span>›</span></button>
+        <button id="borjaOm"><span>Börja om från början<br><small>Raderar din fitchi, dina vänner och allt du har samlat</small></span><span>›</span></button>
       </div>
       <p class="resafot">Nivåer går aldrig förlorade. Varje nivå ger mynt, och nya nivåer låser upp beteenden, minispel och prylar.</p>
       <p class="resafot">Fitchi är en app för vardagsvanor, inte en medicinsk tjänst. Livsmedelsdata från Open Food Facts (ODbL).</p></div>`);
@@ -2722,7 +2722,13 @@ document.addEventListener('click', e => {
   if(e.target.closest('#resaAllt')){ resaAllt = true; const y = $('#ark').scrollTop; visaResa(); $('#ark').scrollTop = y; return; }
   const bo = e.target.closest('#borjaOm');
   if(bo){ if(!bo.classList.contains('saker')){ bo.classList.add('saker'); bo.querySelector('span').innerHTML = 'Tryck igen för att radera allt<br><small>Det går inte att ångra</small>'; return; }
-    try{ localStorage.removeItem(LAGER); }catch(err){} S.klar = false; location.replace(location.pathname); return; }
+    // raderar också vänprofilen på servern (vänskaper och pepp försvinner med den)
+    bo.disabled = true; bo.querySelector('span').innerHTML = 'Raderar…';
+    const klart = () => { try{ localStorage.removeItem(LAGER); localStorage.removeItem('fitchi-sb'); }catch(err){} S.klar = false; location.replace(location.pathname); };
+    const uid = sbSession && sbSession.uid;
+    if(uid) Promise.race([sb('/rest/v1/profiler?id=eq.' + uid, {method: 'DELETE'}), new Promise(r => setTimeout(r, 5000))]).catch(() => {}).finally(klart);
+    else klart();
+    return; }
 }, true);
 document.addEventListener('click', e => { if(e.target.closest('[data-resa]')) resaAllt = false; }, true);
 // start
