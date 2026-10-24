@@ -2908,7 +2908,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
   IKON['s-framsteg'] = ik('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>');
   const ritaMeny = () => document.querySelectorAll('[data-flikar]').forEach(n => { const egen = n.closest('.skarm').id;
     const flik = (id, t) => `<button class="flik${id===egen?' aktiv':''}" ${id===egen?'aria-current="page"':`data-till="${id}"`} aria-label="${t}">${IKON[id]}<span>${t}</span></button>`;
-    n.innerHTML = flik('s-hem', 'Hem') + flik('s-framsteg', 'Framsteg')
+    n.innerHTML = flik('s-hem', 'Hem') + flik('s-framsteg', 'Vecka')
       + `<button class="flik plusk" data-plusval aria-label="Logga träning, mat eller vatten">${IKON.plus}</button>` + flik('s-vanner', 'Vänner') + flik('s-butik', 'Butik'); });
   // Framsteg-skärmen skapas här (måste finnas innan menyn ritas)
   if(!document.getElementById('s-framsteg')){ const s = document.createElement('section'); s.className = 'skarm'; s.id = 's-framsteg'; s.setAttribute('aria-label', 'Framsteg');
