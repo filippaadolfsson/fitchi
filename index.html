@@ -1345,8 +1345,34 @@ ork = (mood, w) => { if(typeof posFor === 'function') mood = posFor(mood); const
 levande = (art, mood, attrs) => `<image href="${F3D[art]}" ${attrs} preserveAspectRatio="xMidYMax meet"/>`;
 for(const k of Object.keys(SVG)){ const art = k.split('-')[0]; if(F3D[art]) Object.defineProperty(SVG, k, {get: () => `<image href="${F3D[art]}" x="0" y="0" width="170" height="200" preserveAspectRatio="xMidYMax meet"/>`}); }
 
-// webbappen har flyttat till fitchi.app/app (Android-appen påverkas inte)
-if(location.hostname.endsWith('github.io')) location.replace('https://fitchi.app/app/' + location.search + location.hash);
+// webbappen har flyttat till fitchi.app/app (Android-appen påverkas inte).
+// Spelet och vänkontot följer med i adressen (#flytt=…, packat), eftersom webbläsaren sparar per adress.
+const FLYTTAR = location.hostname.endsWith('github.io') || /^#flytt=/.test(location.hash); // spara inget medan spelet flyttas
+const b64u = u8 => { let s = ''; for(const x of u8) s += String.fromCharCode(x); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); };
+if(location.hostname.endsWith('github.io')){
+  (async () => {
+    let h = location.hash;
+    try{
+      const d = {s: localStorage.getItem('fitchi-v1'), sb: localStorage.getItem('fitchi-sb')};
+      if(d.s) h = '#flytt=' + b64u(new Uint8Array(await new Response(new Blob([JSON.stringify(d)]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()));
+    }catch(e){}
+    location.replace('https://fitchi.app/app/' + location.search + h);
+  })();
+} else if(/^#flytt=/.test(location.hash)){
+  (async () => {
+    try{
+      const b = atob(location.hash.slice(7).replace(/-/g,'+').replace(/_/g,'/')), u = Uint8Array.from(b, c => c.charCodeAt(0));
+      const d = JSON.parse(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+      const ny = JSON.parse(d.s || 'null'), har = JSON.parse(localStorage.getItem('fitchi-v1') || 'null');
+      const langre = (a, b) => (a.niva || 1) > (b.niva || 1) || ((a.niva || 1) === (b.niva || 1) && (a.xp || 0) >= (b.xp || 0));
+      if(ny && ny.klar && (!har || !har.klar || langre(ny, har))){
+        localStorage.setItem('fitchi-v1', d.s);
+        if(d.sb) localStorage.setItem('fitchi-sb', d.sb);
+      }
+    }catch(e){}
+    location.replace(location.pathname + location.search);
+  })();
+}
 
 // ===== Webbapp: sparas i telefonen, riktig tid =====
 const LAGER = 'fitchi-v1';
@@ -1356,7 +1382,7 @@ document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
 const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag'];
 function spara(){
-  if(!S.klar) return;
+  if(!S.klar || FLYTTAR) return;
   loggaDag();
   const o = {v:1, v2:true, sist:Date.now(), dag:S.dag, klar:true, sit:[...S.sit],
     pref:Object.fromEntries(Object.entries(S.pref).map(([k,v]) => [k, v instanceof Set ? {set:[...v]} : v])), data:S.data};
@@ -1368,7 +1394,8 @@ function ladda(){
   if(!o || !o.klar) return false;
   if(!o.v2 && o.niva >= 7 && o.saldo >= 1000){ try{ localStorage.removeItem(LAGER); }catch(e){} return false; } // gammal demo-sparning
   for(const k of SPARA) if(o[k] !== undefined) S[k] = o[k];
-  S.sit = new Set((o.sit || []).filter(k => !['glp1','rehab','gravid'].includes(k))); // gamla känsliga val tas bort S.data = Object.assign(S.data, o.data || {});
+  S.sit = new Set((o.sit || []).filter(k => !['glp1','rehab','gravid'].includes(k))); // gamla känsliga val tas bort
+  S.data = Object.assign(S.data, o.data || {});
   for(const [k,v] of Object.entries(o.pref || {})) S.pref[k] = v && v.set ? new Set(v.set) : v;
   S.klar = true; S.dag = o.dag;
   if(!o.form){ S.form = {styrka:0, energi:0, lugn:0, naring:0}; S.formTopp = {...S.form}; }
@@ -1507,7 +1534,7 @@ if(HALSA){
     const r = {bra:'En riktigt bra natt. Dagens uppdrag får lite mer energi.', okej:'En okej natt. Ta det i din takt idag.', daligt:'Kort natt. Dagens uppdrag blir lugnare, och vila räknas.'}[val];
     oppnaArk(arkHuvud('God morgon', t, `Klockan säger att du sov ${fmtH(m)}. ${r}`) + `<div class="arkfitchi">${ork(val==='daligt'?'trott':'pigg', 120)}</div><button class="knapp" data-sov="${val}">Godmorgon, ${S.namn}</button>`);
   };
-  const SPARA_EXTRA = () => { try{ const o = JSON.parse(localStorage.getItem(LAGER) || '{}'); o.halsa = S.halsa; localStorage.setItem(LAGER, JSON.stringify(o)); }catch(e){} };
+  const SPARA_EXTRA = () => { if(FLYTTAR) return; try{ const o = JSON.parse(localStorage.getItem(LAGER) || '{}'); o.halsa = S.halsa; localStorage.setItem(LAGER, JSON.stringify(o)); }catch(e){} };
   const _spara = spara; spara = function(){ _spara(); SPARA_EXTRA(); };
   try{ const o = JSON.parse(localStorage.getItem(LAGER) || 'null'); if(o && o.halsa) S.halsa = o.halsa; }catch(e){}
   document.addEventListener('visibilitychange', () => { if(!document.hidden && S.klar) halsaKolla(); });
@@ -2296,8 +2323,9 @@ const SB_URL = 'https://bpyntoollqdnnpkqzmvk.supabase.co', SB_KEY = 'sb_publisha
 const DELA_URL = 'https://fitchi.app/app/';
 let sbSession = null, minProfil = null, vanLista = [], vanLaddar = false, vanFel = '';
 try{ sbSession = JSON.parse(localStorage.getItem('fitchi-sb') || 'null'); }catch(e){}
-const sbSpara = () => { try{ localStorage.setItem('fitchi-sb', JSON.stringify(sbSession)); }catch(e){} };
+const sbSpara = () => { if(FLYTTAR) return; try{ localStorage.setItem('fitchi-sb', JSON.stringify(sbSession)); }catch(e){} };
 async function sbToken(){
+  if(FLYTTAR) return new Promise(() => {}); // rör inte vänkontot medan det flyttas
   if(sbSession && sbSession.expires_at && sbSession.expires_at * 1000 > Date.now() + 60000) return sbSession.access_token;
   try{
     let r;
