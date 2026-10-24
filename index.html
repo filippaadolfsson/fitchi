@@ -2461,9 +2461,10 @@ document.addEventListener('click', async e => {
 { const _visa2 = visa; visa = function(id){ _visa2.apply(this, arguments); if(id === 's-vanner'){ ritaVanner(); laddaVanner(); } }; }
 // inbjudningslänk ?van=KOD
 { const vk = new URLSearchParams(location.search).get('van'); if(vk){ history.replaceState(null, '', location.pathname); const forsok = () => S.klar ? laggTillVan(vk) : setTimeout(forsok, 3000); setTimeout(forsok, 2500); } }
-// synka kortet och kolla pepp när appen öppnas
-setTimeout(() => { if(S.klar){ synkaProfil(); kollaPepp(); } }, 3500);
-document.addEventListener('visibilitychange', () => { if(!document.hidden && S.klar){ kollaPepp(); } else if(document.hidden){ synkaProfil(); } });
+// synka kortet och kolla pepp när appen öppnas – bara för den som har börjat använda Vänner
+// (vänkontot skapas först när man öppnar Vänner eller tar emot en inbjudan)
+setTimeout(() => { if(S.klar && sbSession){ synkaProfil(); kollaPepp(); } }, 3500);
+document.addEventListener('visibilitychange', () => { if(!sbSession) return; if(!document.hidden && S.klar){ kollaPepp(); } else if(document.hidden){ synkaProfil(); } });
 
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
