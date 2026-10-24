@@ -1648,7 +1648,7 @@ oppnaMatare = function(k){
   const m = MATARE[k], d = S.data, idag = dagNr(new Date()), klocka = !!(HALSA && d.halsa);
   const kl = t => new Date(t).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
   const dagNamn = t => { const n = idag - dagNr(new Date(t)); return n === 0 ? 'idag ' + kl(t) : n === 1 ? 'igår' : new Date(t).toLocaleDateString('sv-SE', {weekday:'long'}); };
-  const pass = (S.passlogg || []).filter(p => p.m === k);
+  const pass = (S.passlogg || []).filter(p => p.m === k && !p.borttagen);
   const passIdag = pass.filter(p => dagNr(new Date(p.tid)) === idag);
   const passVecka = pass.filter(p => idag - dagNr(new Date(p.tid)) < 7);
   const ex = 'Exempel · hämtas från klockan i Android-appen';
@@ -1660,13 +1660,11 @@ oppnaMatare = function(k){
       rader.push(['Steg', fmt(d.steg || 0), appNamn(d.stegKalla)]); if(typeof d.stegIgar === 'number') rader.push(['Steg igår', fmt(d.stegIgar), 'Den app som räknade flest']);
       const alla = Object.entries(d.stegKallor || {}); if(alla.length > 1) alla.filter(([p]) => p !== d.stegKalla).forEach(([p, n]) => rader.push([appNamn(p), fmt(n) + ' steg', 'Räknar samma steg, läggs inte ihop'])); }
     else rader.push(['Steg', '6 240', ex]);
-    passIdag.forEach(p => rader.push([p.namn, p.min + ' min', 'Loggat ' + kl(p.tid)]));
     if(klocka && d.stegIgar > 0) insikt = d.steg >= d.stegIgar ? `Du har redan gått fler steg än igår (${fmt(d.stegIgar)}).` : `${fmt(d.stegIgar - d.steg)} steg kvar till gårdagens nivå.`;
   }
   if(k === 'styrka'){
-    rader.push(['Styrkepass', `${passVecka.length} senaste 7 dagarna`, 'Loggat']);
+    rader.push(['Styrkepass', `${passVecka.length} senaste 7 dagarna`, passVecka.length ? 'Se listan nedan' : 'Loggat']);
     rader.push(['Protein', `${Math.round(S.protein || 0)} av 90 g`, 'Mat']);
-    const sist = pass[pass.length - 1]; if(sist) rader.push(['Senaste pass', `${sist.namn}, ${sist.min} min`, dagNamn(sist.tid)]);
     insikt = passVecka.length >= 2 ? 'Två styrkepass i veckan håller styrkan uppe. Du är där!' : `${passVecka.length ? 'Ett pass till' : 'Två pass'} den här veckan håller styrkan uppe.`;
   }
   if(k === 'lugn'){
@@ -1680,7 +1678,6 @@ oppnaMatare = function(k){
       if(d.sovSvar) rader.push(['Hur du sov', {bra:'Bra', okej:'Okej', daligt:'Dåligt'}[d.sovSvar], 'Ditt svar i morse']);
     }
     if(d.kansla && d.kanslaDag === idag) rader.push(['Din incheckning', d.kansla, 'Idag']);
-    passIdag.forEach(p => rader.push([p.namn, p.min + ' min', 'Loggat ' + kl(p.tid)]));
   }
   if(k === 'naring'){
     rader.push(['Protein', `${Math.round(S.protein || 0)} av 90 g`, 'Mat'], ['Grönsaker', `${S.gront || 0} av 5 portioner`, 'Mat'], ['Vatten', `${S.vatten || 0} av 8 glas`, 'Mat']);
@@ -1693,13 +1690,43 @@ oppnaMatare = function(k){
   // senaste veckan: riktiga dagar, tomma där appen inte användes
   loggaDag();
   const v = ark.querySelector('.vecka');
-  if(v) v.innerHTML = [6,5,4,3,2,1,0].map(n => { const dag = idag - n, val = S.hist[dag]?.[k];
-    const namn = n === 0 ? 'idag' : new Date(Date.now() - n*864e5).toLocaleDateString('sv-SE', {weekday:'short'}).replace('.', '');
-    return `<div class="${n===0?'idag':''}"><i style="height:${val ?? 4}%;background:var(--${k});${val === undefined ? 'opacity:.2' : ''}"></i><span>${namn}</span></div>`; }).join('');
+  const dagKort = n => n === 0 ? 'idag' : new Date(Date.now() - n*864e5).toLocaleDateString('sv-SE', {weekday:'short'}).replace('.', '');
+  const minPerDag = k === 'styrka' || k === 'energi';
+  if(v && minPerDag){ // träningsminuter per dag, så att diagrammet stämmer med passlistan
+    const min = [6,5,4,3,2,1,0].map(n => pass.filter(p => dagNr(new Date(p.tid)) === idag - n).reduce((s, p) => s + (p.min || 0), 0)), max = Math.max(60, ...min);
+    v.innerHTML = [6,5,4,3,2,1,0].map((n, i) => `<div class="${n===0?'idag':''}">${min[i] ? `<em class="vmin">${min[i]}</em>` : ''}<i style="height:${min[i] ? Math.max(8, Math.round(min[i] / max * 100)) : 4}%;background:var(--${k});${min[i] ? '' : 'opacity:.2'}"></i><span>${dagKort(n)}</span></div>`).join('');
+    const rub = v.parentElement && v.parentElement.querySelector('.rubrik-liten'); if(rub) rub.textContent = 'Träningsminuter senaste veckan';
+  } else if(v) v.innerHTML = [6,5,4,3,2,1,0].map(n => { const dag = idag - n, val = S.hist[dag]?.[k];
+    return `<div class="${n===0?'idag':''}"><i style="height:${val ?? 4}%;background:var(--${k});${val === undefined ? 'opacity:.2' : ''}"></i><span>${dagKort(n)}</span></div>`; }).join('');
+  // passlista: senaste 7 dagarna, tryck för att ändra
+  if(k !== 'naring' && v){
+    const lista = [...passVecka].sort((a, b) => b.tid - a.tid), visa5 = lista.slice(0, 5);
+    const namnK = {styrka: 'styrkepass', energi: 'konditionspass', lugn: 'lugna pass'}[k];
+    const rad = p => `<button class="prad" data-passpost="${p.id || p.tid}"><span><b>${p.namn} · ${p.min} min</b><small>${dagNamn(p.tid).replace(/^idag$/, 'idag')}${dagNr(new Date(p.tid)) !== idag ? ' ' + kl(p.tid) : ''} · ${p.kalla === 'klocka' ? 'Från klockan' : 'Loggat'}</small></span><span class="penna" aria-hidden="true">✎</span></button>`;
+    const sek = document.createElement('div'); sek.id = 'passSek';
+    sek.innerHTML = `<p class="rubrik-liten" style="margin-bottom:8px">Pass senaste 7 dagarna</p>` + (lista.length
+      ? `<div class="plista">${visa5.map(rad).join('')}</div>${lista.length > 5 ? `<button class="knapp sek" id="passAlla" style="margin-top:8px">Visa alla (${lista.length})</button>` : ''}`
+      : `<div class="ptom">Inga ${namnK} den här veckan.<button class="lite" data-logga-pass>Logga pass</button></div>`);
+    v.parentElement.parentElement.insertBefore(sek, v.parentElement);
+    const alla = sek.querySelector('#passAlla'); if(alla) alla.onclick = () => { sek.querySelector('.plista').innerHTML = lista.map(rad).join(''); alla.remove(); };
+    ark.querySelectorAll('.rad2').forEach(r => { if(/^(Styrkepass)/.test(r.textContent) && lista.length){ r.style.cursor = 'pointer'; r.onclick = () => sek.scrollIntoView({behavior: 'smooth', block: 'start'}); } });
+  }
   if(!insikt) ark.querySelectorAll('.insiktark').forEach(x => { if(x.textContent.includes('Fitchi har märkt')) x.remove(); });
+  ark.querySelectorAll('.insiktark b').forEach(b => { if(b.textContent === 'Fitchi har märkt:') b.textContent = `${S.namn} har märkt:`; });
   ark.querySelectorAll('[data-kansla]').forEach(b => b.setAttribute('aria-pressed', d.kansla === b.dataset.kansla && d.kanslaDag === idag));
   ark.querySelectorAll('.insiktark').forEach(x => { x.innerHTML = x.innerHTML.replace('om cirka 1 veckor', 'om cirka 1 vecka'); });
 };
+
+{ const st = document.createElement('style'); st.textContent = `
+  .plista{display:flex;flex-direction:column;border-radius:20px;background:var(--glas);overflow:hidden}
+  .prad{appearance:none;display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:12px 16px;background:none;border:0;border-bottom:1px solid var(--glas-kant);color:inherit;font:inherit;cursor:pointer}
+  .prad:last-child{border-bottom:0}.prad span:first-child{flex:1}.prad b{display:block;font-size:15.5px}.prad small{display:block;font-size:13px;color:var(--pa-scen-d);margin-top:2px}
+  .prad .penna{opacity:.6}
+  .ptom .lite{white-space:nowrap;flex:none}
+  .ptom{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:20px;background:var(--glas);font-size:14.5px;color:var(--pa-scen-d)}
+  .vecka div{position:relative}.vecka .vmin{font-style:normal;font-size:11px;font-weight:700;color:var(--pa-scen);line-height:1}`;
+  document.head.appendChild(st); }
+document.addEventListener('click', e => { if(e.target.closest('[data-logga-pass]')){ stangArk(); visa('s-logga'); } }, true);
 
 // ===== Matchningen: pulsen hittar din fitchi =====
 {
