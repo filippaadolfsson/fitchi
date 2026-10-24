@@ -1680,7 +1680,8 @@ oppnaMatare = function(k){
     if(d.kansla && d.kanslaDag === idag) rader.push(['Din incheckning', d.kansla, 'Idag']);
   }
   if(k === 'naring'){
-    rader.push(['Protein', `${Math.round(S.protein || 0)} av 90 g`, 'Mat'], ['Grönsaker', `${S.gront || 0} av 5 portioner`, 'Mat'], ['Vatten', `${S.vatten || 0} av 8 glas`, 'Mat']);
+    const se = matloggNu().length ? 'Se listan nedan' : 'Mat';
+    rader.push(['Protein', `${Math.round(S.protein || 0)} av 90 g`, se], ['Grönsaker', `${S.gront || 0} av 5 portioner`, se], ['Vatten', `${S.vatten || 0} av 8 glas`, se]);
     if((S.protein || 0) >= 90) insikt = 'Proteinmålet är nått idag!';
   }
   m.kallor = rader; m.insikt = insikt || '';
@@ -1698,6 +1699,21 @@ oppnaMatare = function(k){
     const rub = v.parentElement && v.parentElement.querySelector('.rubrik-liten'); if(rub) rub.textContent = 'Träningsminuter senaste veckan';
   } else if(v) v.innerHTML = [6,5,4,3,2,1,0].map(n => { const dag = idag - n, val = S.hist[dag]?.[k];
     return `<div class="${n===0?'idag':''}"><i style="height:${val ?? 4}%;background:var(--${k});${val === undefined ? 'opacity:.2' : ''}"></i><span>${dagKort(n)}</span></div>`; }).join('');
+  // näring: protein per dag och dagens matlogg
+  if(k === 'naring' && v){
+    const prot = [6,5,4,3,2,1,0].map(n => n === 0 ? Math.round(S.protein || 0) : Math.round((S.dagbok || {})[idag - n]?.protein || 0)), maxP = Math.max(90, ...prot);
+    v.innerHTML = [6,5,4,3,2,1,0].map((n, i) => `<div class="${n===0?'idag':''}">${prot[i] ? `<em class="vmin">${prot[i]}</em>` : ''}<i style="height:${prot[i] ? Math.max(8, Math.round(prot[i] / maxP * 100)) : 4}%;background:var(--naring);${prot[i] ? '' : 'opacity:.2'}"></i><span>${dagKort(n)}</span></div>`).join('');
+    const rub = v.parentElement && v.parentElement.querySelector('.rubrik-liten'); if(rub) rub.textContent = 'Protein per dag (g) · mål 90';
+    const l = [...matloggNu()].sort((a, b) => (b.id === 'tidigare' ? -1 : b.tid || 0) - (a.id === 'tidigare' ? -1 : a.tid || 0));
+    const rad = x => `<button class="prad" data-matpost="${x.id}"><span><b>${x.namn}</b><small>${matDetalj(x)}${x.id === 'tidigare' ? '' : ' · ' + kl(x.tid)}</small></span><span class="penna" aria-hidden="true">✎</span></button>`;
+    const sek = document.createElement('div'); sek.id = 'passSek';
+    sek.innerHTML = `<p class="rubrik-liten" style="margin-bottom:8px">Mat loggad idag</p>` + (l.length
+      ? `<div class="plista">${l.slice(0, 5).map(rad).join('')}</div>${l.length > 5 ? `<button class="knapp sek" id="passAlla" style="margin-top:8px">Visa alla (${l.length})</button>` : ''}`
+      : `<div class="ptom">Ingen mat loggad idag.<button class="lite" data-logga-mat>Logga mat</button></div>`);
+    v.parentElement.parentElement.insertBefore(sek, v.parentElement);
+    const alla = sek.querySelector('#passAlla'); if(alla) alla.onclick = () => { sek.querySelector('.plista').innerHTML = l.map(rad).join(''); alla.remove(); };
+    ark.querySelectorAll('.rad2').forEach(r => { if(/^(Protein|Grönsaker|Vatten)/.test(r.textContent) && l.length){ r.style.cursor = 'pointer'; r.onclick = () => sek.scrollIntoView({behavior: 'smooth', block: 'start'}); } });
+  }
   // passlista: senaste 7 dagarna, tryck för att ändra
   if(k !== 'naring' && v){
     const lista = [...passVecka].sort((a, b) => b.tid - a.tid), visa5 = lista.slice(0, 5);
@@ -1726,7 +1742,7 @@ oppnaMatare = function(k){
   .ptom{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:20px;background:var(--glas);font-size:14.5px;color:var(--pa-scen-d)}
   .vecka div{position:relative}.vecka .vmin{font-style:normal;font-size:11px;font-weight:700;color:var(--pa-scen);line-height:1}`;
   document.head.appendChild(st); }
-document.addEventListener('click', e => { if(e.target.closest('[data-logga-pass]')){ stangArk(); visa('s-logga'); } }, true);
+document.addEventListener('click', e => { if(e.target.closest('[data-logga-pass]')){ stangArk(); visa('s-logga'); } if(e.target.closest('[data-logga-mat]')){ stangArk(); visa('s-mat'); } }, true);
 
 // ===== Matchningen: pulsen hittar din fitchi =====
 {
