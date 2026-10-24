@@ -1347,9 +1347,11 @@ for(const k of Object.keys(SVG)){ const art = k.split('-')[0]; if(F3D[art]) Obje
 
 // webbappen har flyttat till fitchi.app/app (Android-appen påverkas inte).
 // Spelet och vänkontot följer med i adressen (#flytt=…, packat), eftersom webbläsaren sparar per adress.
-const FLYTTAR = location.hostname.endsWith('github.io') || /^#flytt=/.test(location.hash); // spara inget medan spelet flyttas
+const FRISTAENDE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+// På hemskärmen (iPhone sparar den separat från Safari) fortsätter den gamla adressen att fungera som förut.
+const FLYTTAR = (location.hostname.endsWith('github.io') && !FRISTAENDE) || /^#flytt=/.test(location.hash); // spara inget medan spelet flyttas
 const b64u = u8 => { let s = ''; for(const x of u8) s += String.fromCharCode(x); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); };
-if(location.hostname.endsWith('github.io')){
+if(location.hostname.endsWith('github.io') && !FRISTAENDE){
   (async () => {
     let h = location.hash;
     try{
@@ -1372,6 +1374,28 @@ if(location.hostname.endsWith('github.io')){
     }catch(e){}
     location.replace(location.pathname + location.search);
   })();
+}
+
+// Inbjudan utan sparat spel: kanske spelar personen redan i appen på hemskärmen (iPhone delar inte sparningen med Safari)
+{
+  const vk = new URLSearchParams(location.search).get('van');
+  let harSpel = false; try{ harSpel = !!(JSON.parse(localStorage.getItem('fitchi-v1') || 'null') || {}).klar; }catch(e){}
+  const v = document.querySelector('#s-valkommen .pad');
+  if(vk && !harSpel && !FLYTTAR && !window.Capacitor && v){
+    const kod = vk.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 20);
+    const ruta = document.createElement('div');
+    ruta.className = 'inbjudanRuta';
+    ruta.innerHTML = `<b>Har du redan Fitchi på hemskärmen?</b><span>Öppna den, gå till Vänner och skriv in koden</span><div class="ikod">${kod}</div><button type="button" class="ikopiera">Kopiera koden</button><small>Ny här? Tryck Kom igång – vännen läggs till när du är klar.</small>`;
+    v.insertBefore(ruta, v.querySelector('h1'));
+    document.getElementById('storAgg')?.classList.add('liten');
+    ruta.querySelector('.ikopiera').onclick = async e => { try{ await navigator.clipboard.writeText(kod); e.target.textContent = 'Kopierad!'; }catch(err){ e.target.textContent = kod; } };
+    const st = document.createElement('style');
+    st.textContent = `.inbjudanRuta{display:flex;flex-direction:column;gap:6px;align-items:center;padding:16px;border-radius:22px;background:rgba(255,255,255,.08);border:1px solid rgba(200,241,105,.35);font:400 14px/19px var(--text);color:var(--pa-scen-d)}
+.inbjudanRuta b{color:#fff;font-size:16px;line-height:21px}.inbjudanRuta .ikod{font:800 24px/30px var(--rubrik,inherit);letter-spacing:.06em;color:var(--lime)}
+.inbjudanRuta .ikopiera{appearance:none;border:0;border-radius:999px;padding:10px 18px;background:var(--lime);color:#120c1c;font:700 14px/18px var(--text);cursor:pointer}
+.inbjudanRuta small{font-size:12.5px;line-height:17px;opacity:.85}#storAgg.liten{transform:scale(.6);margin:-30px 0}`;
+    document.head.appendChild(st);
+  }
 }
 
 // ===== Webbapp: sparas i telefonen, riktig tid =====
