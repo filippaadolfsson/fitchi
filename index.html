@@ -1425,7 +1425,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -2756,6 +2756,83 @@ document.addEventListener('click', e => { if(e.target.closest('[data-resa]')) re
 // start
 if(ladda()){ formVeckor(); document.querySelectorAll('.vnamn').forEach(n => n.textContent = S.namn); visa('s-hem'); }
 else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data.steg = 0; S.protein = 0; S.vatten = 0; S.gront = 0; S.glod = 70; }
+
+// ===== Dagens förslag ("Fitchi har märkt"): 2–3 olika per dag utifrån riktig data, aldrig samma igen efter svar =====
+// Ett förslag visas i taget. Svar (ja eller nej) räknas; högst 3 svar per dag. "Nej tack" vilar förslaget i 7 dagar.
+{
+  const kl = () => new Date().getHours();
+  const fmt = n => Math.round(n).toLocaleString('sv-SE');
+  const halsa = () => !!(S.data && S.data.halsa);
+  const passVecka = m => { const idag = dagNr(new Date()), mon = idag - ((new Date().getDay() + 6) % 7);
+    return (S.passlogg || []).filter(p => !p.borttagen && (!m || p.m === m) && dagNr(new Date(p.tid)) >= mon).length; };
+  const lagUppdrag = (u, txt) => { const i = (S.uppdrag || []).findIndex(x => !x.klar && x.m !== 'gladje');
+    const j = i >= 0 ? i : (S.uppdrag || []).findIndex(x => !x.klar); if(j < 0) return toastG('Alla uppdrag är redan klara idag!');
+    S.uppdrag[j] = {...u, varfor: 'Förslag från ' + S.namn, klar: false}; ritaUppdrag(j); spara(); toastG(txt, 2400); };
+  const kvallsNotis = async () => {
+    if(typeof NOTIS !== 'undefined' && NOTIS && S.notis){ const d = new Date(); d.setHours(22, 0, 0, 0); if(d <= new Date()) return toastG('Klockan är redan över 22. Sov gott!');
+      try{ await NOTIS.schedule({notifications: [{id: 22, title: `🌙 Dags att varva ner`, body: `${S.namn} gäspar redan. Lägg undan mobilen så sover ni båda bättre.`, schedule: {at: d, allowWhileIdle: true}}]}); toastG('Fitchi påminner dig kl. 22.', 2200); }catch(e){ toastG('Kunde inte lägga in påminnelsen.'); }
+    } else toastG('Bra! Försök lägga undan mobilen kl. 22 ikväll.', 2600); };
+  const TIPS = [
+    {id: 'somnKort', nar: () => halsa() && S.data.somn > 0 && S.data.somn < 7 && kl() >= 14,
+     text: () => `Du sov ${String(S.data.somn).replace('.', ',')} timmar i natt. Lugnet sjunker de nätter du sover under 7 timmar. Ska ${S.namn} påminna dig om att varva ner kl. 22 ikväll?`,
+     ja: 'Ja, påminn mig', gor: kvallsNotis, varfor: 'Bygger på nattens sömn från Health Connect.'},
+    {id: 'somnBra', nar: () => halsa() && S.data.somn >= 7.5 && kl() < 14,
+     text: () => `Du sov ${String(S.data.somn).replace('.', ',')} timmar i natt – bra läge för ett lite tuffare pass idag.`,
+     ja: 'Kul!', gor: () => {}, varfor: 'Bygger på nattens sömn från Health Connect.'},
+    {id: 'stegFa', nar: () => halsa() && kl() >= 13 && kl() < 21 && (S.data.steg || 0) < 4000,
+     text: () => `${fmt(S.data.steg || 0)} steg hittills idag. En promenad på 10 minuter ger ungefär 1 000 steg och fyller på energin. Ska den bli ett av dagens uppdrag?`,
+     ja: 'Ja, lägg till', gor: () => lagUppdrag({m: 'energi', t: '10 min promenad', p: 20}, 'Promenaden är tillagd. Klockan bockar av den.'), varfor: 'Bygger på dagens steg från Health Connect.'},
+    {id: 'stegNara', nar: () => halsa() && kl() >= 17 && (S.data.steg || 0) >= 6500 && (S.data.steg || 0) < 8000,
+     text: () => `${fmt(S.data.steg)} steg idag – bara ${fmt(8000 - S.data.steg)} kvar till 8 000. En kvällspromenad?`,
+     ja: 'Ja, lägg till', gor: () => lagUppdrag({m: 'energi', t: '15 min kvällspromenad', p: 20}, 'Kvällspromenaden är tillagd.'), varfor: 'Bygger på dagens steg från Health Connect.'},
+    {id: 'lugnLagt', nar: () => S.m.lugn < 40 && (S.niva || 1) >= 3,
+     text: () => `${S.namn}s lugn är lågt just nu. Vill du andas en minut tillsammans?`,
+     ja: 'Ja, andas', gor: () => { if(typeof startaAndas === 'function') startaAndas(); }, varfor: 'Bygger på lugn-mätaren.'},
+    {id: 'energiLag', nar: () => S.m.energi < 35 && kl() >= 9 && kl() < 20,
+     text: () => `Energin är låg. Fem minuters rörelse – en trappa, en kort promenad – brukar ge mer än en kaffe.`,
+     ja: 'Lägg till uppdrag', gor: () => lagUppdrag({m: 'energi', t: '5 min rörelsepaus', p: 15}, 'Rörelsepausen är tillagd.'), varfor: 'Bygger på energi-mätaren.'},
+    {id: 'vatten', nar: () => kl() >= 12 && (S.vatten || 0) < 3,
+     text: () => `Du har loggat ${S.vatten || 0} glas vatten idag. Ta ett glas nu?`,
+     ja: 'Ja, ett glas', gor: () => { S.vatten = (S.vatten || 0) + 1; if(typeof ritaMat === 'function') ritaMat(); spara(); toastG('+1 glas vatten loggat.'); }, varfor: 'Bygger på dagens matlogg.'},
+    {id: 'protein', nar: () => kl() >= 15 && (S.protein || 0) < 45,
+     text: () => `${S.protein || 0} g protein hittills idag. Kvarg, ägg eller bönor till mellanmål tar dig närmare målet på 90 g.`,
+     ja: 'Logga mat', gor: () => visa('s-mat'), varfor: 'Bygger på dagens matlogg.'},
+    {id: 'gront', nar: () => kl() >= 16 && (S.gront || 0) < 2,
+     text: () => `${S.gront ? 'En portion' : 'Inga'} grönsaker loggade än idag. Lägg till något grönt till middagen?`,
+     ja: 'Logga mat', gor: () => visa('s-mat'), varfor: 'Bygger på dagens matlogg.'},
+    {id: 'styrkaVecka', nar: () => new Date().getDay() >= 3 && passVecka('styrka') === 0,
+     text: () => `Inget styrkepass än den här veckan. Ett kort pass hemma på 15 minuter räcker för att hålla ${S.namn} stark.`,
+     ja: 'Lägg till uppdrag', gor: () => lagUppdrag({m: 'styrka', t: '15 min styrka hemma', p: 35}, 'Styrkepasset är tillagt.'), varfor: 'Bygger på veckans loggade pass.'},
+    {id: 'bonusNara', nar: () => kl() >= 17 && (S.uppdrag || []).filter(u => u.klar).length === 2,
+     text: () => `Ett uppdrag kvar till bonusen på +50 mynt!`,
+     ja: 'Visa', gor: () => document.getElementById('uppdrag3')?.scrollIntoView({behavior: 'smooth', block: 'center'}), varfor: 'Bygger på dagens uppdrag.'},
+  ];
+  const tipsLager = () => { const idag = dagNr(new Date()); if(!S.tips || S.tips.dag !== idag) S.tips = {dag: idag, svar: [], vila: (S.tips && S.tips.vila) || {}}; return S.tips; };
+  const nastaTips = () => { const t = tipsLager(), idag = t.dag; if(t.svar.length >= 3) return null;
+    return TIPS.find(x => !t.svar.includes(x.id) && !(t.vila[x.id] > idag) && (() => { try{ return x.nar(); }catch(e){ return false; } })()) || null; };
+  const ritaTips = () => { const el = document.getElementById('insikt'); if(!el) return;
+    if(!S.klar || (S.data && S.data.borta >= 3)){ el.hidden = true; return; }
+    const tp = nastaTips(); el.hidden = !tp; if(!tp) return;
+    el.dataset.tips = tp.id;
+    el.innerHTML = `<p class="etk">${S.namn} har märkt</p><p style="font-size:15px;line-height:21px;margin:4px 0 10px">${tp.text()}</p>`
+      + `<div style="display:flex;gap:8px;align-items:center"><button class="lite" data-tipsja>${tp.ja}</button><button class="lite sek" data-tipsnej>Nej tack</button><button class="varfor" data-tipsvarfor>Varför?</button></div>`
+      + `<p class="liten" hidden data-tipstext style="margin-top:8px">${tp.varfor} Förslagen räknas fram i telefonen och skickas ingenstans.</p>`; };
+  if(!SPARA.includes('tips')) SPARA.push('tips');
+  insikt = () => null; // gamla demo-insikter ersätts
+  const _rhT = ritaHem; ritaHem = function(){ _rhT.apply(this, arguments); ritaTips(); };
+  ritaTips(); setInterval(() => { if(!document.hidden && !document.getElementById('insikt')?.dataset.tips) ritaTips(); }, 60000);
+  document.addEventListener('click', e => {
+    const el = document.getElementById('insikt'); if(!el || !el.contains(e.target)) return;
+    if(e.target.closest('[data-tipsvarfor]')){ const v = el.querySelector('[data-tipstext]'); if(v) v.hidden = !v.hidden; e.stopImmediatePropagation(); return; }
+    const ja = e.target.closest('[data-tipsja]'), nej = e.target.closest('[data-tipsnej]'); if(!ja && !nej) return;
+    e.stopImmediatePropagation();
+    const t = tipsLager(), tp = TIPS.find(x => x.id === el.dataset.tips); if(!tp) return;
+    t.svar.push(tp.id); if(nej) t.vila[tp.id] = t.dag + 7;
+    spara(); el.hidden = true;
+    if(ja) try{ tp.gor(); }catch(err){}
+    setTimeout(ritaTips, 900);
+  }, true);
+}
 
 </script>
 </body>
