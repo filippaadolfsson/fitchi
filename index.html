@@ -1345,6 +1345,8 @@ ork = (mood, w) => { if(typeof posFor === 'function') mood = posFor(mood); const
 levande = (art, mood, attrs) => `<image href="${F3D[art]}" ${attrs} preserveAspectRatio="xMidYMax meet"/>`;
 for(const k of Object.keys(SVG)){ const art = k.split('-')[0]; if(F3D[art]) Object.defineProperty(SVG, k, {get: () => `<image href="${F3D[art]}" x="0" y="0" width="170" height="200" preserveAspectRatio="xMidYMax meet"/>`}); }
 
+// webbappen har flyttat till fitchi.app/app (Android-appen påverkas inte)
+if(location.hostname.endsWith('github.io')) location.replace('https://fitchi.app/app/' + location.search + location.hash);
 
 // ===== Webbapp: sparas i telefonen, riktig tid =====
 const LAGER = 'fitchi-v1';
@@ -2291,7 +2293,7 @@ document.addEventListener('click', e => {
 
 // ===== Riktiga vänner (Supabase) =====
 const SB_URL = 'https://bpyntoollqdnnpkqzmvk.supabase.co', SB_KEY = 'sb_publishable_rjH3w7E3xa2vrgCyB4LKAA_jMBK9lOz';
-const DELA_URL = 'https://filippaadolfsson.github.io/fitchi/';
+const DELA_URL = 'https://fitchi.app/app/';
 let sbSession = null, minProfil = null, vanLista = [], vanLaddar = false, vanFel = '';
 try{ sbSession = JSON.parse(localStorage.getItem('fitchi-sb') || 'null'); }catch(e){}
 const sbSpara = () => { try{ localStorage.setItem('fitchi-sb', JSON.stringify(sbSession)); }catch(e){} };
