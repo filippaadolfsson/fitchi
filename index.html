@@ -1899,15 +1899,39 @@ function visaPrylar(){
 }
 // --- andningsspelet (nivå 3)
 let andasTimer = null;
+const LEKIK = {
+  klappa: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  andas: '<path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3M3 12h8"/>',
+  dansa: '<path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/>',
+  fanga: '<path d="M12 21L4 11l3-6h3.5L12 7l1.5-2H17l3 6z"/>'};
 function visaLeka(){
-  const last = S.niva < 3;
-  oppnaArk(arkHuvud('Leka', `Vad vill ni göra?`, '')
-    + `<div style="display:flex;flex-direction:column;gap:10px">
-      <button class="knapp ljus" data-lek="klappa">Klappa ${S.namn}</button>
-      <button class="knapp ${last?'sek':'ljus'}" data-lek="andas" ${last?'disabled':''}>Andas med ${S.namn} · 1 min${last?' · låses upp på nivå 3':''}</button>
-      <button class="knapp ${S.niva<5?'sek':'ljus'}" data-lek="dansa" ${S.niva<5?'disabled':''}>Dansa${S.niva<5?' · låses upp på nivå 5':''}</button>
-      <button class="knapp ${S.niva<7?'sek':'ljus'}" data-lek="fanga" ${S.niva<7?'disabled':''}>Fånga diamanter · 20 s${S.niva<7?' · låses upp på nivå 7':''}</button></div>`);
+  const idag = dagNr(new Date()), n = S.namn;
+  const kort = (id, niva, farg, titel, text, klarIdag) => {
+    const last = S.niva < niva;
+    const bar = last && S.niva === niva - 1 && typeof xpBehov === 'function' ? `<span class="lbar"><i style="width:${Math.min(100, Math.round(S.xp / xpBehov(S.niva) * 100))}%"></i></span>` : '';
+    const chip = last ? `<span class="lchip last">🔒 Nivå ${niva}</span>` : klarIdag ? `<span class="lchip klar">Klart idag ✓</span>` : `<span class="lchip">${{klappa: 'Klappa', andas: 'Andas', dansa: 'Dansa', fanga: 'Spela'}[id]}</span>`;
+    return `<button class="lekkort${last ? ' last' : ''}" data-lek="${id}" ${last ? 'disabled' : ''}><span class="lik" style="background:${farg}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LEKIK[id]}</svg></span>`
+      + `<span class="ltx"><b>${titel}</b><small>${text}</small>${bar}</span>${chip}</button>`; };
+  oppnaArk(arkHuvud('Leka', 'Vad vill ni göra?', `Lek med ${n} för glöd, lugn och mynt.`)
+    + `<div class="lekar">`
+    + kort('klappa', 1, 'var(--naring, #f2d48a)', `Klappa ${n}`, `Ge ${n} lite kärlek – det syns direkt`, false)
+    + kort('andas', 3, 'var(--lugn, #b48be0)', 'Andas tillsammans', '1 minut lugn andning · +12 lugn', S.andasDag === idag)
+    + kort('dansa', 5, 'var(--styrka, #ff7a5c)', 'Dansa', `${n} dansar loss en stund`, false)
+    + kort('fanga', 7, 'var(--lime, #c8f169)', 'Fånga hjärtstenar', 'Minispel, 20 sekunder · upp till 40 mynt', S.fangaDag === idag)
+    + `</div>`);
 }
+{ const st = document.createElement('style'); st.textContent = `
+  .lekar{display:flex;flex-direction:column;gap:10px}
+  .lekkort{appearance:none;display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:12px 12px 12px 12px;border-radius:22px;background:#ffffff10;border:1px solid #ffffff1c;color:inherit;font:inherit;cursor:pointer}
+  .lekkort .lik{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;flex:none;color:#1e1230}
+  .lekkort .lik svg{width:24px;height:24px}
+  .lekkort .ltx{flex:1;min-width:0}.lekkort b{display:block;font-size:16.5px;line-height:21px}
+  .lekkort small{display:block;color:var(--pa-scen-d,#cbbfdc);font-size:13.5px;line-height:18px;margin-top:2px}
+  .lekkort .lbar{display:block;height:4px;border-radius:9px;background:#ffffff18;margin-top:7px;overflow:hidden}.lekkort .lbar i{display:block;height:100%;background:#c8f169aa}
+  .lekkort .lchip{flex:none;font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:99px;background:#c8f169;color:#120c1c;white-space:nowrap}
+  .lekkort .lchip.klar{background:#ffffff1c;color:#c8f169}
+  .lekkort.last{opacity:.6;cursor:default}.lekkort.last .lik{filter:grayscale(1)}.lekkort .lchip.last{background:#ffffff1c;color:#fff}`;
+  document.head.appendChild(st); }
 function startaAndas(){
   clearInterval(andasTimer);
   const p = F3DP[S.art] || {}, bild = p.lugn || p.neutral || F3D[S.art];
@@ -1950,8 +1974,8 @@ document.addEventListener('click', e => {
   const k = e.target.closest('[data-klar]'); if(k && S.uppdrag && S.uppdrag[+k.dataset.klar] && !S.uppdrag[+k.dataset.klar].klar) nyckelIdag();
   if(e.target.closest('#spara')) nyckelIdag();
 }, true);
-// --- minispel 2: fånga diamanter (nivå 7)
-NIVABEL.forEach(r => { if(r[0] === 3){ r[1] = 'Minispel: andas med din fitchi'; r[2] = 'andningsspelet'; } if(r[0] === 7){ r[1] = 'Minispel: fånga diamanter'; r[2] = 'diamantspelet'; } if(r[0] === 5){ r[1] = 'Nytt beteende: dansen'; r[2] = 'dansen'; } if(r[0] === 12){ r[1] = 'Vänner, lag och lagutmaningar'; r[2] = 'vänner och lag'; } });
+// --- minispel 2: fånga hjärtstenar (nivå 7)
+NIVABEL.forEach(r => { if(r[0] === 3){ r[1] = 'Minispel: andas med din fitchi'; r[2] = 'andningsspelet'; } if(r[0] === 7){ r[1] = 'Minispel: fånga hjärtstenar'; r[2] = 'hjärtstensspelet'; } if(r[0] === 5){ r[1] = 'Nytt beteende: dansen'; r[2] = 'dansen'; } if(r[0] === 12){ r[1] = 'Vänner, lag och lagutmaningar'; r[2] = 'vänner och lag'; } });
 {
   const st = document.createElement('style'); st.textContent = `
   .fanga{position:relative;height:430px;border-radius:24px;overflow:hidden;background:radial-gradient(ellipse at 50% 100%,#5a327455,#00000000 60%),#ffffff08;box-shadow:inset 0 0 0 1px var(--glas-kant);touch-action:none;user-select:none;-webkit-user-select:none}
@@ -1975,7 +1999,7 @@ let fangaStopp = false;
 function startaFanga(){
   fangaStopp = true;
   const p = F3DP[S.art] || {}, bild = p.pigg || p.neutral || F3D[S.art];
-  oppnaArk(arkHuvud('Minispel', 'Fånga diamanter', `Tryck på diamanterna innan de landar. Lila är värda 3. Du har 20 sekunder.`)
+  oppnaArk(arkHuvud('Minispel', 'Fånga hjärtstenar', `Tryck på hjärtstenarna innan de landar. Lila är värda 3. Du har 20 sekunder.`)
     + `<div class="fangatopp"><span id="fangaPoang">0</span><span style="font:600 13px var(--text);color:var(--pa-scen-d)">Rekord: ${S.fangaRekord || 0}</span></div>
        <div class="fangatid"><i id="fangaTid"></i></div>
        <div class="fanga" id="fanga"><div class="fig" id="fangaFig"><img src="${bild}" alt=""></div></div>
@@ -2016,7 +2040,7 @@ function slutFanga(poang){
     S.m.energi = Math.min(100, S.m.energi + 8); belon = `+${mynt} mynt, +8 XP och energi +8.`; }
   else belon = forsta ? '' : 'Belöningen får ni en gång om dagen, men rekord räknas alltid.';
   spara(); ritaHem();
-  $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>` + arkHuvud('Minispel', `${poang} diamanter!`, `${rekord ? 'Nytt rekord! ' : ''}${belon}`)
+  $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>` + arkHuvud('Minispel', `${poang} hjärtstenar!`, `${rekord ? 'Nytt rekord! ' : ''}${belon}`)
     + `<div style="display:flex;justify-content:center;padding:6px 0">${ork('pigg', 150)}</div>
        <div style="display:flex;flex-direction:column;gap:10px"><button class="knapp ljus" id="fangaIgen">Spela igen</button><button class="knapp sek" data-stang-ark>Klar</button></div>`;
 }
