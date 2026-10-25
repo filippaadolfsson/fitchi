@@ -580,7 +580,7 @@ body.testlage .panel,body.testlage .hint{display:flex}
     <div class="tillbaka" id="tillbaka" hidden><b style="font:800 17px var(--display)" id="tillbakaTitel"></b><span class="liten" style="color:var(--natt)" id="tillbakaText"></span></div>
     <div class="uhuvud"><h2>Dagens uppdrag</h2><span class="uprog" id="uprog">0 av 3</span></div>
     <div class="bonusbar"><i id="bonusbar"></i></div>
-    <div style="display:flex;justify-content:space-between;margin-top:-4px"><p class="liten" id="bonustext">Klara alla tre för +50 i bonus</p><p class="liten" id="bytentext"></p></div>
+    <div style="display:flex;justify-content:space-between;margin-top:-4px"><p class="liten" id="bonustext">Klara alla tre för +25 i bonus</p><p class="liten" id="bytentext"></p></div>
     <div class="uppdrag3" id="uppdrag3"></div>
     <div class="kort insikt" id="insikt"><p class="etk">Fitchi har märkt</p><p style="font-size:15px;line-height:21px;margin:4px 0 10px" id="insiktText">Du tränar oftast på morgonen. Ska dagens uppdrag komma kl. 07 i stället för kl. 12?</p><div style="display:flex;gap:8px;align-items:center"><button class="lite" id="insiktJa">Ja, gör så</button><button class="lite sek" id="insiktNej">Nej tack</button><button class="varfor" id="varfor">Varför?</button></div><p class="liten" id="varforText" hidden style="margin-top:8px">Förslaget bygger på dina senaste 14 dagars loggade pass och sömn. Fitchi använder bara din egen aktivitet för förslag som det här, och du kan stänga av insikter i inställningarna.</p></div>
   </div>
@@ -851,7 +851,13 @@ const BANK = {
   naring:[['Proteinrik frukost',''],['Två glas vatten till lunch',''],['En näve grönt till middagen',''],['Ät något med protein innan kl. 15','']],
   gladje:[['Unna dig något gott, helt utan dåligt samvete',''],['Ring eller sms:a någon du gillar',''],['Gör något bara för skojs skull',''],['Lyssna på en låt du älskar, högt',''],['Sätt dig i solen en stund','']]};
 const VARFOR = {energi:'Energi är lägst just nu', styrka:'Bygger din styrka', lugn:'Du behöver vila', naring:'Näring är under målet', gladje:'För att livet ska vara kul också'};
-const POANG = {energi:30, styrka:35, lugn:25, naring:20, gladje:20};
+const POANG = {energi:10, styrka:10, lugn:10, naring:10, gladje:10};
+// mynt: pass och mat ger mynt bara några gånger per dag (XP och mätare påverkas alltid)
+function myntGrans(typ, max){ const d = Math.floor((Date.now() - new Date().getTimezoneOffset()*60000) / 864e5); if(!S.myntDag || S.myntDag.d !== d) S.myntDag = {d, pass:0, mat:0}; if((S.myntDag[typ] || 0) >= max) return false; S.myntDag[typ] = (S.myntDag[typ] || 0) + 1; return true; }
+function passMynt(min){ return myntGrans('pass', 2) ? 10 + Math.min(10, Math.round(min / 6)) : 0; }
+function matMynt(){ return myntGrans('mat', 3) ? 2 : 0; }
+const BONUS = 25;
+const nivaMynt = n => 20 + n * 2;
 function valjUppdrag(matare, utesluten){
   let min = {'5':5,'15':15,'30':30,'45':45}[S.pref.tid]; if(S.start==='igang' || S.sit.has('tid') || S.sit.has('aterstart')) min = Math.min(min,10); if(S.start==='uppehall') min = Math.min(min,15);
   if(S.data && (S.data.borta>=3 || (S.data.stegIgar ?? 6000)<4000)) min = Math.min(min,10);
@@ -867,9 +873,9 @@ function skapaUppdrag(){
   if(S.vila) ordning = ['lugn', ...ordning.filter(x => x!=='lugn' && x!=='styrka')];
   const valda = ordning.slice(0,2);
   S.uppdrag = [...valda.map(m => valjUppdrag(m)), valjUppdrag('gladje')];
-  if(S.vila) S.uppdrag[0] = {m:'lugn', t:'Vilodag: 15 min lugn stretch', p:30, varfor:'Kroppen behöver återhämtning', klar:false};
-  if(S.data.borta >= 3){ S.uppdrag[0] = {m:'energi', t:'5 min promenad, bara för att komma igång', p:30, varfor:'En mjuk start efter pausen', klar:false};
-    S.uppdrag[1] = {m:'gladje', t:'Klappa på din fitchi', p:15, varfor:'Det har saknat dig', klar:false}; }
+  if(S.vila) S.uppdrag[0] = {m:'lugn', t:'Vilodag: 15 min lugn stretch', p:10, varfor:'Kroppen behöver återhämtning', klar:false};
+  if(S.data.borta >= 3){ S.uppdrag[0] = {m:'energi', t:'5 min promenad, bara för att komma igång', p:10, varfor:'En mjuk start efter pausen', klar:false};
+    S.uppdrag[1] = {m:'gladje', t:'Klappa på din fitchi', p:10, varfor:'Det har saknat dig', klar:false}; }
   if(S.sit.has('stress')) S.uppdrag[0].varfor = 'Vila och lugn först just nu';
 }
 S.byten = 2;
@@ -877,7 +883,7 @@ function ritaUppdrag(nyIndex){
   $('#bytentext').innerHTML = S.byten > 0 ? `${S.byten} byte${S.byten>1?'n':''} kvar idag` : 'Inga byten kvar idag';
   const klara = S.uppdrag.filter(u => u.klar).length;
   $('#uprog').textContent = `${klara} av 3`; $('#bonusbar').style.width = (klara/3*100)+'%';
-  $('#bonustext').textContent = klara===3 ? 'Alla klara! Bonus +50 är din.' : `Klara alla tre för +50 i bonus`;
+  $('#bonustext').textContent = klara===3 ? `Alla klara! Bonus +${BONUS} är din.` : `Klara alla tre för +${BONUS} i bonus`;
   $('#uppdrag3').innerHTML = S.uppdrag.map((u,i) => `<div class="ukort${u.klar?' klar':''}${i===nyIndex?' ny':''}">
     <span class="uik" style="background:${UFARG[u.m]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UIK[u.m]}</svg></span>
     <span class="ut"><b>${u.t}</b><small>${u.varfor}</small></span>
@@ -892,7 +898,7 @@ document.addEventListener('click', e => {
     S.saldo += u.p; const mm = u.m==='gladje' ? 'lugn' : u.m; S.m[mm] = Math.min(100, S.m[mm] + 15); if(u.m==='gladje') S.m.energi = Math.min(100, S.m.energi+5);
     S.xp += 12; while(S.xp>=xpBehov(S.niva)){ S.xp-=xpBehov(S.niva); S.niva++; }
     let msg = `+${u.p} mynt`;
-    if(S.uppdrag.every(x => x.klar)){ S.saldo += 50; msg = `Alla tre klara! +${u.p} och +50 i bonus`; }
+    if(S.uppdrag.every(x => x.klar)){ S.saldo += BONUS; msg = `Alla tre klara! +${u.p} och +${BONUS} i bonus`; }
     ritaHem(); klappa();
     const t = $('#toast4'); t.textContent = msg; t.classList.add('syns'); setTimeout(() => t.classList.remove('syns'), 1800); return; }
   const b = e.target.closest('[data-byt]');
@@ -928,7 +934,7 @@ $('#spara').onclick = () => {
   const typ = TYPER.find(t => t[0]===S.typ), mat = typ[2];
   const okning = Math.min(100 - S.m[mat], Math.round(S.min*0.9));
   S.m[mat] += okning; if(mat!=='energi') S.m.energi = Math.min(100, S.m.energi + Math.round(S.min*0.3));
-  const mynt = 20 + S.min, xp = Math.min(35, Math.round(S.min*0.8));
+  const mynt = passMynt(S.min), xp = Math.min(35, Math.round(S.min*0.8));
   S.saldo += mynt; S.xp += xp; S.lag = (S.lag||31)+1; $('#lagPass').textContent = S.lag; $('#lagBar').style.width = Math.min(100,S.lag/40*100)+'%'; let niva = false; while(S.xp>=xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; niva = true; }
   visa('s-belon');
   const mood = mat==='lugn' ? 'lugn' : 'stark';
@@ -937,7 +943,7 @@ $('#spara').onclick = () => {
   $('#belonText').textContent = `${typ[1]}, ${S.min} min. ${S.namn} fick ${mat==='naring'?'näring':mat} +${okning}.`;
   $('#vinster').innerHTML = `<span class="piller glas">+${xp} XP</span><span class="piller glas">${mat==='naring'?'näring':mat} +${okning}</span>`;
   let n = 0; const steg = Math.max(1, Math.round(mynt/24)); const r = $('#raknare');
-  const t = setInterval(() => { n = Math.min(mynt, n+steg); r.textContent = n; if(n>=mynt) clearInterval(t); }, 30);
+  const t = setInterval(() => { n = Math.min(mynt, n+steg); r.textContent = n; if(n>=mynt) clearInterval(t); }, 30); { const sp = r.closest('.storplus'); if(sp) sp.style.display = mynt ? '' : 'none'; }
   const k = $('#konfetti'); k.innerHTML = Array.from({length:28}, (_,i) =>
     `<i style="left:${(i*37)%100}%;background:${['#c8f169','#d9a441','#ff7a5c','#d9b8f0'][i%4]};animation-delay:${(i%7)*0.08}s"></i>`).join('');
 };
@@ -1017,8 +1023,8 @@ function ritaMat(){
   $('#matTips').innerHTML = S.protein >= mal ? `Protein klart för idag. <span class="vnamn">${S.namn}</span> är mätt och glad.` : `${mal - S.protein} g kvar. Ett mål till med protein så är <span class="vnamn">${S.namn}</span> mätt.`;
 }
 $('#snabb').addEventListener('click', e => { const b = e.target.closest('[data-snabb]'); if(!b) return;
-  const [t,,p,v,g] = SNABB[+b.dataset.snabb]; S.protein += p; S.vatten += v; S.gront += g; S.saldo += 5; ritaMat();
-  const tt = $('#toast2'); tt.textContent = `${t} tillagt. +5 mynt`; tt.classList.add('syns'); setTimeout(() => tt.classList.remove('syns'), 1600); });
+  const [t,,p,v,g] = SNABB[+b.dataset.snabb]; S.protein += p; S.vatten += v; S.gront += g; const mm = S._matMynt != null ? S._matMynt : matMynt(); S._matMynt = null; S.saldo += mm; ritaMat();
+  const tt = $('#toast2'); tt.textContent = `${t} tillagt.${mm ? ` +${mm} mynt` : ''}`; tt.classList.add('syns'); setTimeout(() => tt.classList.remove('syns'), 1600); });
 $('#foto').onclick = () => { const tt = $('#toast2'); tt.textContent = 'Här öppnas kameran. Fitchi känner igen maten och föreslår protein, grönt och vatten.'; tt.classList.add('syns'); setTimeout(() => tt.classList.remove('syns'), 2800); };
 
 // Vänner
@@ -1237,9 +1243,9 @@ function visaNivaUpp(fran){
   const nya = NIVABEL.filter(([n]) => n > fran && n <= S.niva), byte = stKlass(fran) !== stKlass(S.niva);
   oppnaArk(arkHuvud('Ny nivå', `Nivå ${S.niva}!`, byte ? `${S.namn}s element växer och lyser starkare.` : `${S.namn} blev lite starkare.`)
     + `<div class="arkfitchi djurscen ${stKlass(S.niva)}" style="min-height:150px">${ork('stark', 120)}</div>`
-    + (nya.length ? nya.map(([n,t]) => `<div class="upplast"><span class="rubrik-liten">Upplåst på nivå ${n}</span><b>${t}</b></div>`).join('') : `<div class="upplast"><span class="rubrik-liten">Belöning</span><b>+${50 + S.niva*5} mynt</b></div>`)
+    + (nya.length ? nya.map(([n,t]) => `<div class="upplast"><span class="rubrik-liten">Upplåst på nivå ${n}</span><b>${t}</b></div>`).join('') : `<div class="upplast"><span class="rubrik-liten">Belöning</span><b>+${nivaMynt(S.niva)} mynt</b></div>`)
     + `<button class="knapp" data-stang-ark>Fortsätt</button>`);
-  S.saldo += 50 + S.niva*5; $('#saldo').textContent = fmt(S.saldo);
+  S.saldo += nivaMynt(S.niva); $('#saldo').textContent = fmt(S.saldo);
 }
 function visaResa(){
   let html = '';
@@ -1430,7 +1436,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -1921,10 +1927,10 @@ function slumpPryl(sallsynt){
 function fapryl(id){ if(!id) return; S.prylar = [...new Set([...(S.prylar || []), id])]; if(!S.framme) S.framme = id; }
 function oppnaKista(){
   const k = kistaNu(), n = k.vantar || k.dagar.length, niva = kistNiva(n);
-  let mynt = {tra:40, silver:80, guld:150}[niva], pryl = null;
+  let mynt = {tra:25, silver:50, guld:100}[niva], pryl = null;
   if(niva === 'guld') pryl = slumpPryl(Math.random() < .25);
   if(niva === 'silver' && Math.random() < .4) pryl = slumpPryl(false);
-  if(!pryl && niva === 'guld') mynt += 100;
+  if(!pryl && niva === 'guld') mynt += 50;
   if(k.vantar) k.vantar = 0; else k.oppnad = true;
   S.saldo += mynt; fapryl(pryl); spara();
   const kb = $('#kistbild'); kb.classList.add('skakar');
@@ -1969,7 +1975,7 @@ function visaLeka(){
     + kort('klappa', 1, 'var(--naring, #f2d48a)', `Klappa ${n}`, `Ge ${n} lite kärlek – det syns direkt`, false)
     + kort('andas', 3, 'var(--lugn, #b48be0)', 'Andas tillsammans', '1 minut lugn andning · +12 vila', S.andasDag === idag)
     + kort('dansa', 5, 'var(--styrka, #ff7a5c)', 'Dansa', `${n} dansar loss en stund`, false)
-    + kort('fanga', 7, 'var(--lime, #c8f169)', 'Fånga hjärtstenar', 'Minispel, 20 sekunder · upp till 40 mynt', S.fangaDag === idag)
+    + kort('fanga', 7, 'var(--lime, #c8f169)', 'Fånga hjärtstenar', 'Minispel, 20 sekunder · upp till 15 mynt', S.fangaDag === idag)
     + `</div>`);
 }
 { const st = document.createElement('style'); st.textContent = `
@@ -2088,7 +2094,7 @@ function slutFanga(poang){
   const idag = dagNr(new Date()), forsta = S.fangaDag !== idag, rekord = poang > (S.fangaRekord || 0);
   if(rekord) S.fangaRekord = poang;
   let belon = '';
-  if(forsta && poang > 0){ S.fangaDag = idag; const mynt = Math.min(40, poang * 2); S.saldo += mynt; S.xp += 8; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
+  if(forsta && poang > 0){ S.fangaDag = idag; const mynt = Math.min(15, poang); S.saldo += mynt; S.xp += 8; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
     S.m.energi = Math.min(100, S.m.energi + 8); belon = `+${mynt} mynt, +8 XP och energi +8.`; }
   else belon = forsta ? '' : 'Belöningen får ni en gång om dagen, men rekord räknas alltid.';
   spara(); ritaHem();
@@ -2285,8 +2291,8 @@ const PRYLPRIS = {vanlig: 150, ovanlig: 400};
 }
 const MYNT_SVG = (s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#f5c04a"/><circle cx="10" cy="10" r="5.5" fill="#e0a92e"/></svg>`;
 const FORMANER = {
-  dose: {namn: 'Dose Athletic', titel: '20 % på träningskläder', text: 'PureZ-plagg som inte luktar svett, ens efter tredje passet. Gäller hela sortimentet på doseathletic.com.', pris: 600, kod: 'FITCHI20'},
-  yoga: {namn: 'Yogastudion', titel: 'Gratis yogapass', text: 'Ett drop in-pass på en partnerstudio nära dig.', pris: 1500, kod: 'FITCHIYOGA'}};
+  dose: {namn: 'Dose Athletic', titel: '20 % på träningskläder', text: 'PureZ-plagg som inte luktar svett, ens efter tredje passet. Gäller hela sortimentet på doseathletic.com.', pris: 2000, kod: 'FITCHI20'},
+  yoga: {namn: 'Yogastudion', titel: 'Gratis yogapass', text: 'Ett drop in-pass på en partnerstudio nära dig.', pris: 3000, kod: 'FITCHIYOGA'}};
 ritaButik = function(){
   const sida = document.querySelector('#s-butik .pad'); if(!sida) return;
   const har = new Set(S.prylar || []), saldo = S.saldo, losta = S.losta || {};
@@ -2342,7 +2348,7 @@ function raknaOmMat(){
 }
 // snabbvalen i mallen loggas också
 document.addEventListener('click', e => { const b = e.target.closest('#snabb [data-snabb]'); if(!b) return;
-  const [t, , p, v, g] = SNABB[+b.dataset.snabb]; matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: t, protein: p, gront: g, vatten: v, mynt: 5}); setTimeout(() => { ritaMatlogg(); spara(); }, 50); }, true);
+  const [t, , p, v, g] = SNABB[+b.dataset.snabb]; matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: t, protein: p, gront: g, vatten: v, mynt: (S._matMynt = matMynt())}); setTimeout(() => { ritaMatlogg(); spara(); }, 50); }, true);
 {
   const st = document.createElement('style'); st.textContent = `
   .loggrubrik{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 8px}
@@ -2407,7 +2413,7 @@ function tillampaPass(p){
   const typ = TYPER_ALLA.find(t => t[0] === p.typ) || TYPER_ALLA[0], mat = typ[2], min = p.min;
   const okning = Math.min(100 - S.m[mat], Math.round(min * 0.9)); S.m[mat] += okning;
   const extra = mat !== 'energi' ? Math.min(100 - S.m.energi, Math.round(min * 0.3)) : 0; S.m.energi += extra;
-  const mynt = 20 + Math.min(60, min), xp = Math.min(35, Math.round(min * 0.8)), g = Math.min(100 - S.glod, Math.min(25, 5 + Math.round(min / 2)));
+  const mynt = passMynt(min), xp = Math.min(35, Math.round(min * 0.8)), g = Math.min(100 - S.glod, Math.min(25, 5 + Math.round(min / 2)));
   S.saldo += mynt; S.xp += xp; S.glod += g; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
   p.m = mat; p.namn = typ[1]; p.eff = {m: {[mat]: okning, ...(extra ? {energi: extra} : {})}, mynt, xp, glod: g};
 }
@@ -2584,7 +2590,7 @@ function klockPass(lista){
     const typ = TYPER_ALLA.find(t => t[0] === p.typ) || TYPER_ALLA.find(t => t[0] === 'annat') || TYPER_ALLA[0], mat = typ[2], min = Math.min(180, p.min);
     const okning = Math.min(100 - S.m[mat], Math.round(min * 0.9));
     S.m[mat] += okning; if(mat !== 'energi') S.m.energi = Math.min(100, S.m.energi + Math.round(min * 0.3));
-    const mynt = 20 + Math.min(60, min), xp = Math.min(35, Math.round(min * 0.8));
+    const mynt = passMynt(min), xp = Math.min(35, Math.round(min * 0.8));
     S.saldo += mynt; S.xp += xp; while(S.xp >= xpBehov(S.niva)){ S.xp -= xpBehov(S.niva); S.niva++; }
     S.glod = Math.min(100, S.glod + Math.min(25, 5 + Math.round(min / 2)));
     S.passlogg = (S.passlogg || []).concat({id: 'k' + p.id, tid: p.start, typ: typ[0], namn: typ[1], min, m: mat, kalla: 'klocka', eff: {m: {[mat]: okning, ...(mat !== 'energi' ? {energi: Math.round(min * 0.3)} : {})}, mynt, xp, glod: 0}}).slice(-60);
@@ -2592,7 +2598,7 @@ function klockPass(lista){
     // bocka av uppdrag som passet uppfyller (samma mätare och minst lika många minuter)
     (S.uppdrag || []).forEach((u, i) => { if(u.klar || u.m !== mat || u.stegMal) return; const krav = +((u.t.match(/(\d+)\s*min/) || [])[1] || 0);
       if(krav && krav <= min) setTimeout(() => { const k = document.querySelector(`[data-klar="${i}"]`); if(k) k.click(); }, 900); });
-    setTimeout(() => toastG(`${KALLNAMN(p.kalla)} såg ett pass: ${typ[1]}, ${min} min. ${MNAMN[mat][0].toUpperCase() + MNAMN[mat].slice(1)} +${okning}, +${mynt} mynt`, 3600), 1200);
+    setTimeout(() => toastG(`${KALLNAMN(p.kalla)} såg ett pass: ${typ[1]}, ${min} min. ${MNAMN[mat][0].toUpperCase() + MNAMN[mat].slice(1)} +${okning}${mynt ? ', +' + mynt + ' mynt' : ''}`, 3600), 1200);
   }
   S.klockpass = S.klockpass.slice(-120);
   spara(); ritaHem();
@@ -2680,11 +2686,11 @@ function ritaEgen(){ const w = $('#egenWrap'); if(!w) return; const l = S.egenMa
   $('#egenrad').innerHTML = l.map((m, i) => `<button data-egen="${i}">${m.namn}<small>${m.protein} g protein${m.gront ? ' · grönt' : ''}${m.vatten ? ' · vatten' : ''}</small></button>`).join(''); }
 { const _rm = ritaMat; ritaMat = function(){ _rm.apply(this, arguments); ritaEgen(); }; }
 function laggMat(m, spara2){
-  matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0, mynt: 5});
-  S.protein += Math.round(m.protein || 0); S.gront += m.gront || 0; S.vatten += m.vatten || 0; S.saldo += 5;
+  matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0, mynt: (m._mm = matMynt())});
+  S.protein += Math.round(m.protein || 0); S.gront += m.gront || 0; S.vatten += m.vatten || 0; S.saldo += m._mm;
   if(spara2){ const l = (S.egenMat || []).filter(x => x.namn.toLowerCase() !== m.namn.toLowerCase()); l.unshift({namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0}); S.egenMat = l.slice(0, 8); }
   stangArk(); ritaMat(); andraGlod(10, `Du matade ${S.namn}.`); spara();
-  setTimeout(() => toastG(`${m.namn} tillagt${m.protein ? ', ' + Math.round(m.protein) + ' g protein' : ''}. +5 mynt`, 2400), 400);
+  setTimeout(() => toastG(`${m.namn} tillagt${m.protein ? ', ' + Math.round(m.protein) + ' g protein' : ''}.${m._mm ? ' +' + m._mm + ' mynt' : ''}`, 2400), 400);
 }
 // --- logga själv
 function visaLoggaSjalv(forval){
@@ -2882,7 +2888,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
      text: () => `Inget styrkepass än den här veckan. Ett kort pass hemma på 15 minuter räcker för att hålla ${S.namn} stark.`,
      ja: 'Lägg till uppdrag', gor: () => lagUppdrag({m: 'styrka', t: '15 min styrka hemma', p: 35}, 'Styrkepasset är tillagt.'), varfor: 'Bygger på veckans loggade pass.'},
     {id: 'bonusNara', nar: () => kl() >= 17 && (S.uppdrag || []).filter(u => u.klar).length === 2,
-     text: () => `Ett uppdrag kvar till bonusen på +50 mynt!`,
+     text: () => `Ett uppdrag kvar till bonusen på +25 mynt!`,
      ja: 'Visa', gor: () => document.getElementById('uppdrag3')?.scrollIntoView({behavior: 'smooth', block: 'center'}), varfor: 'Bygger på dagens uppdrag.'},
   ];
   const tipsLager = () => { const idag = dagNr(new Date()); if(!S.tips || S.tips.dag !== idag) S.tips = {dag: idag, svar: [], vila: (S.tips && S.tips.vila) || {}}; return S.tips; };
@@ -3073,6 +3079,88 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
   const st = document.createElement('style'); st.textContent = `.arkfitchi.vaxer{animation:vaxIn 1.2s cubic-bezier(.2,1.4,.4,1)}@keyframes vaxIn{0%{transform:scale(.55);filter:brightness(2.2) drop-shadow(0 0 30px #c8f169)}60%{filter:brightness(1.4) drop-shadow(0 0 22px #c8f169)}100%{transform:scale(1);filter:none}}@media (prefers-reduced-motion:reduce){.arkfitchi.vaxer{animation:none}}`;
   document.head.appendChild(st);
 }
+
+// ===== Teman: köps för mynt i butiken (Natt är standard och gratis). Dygnsljuset fungerar i alla teman. =====
+const TEMAPRIS = 1200;
+const TEMAN = (() => {
+  const svg = s => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 288 220'>${s}</svg>`)}")`;
+  return {
+    natt: {namn: 'Natt', gratis: true, prov: ['#2a1840', '#4a2766', '#c8f169']},
+    rosa: {namn: 'Rosa', prov: ['#5c1f4a', '#c7559a', '#ff9ccf'],
+      v: {gradde: '#2a0d22', vit: '#3a1530', linje: '#5a2a4a', dampad: '#e3bcd2', lime: '#ff9ccf', 'pa-lime': '#2a0d22', scen: '#5c1f4a', 'scen-ljus': '#c7559a', 'pa-scen-d': '#f4cde2'}, meny: '#1a0715',
+      dekor: svg(`<path d='M40 40c-4-6-14-4-14 3 0 6 14 14 14 14s14-8 14-14c0-7-10-9-14-3z' fill='#ffc3e1' opacity='.5'/><path d='M236 30c-3-4-10-3-10 2 0 4 10 10 10 10s10-6 10-10c0-5-7-6-10-2z' fill='#fff' opacity='.45'/><path d='M252 112c-3-4-9-3-9 2 0 4 9 9 9 9s9-5 9-9c0-5-6-6-9-2z' fill='#ffc3e1' opacity='.4'/><path d='M58 128c-2-3-7-2-7 1 0 3 7 7 7 7s7-4 7-7c0-3-5-4-7-1z' fill='#fff' opacity='.35'/><path d='M150 18l2 6 6 2-6 2-2 6-2-6-6-2 6-2z' fill='#fff' opacity='.6'/>`)},
+    skog: {namn: 'Skog', prov: ['#1e3a2b', '#41704f', '#9fe3b4'],
+      v: {gradde: '#0c1712', vit: '#15261c', linje: '#284034', dampad: '#b9cfc0', lime: '#9fe3b4', 'pa-lime': '#0c1712', scen: '#1e3a2b', 'scen-ljus': '#41704f', 'pa-scen-d': '#cfe2d4'}, meny: '#060e0a',
+      dekor: svg(`<path d='M0 220V150l18-40 18 40 14-60 22 70 16-44 18 54V220z' fill='#163024'/><path d='M200 220v-62l16-48 16 52 14-72 22 82 20-38V220z' fill='#163024'/><path d='M0 220v-28l30-34 26 30 30-26 40 32 44-30 40 28 40-26 38 24V220z' fill='#10241a'/>`)},
+    city: {namn: 'City', prov: ['#1c2248', '#3d4c94', '#7fd4ff'],
+      v: {gradde: '#0b0e1c', vit: '#151a33', linje: '#283057', dampad: '#b6bedf', lime: '#7fd4ff', 'pa-lime': '#0b0e1c', scen: '#1c2248', 'scen-ljus': '#3d4c94', 'pa-scen-d': '#cdd3ee'}, meny: '#05070f',
+      dekor: svg(`<path d='M0 220V128h26V96h22v24h18V70h30v52h14V108h22V84h20v34h16V58h28v62h18V100h22v28h22v92z' fill='#0f1330'/>` + [[58,80,'#ffd66b'],[74,92,'#ffd66b'],[82,78,'#7fd4ff'],[138,92,'#ffd66b'],[196,70,'#ffd66b'],[206,84,'#7fd4ff'],[196,98,'#ffd66b'],[30,106,'#ffd66b'],[244,110,'#ffd66b'],[160,100,'#7fd4ff']].map(([x, y, c]) => `<rect x='${x}' y='${y}' width='4' height='5' fill='${c}'/>`).join(''))},
+    strand: {namn: 'Strand', ljus: true, prov: ['#9ad9e6', '#fff3cf', '#0d7f93'],
+      v: {gradde: '#fdf4e6', vit: '#ffffff', natt: '#12303a', linje: '#e8d9bf', dampad: '#4f6973', lime: '#0d7f93', 'pa-lime': '#ffffff', scen: '#9ad9e6', 'scen-ljus': '#fff3cf', 'pa-scen': '#12303a', 'pa-scen-d': '#3f5b66', glas: '#ffffffb8', 'glas-kant': '#12303a1f', energi: '#6f9a1c', 'mynt-text': '#8a5f10'}, meny: '#12303a',
+      dekor: svg(`<circle cx='226' cy='50' r='24' fill='#ffd36e'/><circle cx='226' cy='50' r='36' fill='#ffd36e' opacity='.25'/><path d='M0 132c24-8 48 8 72 0s48-8 72 0 48 8 72 0 48-8 72 0v24H0z' fill='#3fb6c8'/><path d='M0 146c24-6 48 6 72 0s48-6 72 0 48 6 72 0 48-6 72 0v30H0z' fill='#2a9fb3'/><path d='M0 172c40-10 90-8 144-4s104 2 144-4v56H0z' fill='#f3dcaa'/>`)},
+    retro: {namn: 'Retro', ljus: true, prov: ['#f3d6a8', '#fff7e6', '#d9532a'],
+      v: {gradde: '#fbf0dc', vit: '#fffaf0', natt: '#3a1f14', linje: '#ead6b4', dampad: '#6b4a3a', lime: '#d9532a', 'pa-lime': '#ffffff', scen: '#f3d6a8', 'scen-ljus': '#fff7e6', 'pa-scen': '#3a1f14', 'pa-scen-d': '#6b4a3a', glas: '#ffffffad', 'glas-kant': '#3a1f1421', energi: '#6f9a1c', 'mynt-text': '#8a5f10'}, meny: '#3a1f14',
+      dekor: svg(`<path d='M14 220a130 130 0 0 1 260 0' fill='none' stroke='#7a3b1e' stroke-width='18'/><path d='M32 220a112 112 0 0 1 224 0' fill='none' stroke='#e8652e' stroke-width='18'/><path d='M50 220a94 94 0 0 1 188 0' fill='none' stroke='#f0b234' stroke-width='18'/><path d='M68 220a76 76 0 0 1 152 0' fill='none' stroke='#3f9a8c' stroke-width='18'/><circle cx='240' cy='40' r='16' fill='#f0b234'/>`)},
+    vinter: {namn: 'Vinter', sasong: [12, 1, 2], prov: ['#2f5f8c', '#7fb3dd', '#f2f9ff'],
+      v: {gradde: '#0e1d31', vit: '#16283f', linje: '#2b4566', dampad: '#b9cde3', lime: '#f2f9ff', 'pa-lime': '#0e1d31', scen: '#2f5f8c', 'scen-ljus': '#7fb3dd', 'pa-scen-d': '#d6e7f6', glas: '#ffffff1c', 'glas-kant': '#ffffff33'}, meny: '#08121f',
+      dekor: svg(`<path d='M0 220v-48c40-18 90-22 140-10s100 8 148-8v66z' fill='#eaf6ff'/><path d='M0 220v-26c50-14 110-10 160-2s90 4 128-6v34z' fill='#fff'/><path d='M222 172l24-50 24 50z' fill='#cfe7f8'/>` + [[24,26,2.4],[70,62,1.8],[112,18,2.2],[160,50,1.6],[204,22,2.6],[262,58,2],[40,104,2],[250,104,1.6],[96,120,1.4]].map(([x, y, r]) => `<circle cx='${x}' cy='${y}' r='${r}' fill='#fff'/>`).join(''))}
+  };
+})();
+const temaTillSalu = id => { const t = TEMAN[id]; return !t.sasong || t.sasong.includes(new Date().getMonth() + 1); };
+const DYGNLJUS = {morgon: 'radial-gradient(ellipse at 50% -15%,#ffe2a088 0,#ffe2a000 60%)', dag: 'radial-gradient(ellipse at 50% -10%,#ffffff55 0,#ffffff00 50%)', kvall: 'radial-gradient(ellipse at 50% 85%,#ff8a4a55 0,#ff8a4a00 60%),linear-gradient(#2a0f3a26,#2a0f3a26)', natt: 'linear-gradient(#05030c66,#05030c66)'};
+{
+  const css = Object.entries(TEMAN).filter(([, t]) => t.v).map(([id, t]) => {
+    const sel = `html[data-tema="${id}"]`, bg = `radial-gradient(circle at 50% 38%,${t.v['scen-ljus']} 0,${t.v.scen} 58%,${t.v.gradde} 100%)`;
+    return `${sel}{${Object.entries(t.v).map(([k, v]) => `--${k}:${v}`).join(';')}}
+${sel} body{background:${t.v.gradde}}
+${sel} #s-hem .topp.scen,${sel} #s-hem .topp[class*="tid-"]{background-color:${t.v.scen};background-image:${bg}}
+${Object.entries(DYGNLJUS).map(([k, o]) => `${sel} #s-hem .topp.tid-${k}{background-image:${o},${bg}}`).join('\n')}
+${sel} #s-hem .topp::before{content:"";position:absolute;left:0;right:0;top:0;height:250px;pointer-events:none;z-index:0;opacity:.9;background:${t.dekor} center 0/100% 250px no-repeat;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent)}
+${sel} .flikar{background:${t.meny};box-shadow:inset 0 0 0 1px ${t.v.linje},0 12px 28px -10px #0006}
+${sel} .flik:not(.aktiv):not(.plusk){color:${t.ljus ? '#ffffffcc' : t.v['pa-scen-d']}}
+${sel} .flik.plusk{color:${t.v['pa-lime']}}
+${sel} .pkort button:not(.har):not(.dyr){background:var(--lime);color:var(--pa-lime)}
+${sel} .toast{background:${t.ljus ? t.meny : t.v.scen};color:#fff}`; }).join('\n');
+  const st = document.createElement('style'); st.textContent = css + `
+  html[data-tema]:not([data-tema="natt"]) #s-hem .topp{position:relative}
+  html[data-tema]:not([data-tema="natt"]) #s-hem .topp > *{position:relative;z-index:1}
+  .tkort .tprov{width:100%;height:78px;border-radius:16px;position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px #ffffff22}
+  .tkort .tprov i{position:absolute;right:10px;bottom:10px;width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 3px #00000022}
+  .tkort button[disabled]{opacity:.7;cursor:default}`;
+  document.head.appendChild(st);
+}
+function tillampaTema(){
+  const id = S.tema && TEMAN[S.tema] && (TEMAN[S.tema].gratis || (S.teman || []).includes(S.tema)) ? S.tema : 'natt';
+  document.documentElement.dataset.tema = id;
+  const m = document.querySelector('meta[name="theme-color"]'); if(m) m.content = id === 'natt' ? '#120c1c' : TEMAN[id].v.gradde;
+}
+{
+  const _rb = ritaButik;
+  ritaButik = function(){
+    _rb.apply(this, arguments);
+    const hylla = document.querySelector('#s-butik .prylhylla'); if(!hylla) return;
+    const ager = new Set(S.teman || []), nu = document.documentElement.dataset.tema || 'natt';
+    const kort = Object.entries(TEMAN).filter(([id]) => id === 'natt' || ager.has(id) || temaTillSalu(id) || TEMAN[id].sasong).map(([id, t]) => {
+      const har = t.gratis || ager.has(id), anv = nu === id, dyr = S.saldo < TEMAPRIS, salu = temaTillSalu(id);
+      const prov = `<div class="tprov" style="background:${t.dekor ? t.dekor.replace(/"/g, '&quot;') + ' center bottom/100% auto no-repeat,' : ''}radial-gradient(circle at 50% 40%,${t.prov[1]},${t.prov[0]} 75%)"><i style="background:${t.prov[2]}"></i></div>`;
+      const knapp = anv ? `<button class="har" disabled>Används ✓</button>`
+        : har ? `<button class="har" data-tema-anv="${id}">Använd</button>`
+        : !salu ? `<button class="har" disabled>Från december</button>`
+        : `<button class="${dyr ? 'dyr' : ''}" data-tema-kop="${id}">${MYNT_SVG(14)}${fmt(TEMAPRIS)}</button>`;
+      return `<div class="pkort tkort">${prov}<b>${t.namn}</b><small>${t.gratis ? 'Standard' : t.sasong ? 'Säsong · vinter' : t.ljus ? 'Ljust tema' : 'Tema'}</small>${knapp}</div>`; }).join('');
+    hylla.insertAdjacentHTML('afterend', `<div class="brubrik"><h2>Teman</h2><span>Gör appen till din</span></div><div class="prylhylla temahylla">${kort}</div>`);
+  };
+}
+document.addEventListener('click', e => {
+  const k = e.target.closest('[data-tema-kop]');
+  if(k){ const id = k.getAttribute('data-tema-kop'), t = TEMAN[id]; if(!t || !temaTillSalu(id)) return;
+    if(S.saldo < TEMAPRIS){ toastG(`Du behöver ${fmt(TEMAPRIS - S.saldo)} mynt till för ${t.namn}.`, 2400); return; }
+    S.saldo -= TEMAPRIS; S.teman = [...new Set([...(S.teman || []), id])]; S.tema = id; tillampaTema(); spara(); ritaButik(); ritaHem();
+    toastG(`${t.namn} är ditt! Temat används nu.`, 2400); return; }
+  const a = e.target.closest('[data-tema-anv]');
+  if(a){ const id = a.getAttribute('data-tema-anv'); S.tema = id; tillampaTema(); spara(); ritaButik(); ritaHem(); toastG(`${TEMAN[id].namn} används nu.`, 1800); }
+});
+tillampaTema();
 
 </script>
 </body>
