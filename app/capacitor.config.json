@@ -10,5 +10,8 @@
       "smallIcon": "ic_stat_fitchi",
       "iconColor": "#c8f169"
     }
+  },
+  "ios": {
+    "backgroundColor": "#120c1c"
   }
 }

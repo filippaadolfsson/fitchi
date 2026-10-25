@@ -1479,8 +1479,12 @@ addEventListener('pagehide', spara);
 // installera som app
 if('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 
-// ===== Android-appen: steg, sömn och puls från Samsung Health via Health Connect =====
+// ===== Mobilappen: steg, sömn och puls från Samsung Health via Health Connect (Android) eller Apple Hälsa (iPhone) =====
 const HALSA = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? window.Capacitor.Plugins.FitchiHalsa : null;
+// iPhone-appen läser från Apple Hälsa (HealthKit), Android-appen från Health Connect
+const PA_IOS = !!(HALSA && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios');
+const HNAV = PA_IOS ? 'Apple Hälsa' : 'Health Connect';
+const HKALLA = PA_IOS ? 'Apple Hälsa' : 'Samsung Health';
 if(HALSA){
   const st = document.createElement('style'); st.textContent = `
   .halsarad{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
@@ -1499,15 +1503,15 @@ if(HALSA){
   const fmtH = m => `${Math.floor(m/60)} h ${String(Math.round(m%60)).padStart(2,'0')} min`;
   function visaKoppla(titel, text, knapp){
     kort.hidden = false; kort.innerHTML = `<b>${titel}</b><p>${text}</p>` + (knapp ? `<button class="lite" id="kopplaKnapp">${knapp}</button>` : '');
-    const k = document.getElementById('kopplaKnapp'); if(k) k.onclick = async () => { try{ const r = await HALSA.begar(); if(r.antal > 0){ kort.hidden = true; halsaLas(); } else visaKoppla(titel, 'Inga behörigheter gavs. Du kan försöka igen, eller ge dem senare i Health Connect.', knapp); }catch(e){ visaKoppla('Något gick fel', String(e.message || e), null); } };
+    const k = document.getElementById('kopplaKnapp'); if(k) k.onclick = async () => { try{ const r = await HALSA.begar(); if(r.antal > 0){ kort.hidden = true; halsaLas(); } else visaKoppla(titel, `Inga behörigheter gavs. Du kan försöka igen, eller ge dem senare i ${PA_IOS ? 'Inställningar → Hälsa → Dataåtkomst' : 'Health Connect'}.`, knapp); }catch(e){ visaKoppla('Något gick fel', String(e.message || e), null); } };
   }
   async function halsaKolla(){
     try{
       const s = await HALSA.status();
-      if(!s.tillganglig){ visaKoppla('Health Connect saknas', 'Telefonen har inte Health Connect. Fitchi fungerar ändå, men utan data från klockan.', null); klarNu(); return; }
-      if(s.antal === 0){ visaKoppla('Koppla din klocka', 'Låt Fitchi läsa steg, sömn och puls från Samsung Health. Datan stannar i telefonen.', 'Koppla Samsung Health'); klarNu(); return; }
+      if(!s.tillganglig){ visaKoppla(`${HNAV} saknas`, `Telefonen har inte ${HNAV}. Fitchi fungerar ändå, men utan data från klockan.`, null); klarNu(); return; }
+      if(s.antal === 0){ visaKoppla('Koppla din klocka', `Låt Fitchi läsa steg, sömn och puls från ${HKALLA}. Datan stannar i telefonen.`, `Koppla ${HKALLA}`); klarNu(); return; }
       kort.hidden = true;
-      if(s.trening === false) visaKoppla('Nytt: träningspass från klockan', 'Låt Fitchi se dina pass i Samsung Health, så fylls rätt mätare och uppdrag bockas av automatiskt.', 'Ge Fitchi tillgång');
+      if(s.trening === false) visaKoppla('Nytt: träningspass från klockan', `Låt Fitchi se dina pass i ${HKALLA}, så fylls rätt mätare och uppdrag bockas av automatiskt.`, 'Ge Fitchi tillgång');
       halsaLas();
     }catch(e){ console.log('halsa', e); klarNu(); }
   }
@@ -1656,8 +1660,8 @@ oppnaMatare = function(k){
   let rader = [], insikt = null;
   if(k === 'energi'){
     if(klocka){
-      const appNamn = p => !p ? 'Health Connect' : p === 'com.sec.android.app.shealth' ? 'Samsung Health' : p.startsWith('com.android.healthconnect.phone') || p.startsWith('com.google.android.apps.healthdata') ? 'Telefonens stegräknare' : p === 'com.google.android.apps.fitness' ? 'Google Fit' : p.split('.').slice(-1)[0];
-      rader.push(['Steg', fmt(d.steg || 0), appNamn(d.stegKalla)]); if(typeof d.stegIgar === 'number') rader.push(['Steg igår', fmt(d.stegIgar), 'Den app som räknade flest']);
+      const appNamn = p => !p ? HNAV : p === 'com.apple.health' ? 'Apple Hälsa' : p === 'com.sec.android.app.shealth' ? 'Samsung Health' : p.startsWith('com.android.healthconnect.phone') || p.startsWith('com.google.android.apps.healthdata') ? 'Telefonens stegräknare' : p === 'com.google.android.apps.fitness' ? 'Google Fit' : p.split('.').slice(-1)[0];
+      rader.push(['Steg', fmt(d.steg || 0), appNamn(d.stegKalla)]); if(typeof d.stegIgar === 'number') rader.push(['Steg igår', fmt(d.stegIgar), (PA_IOS ? 'Apple Hälsa' : 'Den app som räknade flest')]);
       const alla = Object.entries(d.stegKallor || {}); if(alla.length > 1) alla.filter(([p]) => p !== d.stegKalla).forEach(([p, n]) => rader.push([appNamn(p), fmt(n) + ' steg', 'Räknar samma steg, läggs inte ihop'])); }
     else rader.push(['Steg', '6 240', ex]);
     if(klocka && d.stegIgar > 0) insikt = d.steg >= d.stegIgar ? `Du har redan gått fler steg än igår (${fmt(d.stegIgar)}).` : `${fmt(d.stegIgar - d.steg)} steg kvar till gårdagens nivå.`;
@@ -1669,9 +1673,9 @@ oppnaMatare = function(k){
   }
   if(k === 'lugn'){
     if(klocka){
-      if(d.somn) rader.push(['Sömn', fmtH(d.somn), 'Samsung Health']);
-      if(d.puls) rader.push([d.vilopulsTyp || 'Vilopuls', d.puls + ' slag/min', 'Samsung Health']);
-      if(d.pulsNu) rader.push(['Puls nu', d.pulsNu + ' slag/min', 'Samsung Health']);
+      if(d.somn) rader.push(['Sömn', fmtH(d.somn), HKALLA]);
+      if(d.puls) rader.push([d.vilopulsTyp || 'Vilopuls', d.puls + ' slag/min', HKALLA]);
+      if(d.pulsNu) rader.push(['Puls nu', d.pulsNu + ' slag/min', HKALLA]);
       if(d.somn) insikt = d.somn < 7 ? 'Du sov under 7 timmar i natt. En tidig kväll ger mer vila i morgon.' : 'Du sov över 7 timmar i natt. Det märks på vilan.';
     } else {
       rader.push(['Sömn', '7 h 20 min', ex], ['Vilopuls', '58 slag/min', ex]);
@@ -2564,7 +2568,7 @@ document.addEventListener('visibilitychange', () => { if(!sbSession) return; if(
     ritaDygn(); ritaPryl(); ritaKistknapp(); ritaStatus(); widgetSync(); }; }
 
 // ===== Träningspass från klockan =====
-const KALLNAMN = p => p === 'com.sec.android.app.shealth' ? 'Samsung Health' : 'klockan';
+const KALLNAMN = p => p === 'com.sec.android.app.shealth' ? 'Samsung Health' : (p || '').startsWith('com.apple') ? 'Apple Hälsa' : 'klockan';
 function klockPass(lista){
   S.klockpass = S.klockpass || [];
   const idag0 = new Date(); idag0.setHours(0, 0, 0, 0);
@@ -2844,16 +2848,16 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
   const TIPS = [
     {id: 'somnKort', nar: () => halsa() && S.data.somn > 0 && S.data.somn < 7 && kl() >= 14,
      text: () => `Du sov ${String(S.data.somn).replace('.', ',')} timmar i natt. Vilan sjunker de nätter du sover under 7 timmar. Ska ${S.namn} påminna dig om att varva ner kl. 22 ikväll?`,
-     ja: 'Ja, påminn mig', gor: kvallsNotis, varfor: 'Bygger på nattens sömn från Health Connect.'},
+     ja: 'Ja, påminn mig', gor: kvallsNotis, varfor: `Bygger på nattens sömn från ${HNAV}.`},
     {id: 'somnBra', nar: () => halsa() && S.data.somn >= 7.5 && kl() < 14,
      text: () => `Du sov ${String(S.data.somn).replace('.', ',')} timmar i natt – bra läge för ett lite tuffare pass idag.`,
-     ja: 'Kul!', gor: () => {}, varfor: 'Bygger på nattens sömn från Health Connect.'},
+     ja: 'Kul!', gor: () => {}, varfor: `Bygger på nattens sömn från ${HNAV}.`},
     {id: 'stegFa', nar: () => halsa() && kl() >= 13 && kl() < 21 && (S.data.steg || 0) < 4000,
      text: () => `${fmt(S.data.steg || 0)} steg hittills idag. En promenad på 10 minuter ger ungefär 1 000 steg och fyller på energin. Ska den bli ett av dagens uppdrag?`,
-     ja: 'Ja, lägg till', gor: () => lagUppdrag({m: 'energi', t: '10 min promenad', p: 20}, 'Promenaden är tillagd. Klockan bockar av den.'), varfor: 'Bygger på dagens steg från Health Connect.'},
+     ja: 'Ja, lägg till', gor: () => lagUppdrag({m: 'energi', t: '10 min promenad', p: 20}, 'Promenaden är tillagd. Klockan bockar av den.'), varfor: `Bygger på dagens steg från ${HNAV}.`},
     {id: 'stegNara', nar: () => halsa() && kl() >= 17 && (S.data.steg || 0) >= 6500 && (S.data.steg || 0) < 8000,
      text: () => `${fmt(S.data.steg)} steg idag – bara ${fmt(8000 - S.data.steg)} kvar till 8 000. En kvällspromenad?`,
-     ja: 'Ja, lägg till', gor: () => lagUppdrag({m: 'energi', t: '15 min kvällspromenad', p: 20}, 'Kvällspromenaden är tillagd.'), varfor: 'Bygger på dagens steg från Health Connect.'},
+     ja: 'Ja, lägg till', gor: () => lagUppdrag({m: 'energi', t: '15 min kvällspromenad', p: 20}, 'Kvällspromenaden är tillagd.'), varfor: `Bygger på dagens steg från ${HNAV}.`},
     {id: 'lugnLagt', nar: () => S.m.lugn < 40 && (S.niva || 1) >= 3,
      text: () => `${S.namn}s vila är låg just nu. Vill du andas en minut tillsammans?`,
      ja: 'Ja, andas', gor: () => { if(typeof startaAndas === 'function') startaAndas(); }, varfor: 'Bygger på vila-mätaren.'},

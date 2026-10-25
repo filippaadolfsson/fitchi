@@ -1,0 +1,113 @@
+name: Bygg iPhone-appen
+
+# Utan Apple-nycklar: kontrollbygge för simulatorn (visar att koden kompilerar).
+# Med Apple-nycklar som secrets: signerat bygge som laddas upp till TestFlight.
+#   APPLE_TEAM_ID      – Team ID från developer.apple.com (Membership)
+#   ASC_KEY_ID         – App Store Connect API-nyckelns Key ID
+#   ASC_ISSUER_ID      – Issuer ID (samma sida som nyckeln)
+#   ASC_KEY_P8         – innehållet i AuthKey_XXXX.p8 (hela texten)
+
+on:
+  push:
+    branches: [main, ios]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bygg:
+    runs-on: macos-latest
+    env:
+      HAR_APPLE: ${{ secrets.ASC_KEY_P8 != '' && secrets.APPLE_TEAM_ID != '' && 'ja' || 'nej' }}
+      VERSION: 0.9.${{ github.run_number }}
+      BYGGNR: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Välj senaste Xcode
+        run: |
+          XC=$(ls -d /Applications/Xcode_*.app | grep -v beta | sort -V | tail -1)
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installera Capacitor
+        working-directory: app
+        run: npm ci
+
+      - name: Kopiera webbappen in i iOS-projektet
+        working-directory: app
+        run: |
+          npm run kopiera
+          npx cap sync ios
+
+      - name: Kontrollbygge för simulatorn
+        if: ${{ env.HAR_APPLE == 'nej' }}
+        working-directory: app/ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ../../../bygg-ios.log | grep -E "error:|warning: .*Fitchi|BUILD" || true
+          grep -q "BUILD SUCCEEDED" ../../../bygg-ios.log
+
+      - name: Bygg och ladda upp till TestFlight
+        if: ${{ env.HAR_APPLE == 'ja' }}
+        working-directory: app/ios/App
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -o pipefail
+          NYCKEL="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$NYCKEL"
+          AUTH="-allowProvisioningUpdates -authenticationKeyPath $NYCKEL -authenticationKeyID $ASC_KEY_ID -authenticationKeyIssuerID $ASC_ISSUER_ID"
+
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Fitchi.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$BYGGNR" MARKETING_VERSION="$VERSION" \
+            $AUTH archive 2>&1 | tee ../../../bygg-ios.log | grep -E "error:|ARCHIVE" || true
+          grep -q "ARCHIVE SUCCEEDED" ../../../bygg-ios.log
+
+          cat > "$RUNNER_TEMP/export.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Fitchi.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" -exportPath "$RUNNER_TEMP/ut" \
+            $AUTH 2>&1 | tee -a ../../../bygg-ios.log | grep -E "error:|EXPORT|Upload" || true
+          grep -q "EXPORT SUCCEEDED" ../../../bygg-ios.log
+          rm -f "$NYCKEL"
+          echo "Version $VERSION ($BYGGNR) är uppladdad. Den syns i TestFlight efter Apples bearbetning (oftast 5–30 min)."
+
+      - name: Spara bygglogg om något gick fel
+        if: failure()
+        run: |
+          git config user.name "fitchi-bygg"
+          git config user.email "fitchi-bygg@users.noreply.github.com"
+          tail -n 300 bygg-ios.log > /tmp/bygg-ios.log || true
+          git checkout --orphan bygglogg-ios
+          git rm -rf --cached . > /dev/null
+          cp /tmp/bygg-ios.log bygg-ios.log
+          git add bygg-ios.log
+          git commit -m "iOS-bygglogg ${{ github.sha }}"
+          git push -f origin bygglogg-ios
