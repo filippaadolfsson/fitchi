@@ -1231,7 +1231,7 @@ ritaHem = function(){
 function oppnaArk(html){ $('#ark').innerHTML = `<div class="handtag" aria-hidden="true"></div>${html}`; $('#slöja').classList.add('oppen'); }
 function arkHuvud(over, titel, text){ return `<div class="arkhuvud"><div style="display:flex;flex-direction:column;gap:4px"><p class="rubrik-liten">${over}</p><h2 id="arkTitel" style="font-size:28px">${titel}</h2>${text?`<p style="font-size:14px;line-height:20px;color:var(--pa-scen-d)">${text}</p>`:''}</div><button class="stang" id="stang" aria-label="Stäng">×</button></div>`; }
 function visaMorgon(){
-  if($('#slöja').classList.contains('oppen')) return;
+  if(new Date().getHours() < 4 || $('#slöja').classList.contains('oppen')) return;
   oppnaArk(arkHuvud('God morgon', `${S.namn} vaknar`, 'Hur sov du i natt? Det avgör hur dagens uppdrag ser ut.')
     + `<div class="arkfitchi">${ork('pigg', 120)}</div><div class="valrad"><button data-sov="bra">Bra<small>utvilad</small></button><button data-sov="okej">Okej<small>lagom</small></button><button data-sov="daligt">Dåligt<small>trött</small></button></div>`);
 }
@@ -1470,7 +1470,7 @@ function nyRiktigDag(dagar){
   for(const k of ['energi','styrka','lugn','naring']) for(let i=0;i<Math.min(dagar,5);i++) S.m[k] = Math.round(S.m[k]*0.8 + 10);
   S.data.somn = 7; S.data.checkin = 'okej'; S.vila = false;
   S.morgonKlar = S.glod <= 0;   // väcks ur kristallen först
-  S.sover = false;
+  if(new Date().getHours() >= 4) S.sover = false;   // nattad före midnatt: sov vidare till morgonen
 }
 // mätarna styrs av vad du gör, inte av testpanelen
 berakna = function(){ S.vila = false; };
@@ -1585,6 +1585,7 @@ if(HALSA){
   // morgonen: sömnen kommer från klockan i stället för frågan
   const _visaMorgon = visaMorgon;
   visaMorgon = function(){
+    if(new Date().getHours() < 4) return;   // ingen morgon mitt i natten
     if(!halsaKlar){ vantaMorgon = true; return; }
     const m = S.halsa && S.halsa.somnDag === dagNr(new Date()) ? S.halsa.somnMin : 0;
     if(!m){ _visaMorgon(); return; }
@@ -3302,6 +3303,12 @@ document.addEventListener('click', async e => {
 { const _hv = hamtaVanner; hamtaVanner = async function(){ await _hv.apply(this, arguments); await hamtaBesok(); }; }
 setTimeout(() => { if(S.klar && sbSession) hamtaBesok(); }, 4500);
 document.addEventListener('visibilitychange', () => { if(sbSession && !document.hidden && S.klar) setTimeout(hamtaBesok, 1500); });
+
+// ===== Morgonfrågan: stängs den med × frågar vi inte igen idag (tidsgränsen kl 4 sitter i visaMorgon) =====
+document.addEventListener('click', e => {
+  if(!(e.target.id === 'slöja' || e.target.closest('#stang')) || !document.querySelector('#ark [data-sov]')) return;
+  S.morgonKlar = true; S.sover = false; spara(); setTimeout(ritaHem, 50);
+}, true);
 
 </script>
 </body>
