@@ -222,13 +222,13 @@ public class FitchiHalsaPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func arSomn(_ v: Int) -> Bool {
-        if v == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue { return true }
         if #available(iOS 16.0, *) {
-            return v == HKCategoryValueSleepAnalysis.asleepCore.rawValue
+            return v == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
+                || v == HKCategoryValueSleepAnalysis.asleepCore.rawValue
                 || v == HKCategoryValueSleepAnalysis.asleepDeep.rawValue
                 || v == HKCategoryValueSleepAnalysis.asleepREM.rawValue
         }
-        return false
+        return v == 1 // "sover" före iOS 16 (samma värde som asleepUnspecified)
     }
 
     /// Slår ihop tidsperioder som överlappar (eller ligger närmare än `glapp` sekunder).
