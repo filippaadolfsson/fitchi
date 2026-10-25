@@ -1436,7 +1436,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -2500,8 +2500,10 @@ async function kollaPepp(){
     let namn = [];
     try{ const fr = await sb('/rest/v1/profiler?select=id,namn&id=in.(' + [...new Set(p.map(x => x.fran))].join(',') + ')'); namn = fr.map(x => x.namn); }catch(e){}
     await sb('/rest/v1/pepp?id=in.(' + p.map(x => x.id).join(',') + ')', {method: 'PATCH', body: JSON.stringify({sedd: true})});
-    andraGlod(5 * p.length);
-    toastG(`${namn.length ? namn.join(' och ') : 'En vän'} peppade dig 💪 Glöd +${5 * p.length}`, 3200);
+    const idag = idagStr(); S.peppGlod = S.peppGlod && S.peppGlod.dag === idag ? S.peppGlod : {dag: idag, sum: 0};
+    const glod = Math.max(0, Math.min(5 * p.length, 25 - S.peppGlod.sum)); S.peppGlod.sum += glod; if(glod) andraGlod(glod);
+    const vem = !namn.length ? 'En vän' : namn.length <= 2 ? namn.join(' och ') : `${namn[0]} och ${namn.length - 1} till`;
+    toastG(`${vem} peppade dig${glod ? '. Glöd +' + glod : ''}`, 3200); spara();
   }catch(e){ console.log('pepp', e); }
 }
 {
@@ -2980,7 +2982,8 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     ['prylar5', '🎒', 'Samlare', 'Samla 5 prylar', () => [(S.prylar || []).length, 5]],
     ['niva5', '⭐', 'Nivå 5', 'Nå nivå 5', () => [S.niva || 1, 5]],
     ['niva10', '🏆', 'Nivå 10', 'Nå nivå 10', () => [S.niva || 1, 10]],
-    ['bastisar', '🤝', 'Bästisar', 'Hälsa på varandra fem gånger', () => [(S.bastisar || []).length ? 1 : 0, 1]]];
+    ['bastisar', '🤝', 'Bästisar', 'Hälsa på varandra fem gånger', () => [(S.bastisar || []).length ? 1 : 0, 1]],
+    ['popular', '🎉', 'Populär', 'Ha fem besökare samma dag', () => [S.popular ? 1 : 0, 1]]];
   const kollaMarken = (tyst) => { S.marken = S.marken || {}; S.basRad = Math.max(S.basRad || 0, iRad()); const nya = [];
     for(const [id, , namn, , f] of MARKEN){ if(S.marken[id]) continue; let v = [0, 1]; try{ v = f(); }catch(e){} if(v[0] >= v[1]){ S.marken[id] = idagNr(); nya.push(namn); } }
     if(nya.length && !tyst){ spara(); setTimeout(() => toastG(`Nytt märke: ${nya[0]}!${nya.length > 1 ? ` (+${nya.length - 1} till)` : ''}`, 2800), 1200); }
@@ -3175,6 +3178,14 @@ const STEGORD = {bebis: 'Bebis', barn: 'Barn', tonaring: 'Tonåring', vuxen: 'Vu
   #djurscen .bbubbla b{font-weight:700}
   .besokrad{display:flex;flex-direction:column;align-items:center;gap:6px}
   .besokrad .lite{min-height:42px;padding:0 18px;font-weight:700;align-self:center;width:auto}
+  .bfler{appearance:none;border:0;display:flex;align-items:center;gap:0;padding:4px 12px 4px 4px;min-height:40px;border-radius:99px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 12.5px var(--text);cursor:pointer}
+  .bfler img{width:30px;height:30px;object-fit:contain;border-radius:50%;background:var(--scen);box-shadow:0 0 0 2px var(--scen-ljus);margin-right:-8px}
+  .bfler b{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--scen-ljus);font:800 11px var(--text);margin-right:-8px}
+  .bfler span{margin-left:16px}
+  .besokare-rad{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}
+  .bkort{flex:0 0 136px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border-radius:20px;background:#ff7a5c14;box-shadow:inset 0 0 0 1px #ff7a5c55;text-align:center}
+  .bkort img{height:62px;width:auto}.bkort b{font:700 14px var(--text);color:var(--natt)}.bkort span{font-size:11.5px;line-height:1.3;color:var(--dampad);min-height:30px}
+  .bkort .lite{min-height:34px;padding:0 14px;font-size:13px}.bkort em{font-style:normal;font-size:12px;font-weight:700;color:var(--lime)}
   .besokrad small{font-size:12px;color:var(--pa-scen-d);text-align:center}
   .utkort{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:20px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);text-align:left}
   .utkort .ubild{position:relative;width:84px;height:62px;flex:none;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 70%,var(--scen-ljus),var(--scen) 80%)}
@@ -3211,7 +3222,7 @@ async function hamtaBesok(){
       ut: rader.filter(r => r.fran === me && r.dag === idag && P[r.till]).map(r => ({...P[r.till], sedd: r.sedd})),
       logg: rader.filter(r => r.dag >= sedan && P[r.fran === me ? r.till : r.fran]).slice(0, 6).map(r => ({jag: r.fran === me, v: P[r.fran === me ? r.till : r.fran], dag: r.dag})),
       antal};
-    besokLaddat = true;
+    besokLaddat = true; if(BESOK.inn.length >= 5) S.popular = S.popular || idagStr();
     // peppade ni varandra idag? båda fitchis får glöd, en gång per vän och dag
     S.besokBonus = S.besokBonus && S.besokBonus.dag === idag ? S.besokBonus : {dag: idag, ids: []};
     BESOK.inn.filter(v => BESOK.ut.some(u => u.id === v.id) && !S.besokBonus.ids.includes(v.id)).forEach(v => { S.besokBonus.ids.push(v.id); andraGlod(10, `Du och ${v.namn} peppade varandra. Glöd +10`); });
@@ -3231,6 +3242,8 @@ function ritaBesok(){
     const peppad = (S.peppIdag || []).includes(v.id);
     scen.insertAdjacentHTML('beforeend', `<div class="besokare"><img src="${vanBild(v)}" alt="${v.namn} hälsar på"><span class="bskylt">${v.namn} på besök</span></div>
       <div class="bbubbla"><b>${v.namn} hälsar på!</b><br>${v.text ? '”' + v.text + '”' : 'Du fick pepp idag'}</div>`);
+    const fler = BESOK.inn.slice(1);
+    if(fler.length) html += `<button class="bfler" data-gavanner aria-label="Se alla som hälsar på idag">${fler.slice(0, 3).map(f => `<img src="${vanBild(f)}" alt="">`).join('')}${fler.length > 3 ? `<b>+${fler.length - 3}</b>` : ''}<span>${fler.length === 1 ? fler[0].namn + ' hälsar också på' : fler.length + ' till hälsar på'}</span></button>`;
     html += peppad ? `<small>Ni peppade varandra idag</small>` : `<button class="lite" data-peppa="${v.id}">Peppa tillbaka</button><small>Peppar du tillbaka idag får båda +10 glöd</small>`;
   }
   if(ut) html += `<div class="utkort"><span class="ubild"><img src="${vanBild(ut)}" alt="" style="left:4px;height:58px"><img src="${(F3DP[S.art] || {}).neutral || F3D[S.art]}" alt="" style="right:2px;height:42px"></span><span><b>${S.namn} hälsar på hos ${ut.namn}</b><span>Resten av dagen</span>${ut.sedd ? '<em>Besöket är sett ✓</em>' : ''}</span></div>`;
@@ -3257,6 +3270,7 @@ document.addEventListener('click', async e => {
   // Peppa-knappen öppnar arket i stället för att skicka direkt
   const pp = e.target.closest('[data-peppa]');
   if(pp && !pp.disabled){ e.stopImmediatePropagation(); e.preventDefault(); if(!sbSession){ await sbToken(); } peppaArk(pp.dataset.peppa); return; }
+  if(e.target.closest('[data-gavanner]')){ visa('s-vanner'); return; }
   const pv = e.target.closest('[data-pval]'); if(pv){ pv.parentElement.querySelectorAll('[data-pval]').forEach(b => b.setAttribute('aria-pressed', b === pv)); return; }
   const sk = e.target.closest('[data-skickapepp]');
   if(sk){ const id = sk.dataset.skickapepp, val = document.querySelector('#ark [data-pval][aria-pressed=true]'), text = PEPPTEXT[val ? +val.dataset.pval : 0];
@@ -3273,7 +3287,9 @@ document.addEventListener('click', async e => {
     _rv.apply(this, arguments);
     const lista = document.getElementById('vanLista'); if(!lista) return;
     const v = BESOK.inn[0];
-    if(v){ const peppad = (S.peppIdag || []).includes(v.id);
+    if(BESOK.inn.length > 1){
+      lista.insertAdjacentHTML('beforebegin', `<p class="rubrik-liten" style="margin:4px 0 -4px">${BESOK.inn.length} hälsar på idag</p><div class="besokare-rad">${BESOK.inn.map(b => `<div class="bkort"><img src="${vanBild(b)}" alt=""><b>${b.namn}</b><span>${b.text ? '”' + b.text + '”' : 'Peppade dig'}</span>${(S.peppIdag || []).includes(b.id) ? '<em>Peppad ✓</em>' : `<button class="lite" data-peppa="${b.id}">Peppa</button>`}</div>`).join('')}</div>`);
+    } else if(v){ const peppad = (S.peppIdag || []).includes(v.id);
       lista.insertAdjacentHTML('beforebegin', `<div class="hosdig"><img src="${vanBild(v)}" alt=""><div><b>${v.namn} är hos dig idag</b><span>${v.text ? '”' + v.text + '”' : 'Peppade dig idag'}</span></div>${peppad ? '' : `<button class="lite" data-peppa="${v.id}">Peppa</button>`}</div>`); }
     lista.querySelectorAll('.vkort').forEach(k => { const b = k.querySelector('[data-peppa]'); const id = b && b.dataset.peppa; if(!id) return;
       const a = BESOK.antal[id] || {ut: 0, inn: 0}, ar = (S.bastisar || []).includes(id), info = k.querySelector('.vinfo');
