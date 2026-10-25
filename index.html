@@ -1436,7 +1436,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -2033,7 +2033,8 @@ document.addEventListener('click', e => {
   if(e.target.closest('#spara')) nyckelIdag();
 }, true);
 // --- minispel 2: fånga hjärtstenar (nivå 7)
-NIVABEL.forEach(r => { if(r[0] === 3){ r[1] = 'Minispel: andas med din fitchi'; r[2] = 'andningsspelet'; } if(r[0] === 7){ r[1] = 'Minispel: fånga hjärtstenar'; r[2] = 'hjärtstensspelet'; } if(r[0] === 5){ r[1] = 'Nytt beteende: dansen'; r[2] = 'dansen'; } if(r[0] === 12){ r[1] = 'Vänner, lag och lagutmaningar'; r[2] = 'vänner och lag'; } });
+NIVABEL.forEach(r => { if(r[0] === 3){ r[1] = 'Minispel: andas med din fitchi'; r[2] = 'andningsspelet'; } if(r[0] === 7){ r[1] = 'Minispel: fånga hjärtstenar'; r[2] = 'hjärtstensspelet'; } if(r[0] === 5){ r[1] = 'Nytt beteende: dansen'; r[2] = 'dansen'; } if(r[0] === 12){ r[1] = 'Lag och lagutmaningar'; r[2] = 'lag'; } });
+if(!NIVABEL.some(r => r[2] === 'vänner')){ NIVABEL.push([3, 'Vänner: peppa och hälsa på varandra', 'vänner']); NIVABEL.sort((a, b) => a[0] - b[0]); }
 {
   const st = document.createElement('style'); st.textContent = `
   .fanga{position:relative;height:430px;border-radius:24px;overflow:hidden;background:radial-gradient(ellipse at 50% 100%,#5a327455,#00000000 60%),#ffffff08;box-shadow:inset 0 0 0 1px var(--glas-kant);touch-action:none;user-select:none;-webkit-user-select:none}
@@ -2558,10 +2559,7 @@ document.addEventListener('click', async e => {
     try{ if(navigator.share){ await navigator.share({title: 'Fitchi', text, url}); return; } }catch(err){ if(err && err.name === 'AbortError') return; }
     try{ await navigator.clipboard.writeText(`${text} ${url}`); toastG('Inbjudan kopierad – klistra in i sms eller chatt.', 2600); }catch(err){ toastG(`Din kod: ${kod}`, 3000); }
     return; }
-  const pp = e.target.closest('[data-peppa]'); if(pp && !pp.disabled){ pp.disabled = true; pp.textContent = 'Peppad'; pp.setAttribute('aria-pressed', 'true');
-    try{ await sb('/rest/v1/pepp', {method: 'POST', body: JSON.stringify({fran: sbSession.uid, till: pp.dataset.peppa})}); S.peppIdag = [...(S.peppIdag || []), pp.dataset.peppa]; spara(); klappa(); }
-    catch(err){ pp.disabled = false; pp.textContent = 'Peppa'; toastG('Kunde inte peppa just nu.'); }
-    return; }
+  // peppa: se modulen Besök längre ner (öppnar ett ark)
 }, true);
 { const _visa2 = visa; visa = function(id){ _visa2.apply(this, arguments); if(id === 's-vanner'){ ritaVanner(); laddaVanner(); } }; }
 // inbjudningslänk ?van=KOD
@@ -2981,7 +2979,8 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     ['guldkista', '👑', 'Guldkistan', 'Öppna en guldkista', () => [S.kistGuld ? 1 : 0, 1]],
     ['prylar5', '🎒', 'Samlare', 'Samla 5 prylar', () => [(S.prylar || []).length, 5]],
     ['niva5', '⭐', 'Nivå 5', 'Nå nivå 5', () => [S.niva || 1, 5]],
-    ['niva10', '🏆', 'Nivå 10', 'Nå nivå 10', () => [S.niva || 1, 10]]];
+    ['niva10', '🏆', 'Nivå 10', 'Nå nivå 10', () => [S.niva || 1, 10]],
+    ['bastisar', '🤝', 'Bästisar', 'Hälsa på varandra fem gånger', () => [(S.bastisar || []).length ? 1 : 0, 1]]];
   const kollaMarken = (tyst) => { S.marken = S.marken || {}; S.basRad = Math.max(S.basRad || 0, iRad()); const nya = [];
     for(const [id, , namn, , f] of MARKEN){ if(S.marken[id]) continue; let v = [0, 1]; try{ v = f(); }catch(e){} if(v[0] >= v[1]){ S.marken[id] = idagNr(); nya.push(namn); } }
     if(nya.length && !tyst){ spara(); setTimeout(() => toastG(`Nytt märke: ${nya[0]}!${nya.length > 1 ? ` (+${nya.length - 1} till)` : ''}`, 2800), 1200); }
@@ -3161,6 +3160,132 @@ document.addEventListener('click', e => {
   if(a){ const id = a.getAttribute('data-tema-anv'); S.tema = id; tillampaTema(); spara(); ritaButik(); ritaHem(); toastG(`${TEMAN[id].namn} används nu.`, 1800); }
 });
 tillampaTema();
+
+// ===== Besök: när du peppar en vän hälsar din fitchi på hos den resten av dagen =====
+const PEPPTEXT = ['Heja, du fixar det!', 'Du är stark!', 'Promenad ihop?', 'Kom igen, ser bra ut!'];
+let BESOK = {inn: [], ut: [], logg: [], antal: {}}, besokLaddat = false;
+const vanBild = v => (stegNu(v.niva) !== 'vuxen' && F3DS[v.art] && F3DS[v.art][stegNu(v.niva)] && (F3DS[v.art][stegNu(v.niva)][v.humor === 'sover' ? 'neutral' : v.humor] || F3DS[v.art][stegNu(v.niva)].neutral)) || (F3DP[v.art] && F3DP[v.art].neutral) || F3D[v.art] || F3D.bjorn;
+const STEGORD = {bebis: 'Bebis', barn: 'Barn', tonaring: 'Tonåring', vuxen: 'Vuxen'};
+{
+  const st = document.createElement('style'); st.textContent = `
+  #djurscen .besokare{position:absolute;left:4%;bottom:6px;z-index:1;display:flex;flex-direction:column;align-items:center;pointer-events:none}
+  #djurscen .besokare img{height:58%;max-height:150px;width:auto;filter:drop-shadow(0 8px 10px #0006)}
+  #djurscen .besokare .bskylt{margin-top:2px;padding:3px 9px;border-radius:99px;background:#ffffff1f;box-shadow:inset 0 0 0 1px #ffffff33;font:700 10.5px var(--text);color:var(--pa-scen);white-space:nowrap}
+  #djurscen .bbubbla{position:absolute;left:3%;top:2%;z-index:2;max-width:56%;padding:8px 12px;border-radius:16px 16px 16px 4px;background:#ffffff1f;box-shadow:inset 0 0 0 1px #ffffff33;font:400 12.5px/1.35 var(--text);color:var(--pa-scen);pointer-events:none}
+  #djurscen .bbubbla b{font-weight:700}
+  .besokrad{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .besokrad .lite{min-height:42px;padding:0 18px;font-weight:700;align-self:center;width:auto}
+  .besokrad small{font-size:12px;color:var(--pa-scen-d);text-align:center}
+  .utkort{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:20px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);text-align:left}
+  .utkort .ubild{position:relative;width:84px;height:62px;flex:none;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 70%,var(--scen-ljus),var(--scen) 80%)}
+  .utkort .ubild img{position:absolute;bottom:0;width:auto}
+  .utkort b{display:block;font:700 14px var(--text);color:var(--pa-scen)}
+  .utkort span{display:block;font-size:12px;color:var(--pa-scen-d)}
+  .utkort em{display:block;font-style:normal;font-size:11.5px;font-weight:700;color:var(--lime)}
+  .pval{display:flex;flex-wrap:wrap;gap:8px}
+  .pval button{appearance:none;border:0;min-height:44px;padding:0 16px;border-radius:99px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 14px var(--text);cursor:pointer}
+  .pval button[aria-pressed=true]{background:var(--lime);color:var(--pa-lime);box-shadow:none;font-weight:700}
+  .folj{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:20px;background:#c8f1691a;box-shadow:inset 0 0 0 1px #c8f16966}
+  .folj b{display:block;font-size:15px;color:var(--pa-scen)}.folj span{font-size:13px;color:var(--pa-scen-d)}
+  .hosdig{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:22px;background:#ff7a5c1a;box-shadow:inset 0 0 0 1px #ff7a5c66}
+  .hosdig img{height:56px;width:auto;flex:none}
+  .hosdig div{flex:1;min-width:0}.hosdig b{display:block;font-size:15px;color:var(--natt)}.hosdig span{font-size:13px;color:var(--dampad)}
+  .besoklogg{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:20px;background:var(--vit);box-shadow:inset 0 0 0 1px var(--linje);font-size:13.5px;color:var(--natt)}
+  .besoklogg div{display:flex;justify-content:space-between;gap:10px}.besoklogg span{color:var(--dampad)}
+  .bastisrad{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dampad)}
+  .bastisrad i{width:60px;height:5px;border-radius:99px;background:var(--linje);overflow:hidden;display:block}.bastisrad i b{display:block;height:100%;background:var(--lime)}`;
+  document.head.appendChild(st);
+}
+function dagOrd(d){ const idag = idagStr(); if(d === idag) return 'idag'; const ig = new Date(Date.now() - 864e5).toLocaleDateString('sv-SE', {timeZone: 'Europe/Stockholm'}); return d === ig ? 'i går' : d.slice(8, 10).replace(/^0/, '') + '/' + d.slice(5, 7).replace(/^0/, ''); }
+async function hamtaBesok(){
+  if(!sbSession || !sbSession.uid) return;
+  try{
+    const me = sbSession.uid, sedan = new Date(Date.now() - 13 * 864e5).toLocaleDateString('sv-SE', {timeZone: 'Europe/Stockholm'});
+    const rader = await sb('/rest/v1/pepp?select=*&or=(fran.eq.' + me + ',till.eq.' + me + ')&order=skapad.desc&limit=500') || [];
+    const ids = [...new Set(rader.map(r => r.fran === me ? r.till : r.fran))];
+    const prof = ids.length ? await sb('/rest/v1/profiler?select=id,namn,art,humor,niva&id=in.(' + ids.join(',') + ')') || [] : [];
+    const P = Object.fromEntries(prof.map(p => [p.id, p])), idag = idagStr(), antal = {};
+    rader.forEach(r => { const v = r.fran === me ? r.till : r.fran; antal[v] = antal[v] || {ut: 0, inn: 0}; antal[v][r.fran === me ? 'ut' : 'inn']++; });
+    BESOK = {
+      inn: rader.filter(r => r.till === me && r.dag === idag && P[r.fran]).map(r => ({...P[r.fran], text: r.text || ''})),
+      ut: rader.filter(r => r.fran === me && r.dag === idag && P[r.till]).map(r => ({...P[r.till], sedd: r.sedd})),
+      logg: rader.filter(r => r.dag >= sedan && P[r.fran === me ? r.till : r.fran]).slice(0, 6).map(r => ({jag: r.fran === me, v: P[r.fran === me ? r.till : r.fran], dag: r.dag})),
+      antal};
+    besokLaddat = true;
+    // peppade ni varandra idag? båda fitchis får glöd, en gång per vän och dag
+    S.besokBonus = S.besokBonus && S.besokBonus.dag === idag ? S.besokBonus : {dag: idag, ids: []};
+    BESOK.inn.filter(v => BESOK.ut.some(u => u.id === v.id) && !S.besokBonus.ids.includes(v.id)).forEach(v => { S.besokBonus.ids.push(v.id); andraGlod(10, `Du och ${v.namn} peppade varandra. Glöd +10`); });
+    // bästisar: fem besök åt båda hållen
+    const nya = Object.entries(antal).filter(([id, a]) => a.ut >= 5 && a.inn >= 5 && !(S.bastisar || []).includes(id)).map(([id]) => id);
+    if(nya.length){ S.bastisar = [...(S.bastisar || []), ...nya]; const v = P[nya[0]]; if(v) setTimeout(() => visaBastisar(v), 1200); }
+    spara(); ritaBesok(); if(document.querySelector('#s-vanner.aktiv')) ritaVanner();
+  }catch(e){ console.log('besok', e); }
+}
+function ritaBesok(){
+  const scen = document.getElementById('djurscen'); if(!scen) return;
+  scen.querySelectorAll('.besokare,.bbubbla').forEach(e => e.remove());
+  document.querySelectorAll('#s-hem .besokrad').forEach(e => e.remove());
+  const v = BESOK.inn[0], ut = BESOK.ut[0], xp = document.querySelector('#s-hem .xp'); if(!xp) return;
+  let html = '';
+  if(v){
+    const peppad = (S.peppIdag || []).includes(v.id);
+    scen.insertAdjacentHTML('beforeend', `<div class="besokare"><img src="${vanBild(v)}" alt="${v.namn} hälsar på"><span class="bskylt">${v.namn} på besök</span></div>
+      <div class="bbubbla"><b>${v.namn} hälsar på!</b><br>${v.text ? '”' + v.text + '”' : 'Du fick pepp idag'}</div>`);
+    html += peppad ? `<small>Ni peppade varandra idag</small>` : `<button class="lite" data-peppa="${v.id}">Peppa tillbaka</button><small>Peppar du tillbaka idag får båda +10 glöd</small>`;
+  }
+  if(ut) html += `<div class="utkort"><span class="ubild"><img src="${vanBild(ut)}" alt="" style="left:4px;height:58px"><img src="${(F3DP[S.art] || {}).neutral || F3D[S.art]}" alt="" style="right:2px;height:42px"></span><span><b>${S.namn} hälsar på hos ${ut.namn}</b><span>Resten av dagen</span>${ut.sedd ? '<em>Besöket är sett ✓</em>' : ''}</span></div>`;
+  if(html) xp.insertAdjacentHTML('afterend', `<div class="besokrad">${html}</div>`);
+}
+function visaBastisar(v){
+  oppnaArk(arkHuvud('Ni peppade varandra', `${v.namn} och ${S.namn} blev bästisar`, 'Fem besök åt båda hållen. Ni får märket Bästisar.')
+    + `<div class="arkfitchi djurscen" style="min-height:150px;gap:8px;align-items:flex-end"><img src="${vanBild(v)}" alt="" style="height:130px;width:auto">${ork('pigg', 110)}</div>`
+    + `<button class="knapp" data-stang-ark>Fortsätt</button>`);
+}
+function peppaArk(id){
+  const v = vanLista.find(x => x.id === id) || BESOK.inn.find(x => x.id === id); if(!v) return;
+  oppnaArk(arkHuvud(`Peppa ${v.namn}`, `${v.namn} ${HUMORTEXT[v.humor] || 'mår bra'}`, `Nivå ${v.niva} · ${STEGORD[stegNu(v.niva)]}`)
+    + `<div class="pval" role="group" aria-label="Välj pepp">${PEPPTEXT.map((t, i) => `<button data-pval="${i}" aria-pressed="${i === 0}">${t}</button>`).join('')}</div>`
+    + `<div class="folj"><span style="width:58px;flex:none">${ork('pigg', 58)}</span><div><b>${S.namn} följer med peppen</b><span>och hälsar på hos ${v.namn} resten av dagen.</span></div></div>`
+    + `<button class="knapp" data-skickapepp="${v.id}">Skicka pepp och hälsa på</button><p class="liten" style="text-align:center;margin:0">Ett besök per vän och dag</p>`);
+}
+async function skickaPepp(id, text){
+  const kropp = {fran: sbSession.uid, till: id, text};
+  try{ await sb('/rest/v1/pepp', {method: 'POST', body: JSON.stringify(kropp)}); }
+  catch(err){ if(/text/i.test(String(err && err.message))){ delete kropp.text; await sb('/rest/v1/pepp', {method: 'POST', body: JSON.stringify(kropp)}); } else throw err; }
+}
+document.addEventListener('click', async e => {
+  // Peppa-knappen öppnar arket i stället för att skicka direkt
+  const pp = e.target.closest('[data-peppa]');
+  if(pp && !pp.disabled){ e.stopImmediatePropagation(); e.preventDefault(); if(!sbSession){ await sbToken(); } peppaArk(pp.dataset.peppa); return; }
+  const pv = e.target.closest('[data-pval]'); if(pv){ pv.parentElement.querySelectorAll('[data-pval]').forEach(b => b.setAttribute('aria-pressed', b === pv)); return; }
+  const sk = e.target.closest('[data-skickapepp]');
+  if(sk){ const id = sk.dataset.skickapepp, val = document.querySelector('#ark [data-pval][aria-pressed=true]'), text = PEPPTEXT[val ? +val.dataset.pval : 0];
+    sk.disabled = true; sk.textContent = 'Skickar …';
+    try{ await skickaPepp(id, text); S.peppIdag = [...new Set([...(S.peppIdag || []), id])]; spara(); stangArk(); klappa();
+      const v = vanLista.find(x => x.id === id) || BESOK.inn.find(x => x.id === id);
+      toastG(`${S.namn} hälsar på hos ${v ? v.namn : 'din vän'} idag!`, 2600); hamtaBesok(); if(document.querySelector('#s-vanner.aktiv')) ritaVanner(); }
+    catch(err){ sk.disabled = false; sk.textContent = 'Skicka pepp och hälsa på'; toastG(/duplicate|23505|unique/i.test(String(err && err.message)) ? 'Du har redan peppat idag.' : 'Kunde inte peppa just nu.', 2400); }
+    return; }
+}, true);
+{
+  const _rv = ritaVanner;
+  ritaVanner = function(){
+    _rv.apply(this, arguments);
+    const lista = document.getElementById('vanLista'); if(!lista) return;
+    const v = BESOK.inn[0];
+    if(v){ const peppad = (S.peppIdag || []).includes(v.id);
+      lista.insertAdjacentHTML('beforebegin', `<div class="hosdig"><img src="${vanBild(v)}" alt=""><div><b>${v.namn} är hos dig idag</b><span>${v.text ? '”' + v.text + '”' : 'Peppade dig idag'}</span></div>${peppad ? '' : `<button class="lite" data-peppa="${v.id}">Peppa</button>`}</div>`); }
+    lista.querySelectorAll('.vkort').forEach(k => { const b = k.querySelector('[data-peppa]'); const id = b && b.dataset.peppa; if(!id) return;
+      const a = BESOK.antal[id] || {ut: 0, inn: 0}, ar = (S.bastisar || []).includes(id), info = k.querySelector('.vinfo');
+      if((S.peppIdag || []).includes(id) && info) info.insertAdjacentHTML('beforeend', `<small class="aktiv">${S.namn} är där nu</small>`);
+      if(info) info.insertAdjacentHTML('beforeend', ar ? `<span class="bastisrad"><b style="color:var(--lime)">Bästisar</b></span>` : `<span class="bastisrad">Bästisar <i><b style="width:${Math.min(100, Math.min(a.ut, a.inn) / 5 * 100)}%"></b></i> ${Math.min(a.ut, a.inn)}/5</span>`); });
+    if(BESOK.logg.length) lista.insertAdjacentHTML('afterend', `<p class="rubrik-liten" style="margin:8px 0 -4px">Besök</p><div class="besoklogg">${BESOK.logg.map(l => `<div>${l.jag ? `${S.namn} hälsade på hos ${l.v.namn}` : `${l.v.namn} hälsade på hos dig`}<span>${dagOrd(l.dag)}</span></div>`).join('')}</div>`);
+  };
+}
+{ const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments); if(besokLaddat) ritaBesok(); }; }
+{ const _hv = hamtaVanner; hamtaVanner = async function(){ await _hv.apply(this, arguments); await hamtaBesok(); }; }
+setTimeout(() => { if(S.klar && sbSession) hamtaBesok(); }, 4500);
+document.addEventListener('visibilitychange', () => { if(sbSession && !document.hidden && S.klar) setTimeout(hamtaBesok, 1500); });
 
 </script>
 </body>
