@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "kopiera": "rm -rf www && mkdir -p www && cp -r ../index.html ../img ../manifest.webmanifest www/"
+    "kopiera": "rm -rf www && mkdir -p www && cp -r ../index.html ../img ../manifest.webmanifest www/ && rm -rf www/img/*-bebis www/img/*-barn www/img/*-tonaring"
   },
   "dependencies": {
     "@capacitor-mlkit/barcode-scanning": "7.5.0",
