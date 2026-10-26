@@ -3221,12 +3221,12 @@ async function hamtaBesok(){
     const ids = [...new Set(rader.map(r => r.fran === me ? r.till : r.fran))];
     const prof = ids.length ? await sb('/rest/v1/profiler?select=id,namn,art,humor,niva&id=in.(' + ids.join(',') + ')') || [] : [];
     const P = Object.fromEntries(prof.map(p => [p.id, p])), idag = idagStr(), antal = {};
-    rader.forEach(r => { const v = r.fran === me ? r.till : r.fran; antal[v] = antal[v] || {ut: 0, inn: 0}; antal[v][r.fran === me ? 'ut' : 'inn']++; });
+    rader.filter(r => r.besok !== false).forEach(r => { const v = r.fran === me ? r.till : r.fran; antal[v] = antal[v] || {ut: 0, inn: 0}; antal[v][r.fran === me ? 'ut' : 'inn']++; });
     const allaInn = rader.filter(r => r.till === me && r.dag === idag && P[r.fran]).map(r => ({...P[r.fran], text: r.text || '', besok: r.besok !== false}));
     const allaUt = rader.filter(r => r.fran === me && r.dag === idag && P[r.till]).map(r => ({...P[r.till], sedd: r.sedd, besok: r.besok !== false}));
     BESOK = {
       inn: allaInn.filter(v => v.besok), ut: allaUt.filter(v => v.besok), halsningar: allaInn.filter(v => !v.besok), allaInn, allaUt,
-      logg: rader.filter(r => r.dag >= sedan && P[r.fran === me ? r.till : r.fran]).slice(0, 6).map(r => ({jag: r.fran === me, v: P[r.fran === me ? r.till : r.fran], dag: r.dag})),
+      logg: rader.filter(r => r.dag >= sedan && P[r.fran === me ? r.till : r.fran]).slice(0, 6).map(r => ({jag: r.fran === me, v: P[r.fran === me ? r.till : r.fran], dag: r.dag, besok: r.besok !== false})),
       antal};
     besokLaddat = true; if(BESOK.inn.length >= 5) S.popular = S.popular || idagStr();
     // peppade ni varandra idag? båda fitchis får glöd, en gång per vän och dag
@@ -3309,9 +3309,10 @@ document.addEventListener('click', async e => {
       lista.insertAdjacentHTML('beforebegin', `<div class="hosdig"><img src="${vanBild(v)}" alt=""><div><b>${v.namn} är hos dig idag</b><span>${v.text ? '”' + v.text + '”' : 'Peppade dig idag'}</span></div>${peppad ? '' : `<button class="lite" data-peppa="${v.id}">Peppa</button>`}</div>`); }
     lista.querySelectorAll('.vkort').forEach(k => { const b = k.querySelector('[data-peppa]'); const id = b && b.dataset.peppa; if(!id) return;
       const a = BESOK.antal[id] || {ut: 0, inn: 0}, ar = (S.bastisar || []).includes(id), info = k.querySelector('.vinfo');
-      if((S.peppIdag || []).includes(id) && info) info.insertAdjacentHTML('beforeend', `<small class="aktiv">${S.namn} är där nu</small>`);
+      if(info && BESOK.ut.some(u => u.id === id)) info.insertAdjacentHTML('beforeend', `<small class="aktiv">${S.namn} är där nu</small>`);
+      else if(info && (S.peppIdag || []).includes(id)) info.insertAdjacentHTML('beforeend', `<small class="aktiv">Du peppade idag</small>`);
       if(info) info.insertAdjacentHTML('beforeend', ar ? `<span class="bastisrad"><b style="color:var(--lime)">Bästisar</b></span>` : `<span class="bastisrad">Bästisar <i><b style="width:${Math.min(100, Math.min(a.ut, a.inn) / 5 * 100)}%"></b></i> ${Math.min(a.ut, a.inn)}/5</span>`); });
-    if(BESOK.logg.length) lista.insertAdjacentHTML('afterend', `<p class="rubrik-liten" style="margin:8px 0 -4px">Besök</p><div class="besoklogg">${BESOK.logg.map(l => `<div>${l.jag ? `${S.namn} hälsade på hos ${l.v.namn}` : `${l.v.namn} hälsade på hos dig`}<span>${dagOrd(l.dag)}</span></div>`).join('')}</div>`);
+    if(BESOK.logg.length) lista.insertAdjacentHTML('afterend', `<p class="rubrik-liten" style="margin:8px 0 -4px">Besök och pepp</p><div class="besoklogg">${BESOK.logg.map(l => `<div>${l.besok ? (l.jag ? `${S.namn} hälsade på hos ${l.v.namn}` : `${l.v.namn} hälsade på hos dig`) : (l.jag ? `Du peppade ${l.v.namn}` : `${l.v.namn} peppade dig`)}<span>${dagOrd(l.dag)}</span></div>`).join('')}</div>`);
   };
 }
 { const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments); if(besokLaddat) ritaBesok(); }; }
