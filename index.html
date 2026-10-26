@@ -691,7 +691,7 @@ const S = {namn:'Bruno', art:'bjorn', sit:new Set(), typ:'promenad', min:20, sal
   m:{energi:62, styrka:55, lugn:38, naring:70}};
 S.pref = {mal:new Set(['ork','lugn']), typer:new Set(['promenad','styrka']), tid:'15', nar:'morgon', kost:'alla', mathjalp:new Set(['protein']), pepp:'varm', plattform:'iphone'};
 const $ = s => document.querySelector(s);
-const posFor = mood => (mood==='pigg' && (S.m?.energi ?? 0) < 70 && S.data.borta < 3) ? 'neutral' : mood;
+const posFor = mood => mood;   // humor() väljer posen själv (neutral = mår bra)
 let ork = (mood, w) => { const f = formSteg(); mood = posFor(mood); return `<svg class="orkis humor-${mood}" viewBox="0 0 170 200" width="${w}" height="${w*200/170}" aria-hidden="true" style="overflow:visible">${formBak(f)}${levande(S.art, mood, 'x="0" y="0" width="170" height="200"')}${formFram(f)}</svg>`; };
 const kx = 85, ky = 120, u = 110;
 function formBak(f){ const fl = f.lugn; if(!fl) return '';
@@ -1232,8 +1232,8 @@ function oppnaArk(html){ $('#ark').innerHTML = `<div class="handtag" aria-hidden
 function arkHuvud(over, titel, text){ return `<div class="arkhuvud"><div style="display:flex;flex-direction:column;gap:4px"><p class="rubrik-liten">${over}</p><h2 id="arkTitel" style="font-size:28px">${titel}</h2>${text?`<p style="font-size:14px;line-height:20px;color:var(--pa-scen-d)">${text}</p>`:''}</div><button class="stang" id="stang" aria-label="Stäng">×</button></div>`; }
 function visaMorgon(){
   if(new Date().getHours() < 4 || $('#slöja').classList.contains('oppen')) return;
-  oppnaArk(arkHuvud('God morgon', `${S.namn} vaknar`, 'Hur sov du i natt? Det avgör hur dagens uppdrag ser ut.')
-    + `<div class="arkfitchi">${ork('pigg', 120)}</div><div class="valrad"><button data-sov="bra">Bra<small>utvilad</small></button><button data-sov="okej">Okej<small>lagom</small></button><button data-sov="daligt">Dåligt<small>trött</small></button></div>`);
+  oppnaArk(arkHuvud('God morgon', `${S.namn} vaknar`, 'Hur känner du dig i morse? Det avgör hur dagens uppdrag ser ut.')
+    + `<div class="arkfitchi">${ork('neutral', 120)}</div>${kanslaKnappar()}`);
 }
 function visaNatta(){
   oppnaArk(arkHuvud('Kvällsritual', `Natta ${S.namn}`, `${S.namn} har haft en bra dag. Kanske är det dags för dig också? 7–9 timmars sömn gör mest för din glöd i morgon.`)
@@ -1436,7 +1436,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -1593,7 +1593,7 @@ if(HALSA){
     const tim = m/60, val = tim >= 7 ? 'bra' : tim >= 5.5 ? 'okej' : 'daligt';
     const t = {bra:`${S.namn} vaknar utvilad`, okej:`${S.namn} vaknar`, daligt:`${S.namn} är lite trött`}[val];
     const r = {bra:'En riktigt bra natt. Dagens uppdrag får lite mer energi.', okej:'En okej natt. Ta det i din takt idag.', daligt:'Kort natt. Dagens uppdrag blir lugnare, och vila räknas.'}[val];
-    oppnaArk(arkHuvud('God morgon', t, `Klockan säger att du sov ${fmtH(m)}. ${r}`) + `<div class="arkfitchi">${ork(val==='daligt'?'trott':'pigg', 120)}</div><button class="knapp" data-sov="${val}">Godmorgon, ${S.namn}</button>`);
+    oppnaArk(arkHuvud('God morgon', `${S.namn} vaknar`, `Klockan säger att du sov ${fmtH(m)}. Hur känner du dig?`) + `<div class="arkfitchi">${ork('neutral', 120)}</div>${kanslaKnappar(val)}`);
   };
   const SPARA_EXTRA = () => { if(FLYTTAR) return; try{ const o = JSON.parse(localStorage.getItem(LAGER) || '{}'); o.halsa = S.halsa; localStorage.setItem(LAGER, JSON.stringify(o)); }catch(e){} };
   const _spara = spara; spara = function(){ _spara(); SPARA_EXTRA(); };
@@ -3309,6 +3309,101 @@ document.addEventListener('click', e => {
   if(!(e.target.id === 'slöja' || e.target.closest('#stang')) || !document.querySelector('#ark [data-sov]')) return;
   S.morgonKlar = true; S.sover = false; spara(); setTimeout(ritaHem, 50);
 }, true);
+
+// ===== Humör: återhämtning (klockans sömn + din känsla) först, sedan aktivitet =====
+const KANSLA = {pigg: ['Pigg', 'full av energi', 90, 'bra'], okej: ['Okej', 'lagom', 65, 'okej'], trott: ['Trött', 'seg i kroppen', 35, 'daligt'], stressad: ['Stressad', 'mycket i huvudet', 45, 'okej']};
+// sov: värdet från klockan (bra/okej/daligt) när det finns, annars från känslan
+function kanslaKnappar(sov){
+  return `<div class="valrad kanslarad">${Object.entries(KANSLA).map(([k, [n, s, , sv]]) => `<button data-sov="${sov || sv}" data-kansla="${k}">${n}<small>${s}</small></button>`).join('')}</div>`
+    + `<p class="liten" style="text-align:center;margin:0">Klockan och din känsla räknas lika mycket.</p>`;
+}
+{ const st = document.createElement('style'); st.textContent = `
+  .kanslarad{display:grid!important;grid-template-columns:1fr 1fr;gap:10px}
+  .kanslarad button{min-height:60px}
+  #humor{cursor:pointer}
+  #humor::after{content:"";display:inline-block;width:14px;height:14px;margin-left:8px;vertical-align:1px;background:var(--lime);opacity:.8;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat}
+  .humorvarfor{align-self:stretch;display:flex;flex-direction:column;gap:7px;padding:12px 14px;border-radius:18px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);font-size:13.5px}
+  .humorvarfor>span{display:flex;justify-content:space-between;gap:10px;color:var(--pa-scen-d)} .humorvarfor *{text-decoration:none;box-shadow:none;background:none;padding:0;border:0} .humorvarfor b{color:var(--pa-scen)}
+  .kanslachips{display:flex;flex-wrap:wrap;gap:8px} .kanslachips button{min-height:44px;padding:0 14px;border:0;border-radius:99px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 13.5px var(--text);cursor:pointer}`;
+  document.head.appendChild(st); }
+const somnPoang = tim => { const P = [[4, 15], [5, 35], [6, 60], [7, 80], [8, 95]]; if(tim <= 4) return 15; if(tim >= 8) return 95;
+  for(let i = 1; i < P.length; i++) if(tim <= P[i][0]){ const [a, pa] = P[i-1], [b, pb] = P[i]; return Math.round(pa + (pb - pa) * (tim - a) / (b - a)); } };
+function kanslaIdag(){ const k = S.kansla; return k && k.dag === dagNr(new Date()) ? k : null; }
+function mabra(){
+  const idag = dagNr(new Date()), h = S.halsa || {};
+  const klocka = h.somnDag === idag && h.somnMin > 0 ? somnPoang(h.somnMin / 60) : null;
+  const k = kanslaIdag(), kansla = k && k.val ? KANSLA[k.val][2] : null;
+  const delar = [klocka, kansla].filter(v => v !== null);
+  const ater = delar.length ? Math.round(delar.reduce((a, b) => a + b, 0) / delar.length) : 65;
+  // vilopuls mot ditt vanliga (minst 5 dagar att jämföra med)
+  S.pulsHist = S.pulsHist || {}; if(h.pulsDag === idag && h.puls) S.pulsHist[idag] = h.puls;
+  for(const d of Object.keys(S.pulsHist)) if(idag - d > 21) delete S.pulsHist[d];
+  const andra = Object.entries(S.pulsHist).filter(([d]) => +d !== idag).map(([, v]) => v);
+  const bas = andra.length >= 5 ? andra.reduce((a, b) => a + b, 0) / andra.length : null;
+  const pulsHog = bas && S.pulsHist[idag] ? S.pulsHist[idag] >= bas + 7 : false;
+  return {ater, klocka, kansla: k, somnMin: klocka !== null ? h.somnMin : 0, pulsHog, bas};
+}
+function hungrigNu(){
+  const k = kanslaIdag(), nu = Date.now(), kl = new Date().getHours();
+  const l = typeof matloggNu === 'function' ? matloggNu() : (S.matlogg || []), senast = l.reduce((a, x) => Math.max(a, x.tid || 0), 0);
+  if(k && k.hungrig && senast < k.hungrig && nu - k.hungrig < 4 * 36e5) return true;
+  return kl >= 12 && kl < 21 && (S.m.naring ?? 50) < 30 && nu - senast > 5 * 36e5;
+}
+function styrkaNyss(){
+  const idag = dagNr(new Date()), k = kanslaIdag();
+  const pass = (S.passlogg || []).some(p => (p.typ === 'styrka' || p.typ === 'hemma') && idag - dagNr(new Date(p.tid)) <= 1);
+  const upp = (S.uppdrag || []).some(u => u.klar && u.m === 'styrka');
+  return pass || upp || !!(k && k.stark);
+}
+{ const _h = humor;
+  humor = function(){
+    if(S.glod <= 0 || S.sover) return _h();
+    const n = S.namn, m = mabra(), k = m.kansla, kl = new Date().getHours();
+    let r;
+    if(S.data.borta >= 3) r = ['pigg', `${n} är glad att se dig`];
+    else if((k && k.val === 'stressad') || (m.pulsHog && m.ater < 55)) r = ['stressad', `${n} är lite stressad`];
+    else if(m.ater < 50) r = ['trott', `${n} är lite trött`];
+    else if(hungrigNu()) r = ['hungrig', `${n} är hungrig`];
+    else if(styrkaNyss() && m.ater >= (k && k.stark ? 50 : 60)) r = ['stark', `${n} känner sig stark`];
+    else if(S.vila) r = ['lugn', `${n} vill vila idag`];
+    else if(m.ater >= 75 && ((S.m.energi ?? 0) >= 60 || (k && k.val === 'pigg'))) r = ['pigg', `${n} är pigg`];
+    else if(kl >= 15 && m.ater >= 60 && (S.m.energi ?? 0) < 40) r = ['lugn', `${n} tar det lugnt idag`];
+    else r = ['neutral', `${n} mår bra`];
+    if(S.glod < 30) r = [r[0], `${n}s glöd är låg`];
+    return r;
+  }; }
+// bilder som inte finns än: hungrig visar mår bra, stressad visar trött
+{ const _o = ork; const RESERV = {hungrig: 'neutral', stressad: 'trott'};
+  ork = (mood, w) => (RESERV[mood] && !(F3DP[S.art] || {})[mood]) ? _o(RESERV[mood], w) : _o(mood, w); }
+Object.assign(HUMORTEXT, {hungrig: 'är hungrig', stressad: 'är lite stressad'});
+Object.assign(REAKTION, {
+  neutral: REAKTION.pigg,
+  hungrig: {form: 'hjarta', farg: ['#ffb07a', '#f6d27a'], n: 5, t: 1.4, text: n => `${n} hoppas på mat snart`},
+  stressad: {form: 'bubbla', farg: ['#d9b8f0', '#ffffff99'], n: 6, t: 2.2, text: n => `${n} andas ut lite`}});
+// valet i morgonfrågan
+document.addEventListener('click', e => { const b = e.target.closest('[data-kansla]'); if(!b) return;
+  const k = kanslaIdag() || {dag: dagNr(new Date())}; k.val = b.dataset.kansla; k.tid = Date.now(); S.kansla = k; }, true);
+// Hur mår du nu? – tryck på humöret
+function visaKansla(){
+  const m = mabra(), k = m.kansla, n = S.namn, rad = (a, b) => `<span><span>${a}</span><b>${b}</b></span>`;
+  const varfor = [m.klocka !== null ? rad('Sömn enligt klockan', `${Math.floor(m.somnMin/60)} h ${String(Math.round(m.somnMin%60)).padStart(2,'0')} min`) : '', rad('Du har sagt', k && k.val ? KANSLA[k.val][0] : 'inget än idag'),
+    m.pulsHog ? rad('Vilopuls', 'högre än vanligt') : '', rad('Återhämtning', `${m.ater} av 100`)].join('');
+  oppnaArk(arkHuvud(`Kl ${new Date().toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'})}`, 'Hur mår du nu?', `${n} ändrar sig efter det du säger, tillsammans med klockan.`)
+    + `<div class="humorvarfor">${varfor}</div>`
+    + `<div class="valrad kanslarad">${Object.entries(KANSLA).map(([id, [t]]) => `<button data-nu="${id}" aria-pressed="${!!(k && k.val === id)}"${k && k.val === id ? ' style="box-shadow:inset 0 0 0 2px var(--lime)"' : ''}>${t}</button>`).join('')}</div>`
+    + `<div class="kanslachips"><button data-nu-flagga="hungrig">Hungrig</button><button data-nu-flagga="stark">Stark</button></div>`);
+}
+document.addEventListener('click', e => {
+  if(e.target.closest('#humor') && S.klar && !S.sover && S.glod > 0){ visaKansla(); return; }
+  const b = e.target.closest('[data-nu],[data-nu-flagga]'); if(!b) return;
+  const k = kanslaIdag() || {dag: dagNr(new Date())};
+  if(b.dataset.nu){ k.val = b.dataset.nu; k.tid = Date.now(); } else k[b.dataset.nuFlagga] = Date.now();
+  S.kansla = k; stangArk(); spara(); ritaHem(); toastG(`${S.namn} ${HUMORTEXT[humor()[0]] || 'mår bra'}`, 2000);
+});
+{ const h = document.getElementById('humor'); if(h){ h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0'); h.setAttribute('aria-label', 'Säg hur du mår');
+  h.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); h.click(); } }); } }
 
 </script>
 </body>
