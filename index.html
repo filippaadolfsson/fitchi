@@ -1593,7 +1593,7 @@ if(HALSA){
     const tim = m/60, val = tim >= 7 ? 'bra' : tim >= 5.5 ? 'okej' : 'daligt';
     const t = {bra:`${S.namn} vaknar utvilad`, okej:`${S.namn} vaknar`, daligt:`${S.namn} är lite trött`}[val];
     const r = {bra:'En riktigt bra natt. Dagens uppdrag får lite mer energi.', okej:'En okej natt. Ta det i din takt idag.', daligt:'Kort natt. Dagens uppdrag blir lugnare, och vila räknas.'}[val];
-    oppnaArk(arkHuvud('God morgon', `${S.namn} vaknar`, `Klockan säger att du sov ${fmtH(m)}. Hur känner du dig?`) + `<div class="arkfitchi">${ork('neutral', 120)}</div>${kanslaKnappar(val)}`);
+    oppnaArk(arkHuvud('God morgon', `${S.namn} vaknar`, `Enligt din sömndata sov du ${fmtH(m)}. Hur känner du dig?`) + `<div class="arkfitchi">${ork('neutral', 120)}</div>${kanslaKnappar(val)}`);
   };
   const SPARA_EXTRA = () => { if(FLYTTAR) return; try{ const o = JSON.parse(localStorage.getItem(LAGER) || '{}'); o.halsa = S.halsa; localStorage.setItem(LAGER, JSON.stringify(o)); }catch(e){} };
   const _spara = spara; spara = function(){ _spara(); SPARA_EXTRA(); };
@@ -3311,15 +3311,15 @@ document.addEventListener('click', e => {
 }, true);
 
 // ===== Humör: återhämtning (klockans sömn + din känsla) först, sedan aktivitet =====
-const KANSLA = {pigg: ['Pigg', 'full av energi', 90, 'bra'], okej: ['Okej', 'lagom', 65, 'okej'], trott: ['Trött', 'seg i kroppen', 35, 'daligt'], stressad: ['Stressad', 'mycket i huvudet', 45, 'okej']};
+const KANSLA = {pigg: ['Pigg', 'full av energi', 90, 'bra'], glad: ['Glad', 'på bra humör', 80, 'bra'], okej: ['Okej', 'lagom', 65, 'okej'], trott: ['Trött', 'seg i kroppen', 35, 'daligt'], stressad: ['Stressad', 'mycket i huvudet', 45, 'okej'], ledsen: ['Ledsen', 'tung dag', 45, 'okej']};
 // sov: värdet från klockan (bra/okej/daligt) när det finns, annars från känslan
 function kanslaKnappar(sov){
   return `<div class="valrad kanslarad">${Object.entries(KANSLA).map(([k, [n, s, , sv]]) => `<button data-sov="${sov || sv}" data-kansla="${k}">${n}<small>${s}</small></button>`).join('')}</div>`
-    + `<p class="liten" style="text-align:center;margin:0">Klockan och din känsla räknas lika mycket.</p>`;
+    + `<p class="liten" style="text-align:center;margin:0">Din känsla och din automatiska data räknas lika mycket.</p>`;
 }
 { const st = document.createElement('style'); st.textContent = `
   .kanslarad{display:grid!important;grid-template-columns:1fr 1fr;gap:10px}
-  .kanslarad button{min-height:60px}
+  .kanslarad button{min-height:56px}
   #humor{cursor:pointer}
   #humor::after{content:"";display:inline-block;width:14px;height:14px;margin-left:8px;vertical-align:1px;background:var(--lime);opacity:.8;
     -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat;
@@ -3364,8 +3364,10 @@ function styrkaNyss(){
     let r;
     if(S.data.borta >= 3) r = ['pigg', `${n} är glad att se dig`];
     else if((k && k.val === 'stressad') || (m.pulsHog && m.ater < 55)) r = ['stressad', `${n} är lite stressad`];
+    else if(k && k.val === 'ledsen') r = ['ledsen', `${n} är lite ledsen`];
     else if(m.ater < 50) r = ['trott', `${n} är lite trött`];
     else if(hungrigNu()) r = ['hungrig', `${n} är hungrig`];
+    else if(k && k.val === 'glad') r = ['glad', `${n} är glad`];
     else if(styrkaNyss() && m.ater >= (k && k.stark ? 50 : 60)) r = ['stark', `${n} känner sig stark`];
     else if(S.vila) r = ['lugn', `${n} vill vila idag`];
     else if(m.ater >= 75 && ((S.m.energi ?? 0) >= 60 || (k && k.val === 'pigg'))) r = ['pigg', `${n} är pigg`];
@@ -3375,11 +3377,12 @@ function styrkaNyss(){
     return r;
   }; }
 // bilder som inte finns än: hungrig visar mår bra, stressad visar trött
-{ const _o = ork; const RESERV = {hungrig: 'neutral', stressad: 'trott'};
+{ const _o = ork; const RESERV = {hungrig: 'neutral', stressad: 'trott', ledsen: 'trott', glad: 'pigg'};
   ork = (mood, w) => (RESERV[mood] && !(F3DP[S.art] || {})[mood]) ? _o(RESERV[mood], w) : _o(mood, w); }
-Object.assign(HUMORTEXT, {hungrig: 'är hungrig', stressad: 'är lite stressad'});
+Object.assign(HUMORTEXT, {hungrig: 'är hungrig', stressad: 'är lite stressad', ledsen: 'är lite ledsen', glad: 'är glad'});
 Object.assign(REAKTION, {
-  neutral: REAKTION.pigg,
+  neutral: REAKTION.pigg, glad: REAKTION.pigg,
+  ledsen: {form: 'hjarta', farg: ['#d9b8f0', '#ff8f9a'], n: 5, t: 2, text: n => `${n} ger dig en kram`},
   hungrig: {form: 'hjarta', farg: ['#ffb07a', '#f6d27a'], n: 5, t: 1.4, text: n => `${n} hoppas på mat snart`},
   stressad: {form: 'bubbla', farg: ['#d9b8f0', '#ffffff99'], n: 6, t: 2.2, text: n => `${n} andas ut lite`}});
 // valet i morgonfrågan
@@ -3388,9 +3391,9 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-kans
 // Hur mår du nu? – tryck på humöret
 function visaKansla(){
   const m = mabra(), k = m.kansla, n = S.namn, rad = (a, b) => `<span><span>${a}</span><b>${b}</b></span>`;
-  const varfor = [m.klocka !== null ? rad('Sömn enligt klockan', `${Math.floor(m.somnMin/60)} h ${String(Math.round(m.somnMin%60)).padStart(2,'0')} min`) : '', rad('Du har sagt', k && k.val ? KANSLA[k.val][0] : 'inget än idag'),
+  const varfor = [m.klocka !== null ? rad('Sömn, automatiskt', `${Math.floor(m.somnMin/60)} h ${String(Math.round(m.somnMin%60)).padStart(2,'0')} min`) : '', rad('Du har sagt', k && k.val ? KANSLA[k.val][0] : 'inget än idag'),
     m.pulsHog ? rad('Vilopuls', 'högre än vanligt') : '', rad('Återhämtning', `${m.ater} av 100`)].join('');
-  oppnaArk(arkHuvud(`Kl ${new Date().toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'})}`, 'Hur mår du nu?', `${n} ändrar sig efter det du säger, tillsammans med klockan.`)
+  oppnaArk(arkHuvud(`Kl ${new Date().toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'})}`, 'Hur mår du nu?', `${n} ändrar sig efter det du säger, tillsammans med data från din mobil och kopplade enheter.`)
     + `<div class="humorvarfor">${varfor}</div>`
     + `<div class="valrad kanslarad">${Object.entries(KANSLA).map(([id, [t]]) => `<button data-nu="${id}" aria-pressed="${!!(k && k.val === id)}"${k && k.val === id ? ' style="box-shadow:inset 0 0 0 2px var(--lime)"' : ''}>${t}</button>`).join('')}</div>`
     + `<div class="kanslachips"><button data-nu-flagga="hungrig">Hungrig</button><button data-nu-flagga="stark">Stark</button></div>`);
