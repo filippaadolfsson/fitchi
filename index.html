@@ -3546,7 +3546,7 @@ function fragaNu(){
 function ritaFraga(){
   document.querySelectorAll('#s-hem .mfraga').forEach(x => x.remove());
   const id = fragaNu(), h = document.getElementById('humor'); if(!id || !h) return;
-  const efter = h.nextElementSibling && h.nextElementSibling.classList.contains('egrad') ? h.nextElementSibling : h;
+  const efter = document.querySelector('#s-hem .xp') || (h.nextElementSibling && h.nextElementSibling.classList.contains('egrad') ? h.nextElementSibling : h);
   efter.insertAdjacentHTML('afterend', `<div class="mfraga" role="group" aria-label="${S.namn} undrar"><b>${S.namn} undrar: Vad blev det till ${maltidNamn(id).toLowerCase()}?</b>`
     + `<div class="knappar">${['bra', 'okej', 'snabbt'].map(b => `<button data-fraga-svar="${id}:${b}">${MBETYG[b]}</button>`).join('')}</div>`
     + `<div class="lankar"><button data-fraga-svar="${id}:hoppade">Hoppade över</button><button data-fraga-mer="${id}">Mer om tallriken</button></div></div>`);
@@ -3589,6 +3589,32 @@ if(typeof NOTIS !== 'undefined' && NOTIS){
 // direkt vid start och sedan när tiden går (frågan och mätaren följer klockan)
 setTimeout(() => { if(S.klar) ritaHem(); }, 0);
 { let sist = ''; setInterval(() => { try{ const nyck = `${fragaNu()}|${naringNu().varde}`; if(nyck !== sist && S.klar && !$('#slöja').classList.contains('oppen')){ sist = nyck; ritaHem(); } }catch(e){} }, 60000); }
+
+// ===== Nivå och XP i mitten, glöden får egen symbol uppe =====
+{ const st = document.createElement('style'); st.textContent = `
+  #s-hem .xp.nivarad{display:flex;flex-direction:column;align-items:stretch;gap:4px;width:min(320px,86%);align-self:center;margin:2px auto 0}
+  .nivarad .nrad{display:flex;align-items:center;gap:10px}
+  .nivarad #niva{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:6px;appearance:none;border:0;background:none;box-shadow:none;padding:0;cursor:pointer;font:800 15px var(--display);color:var(--pa-scen);white-space:nowrap}
+  .nivarad #niva svg{width:24px;height:24px;filter:drop-shadow(0 0 6px #c8f16966)}
+  .nivarad .xpbar{flex:1;width:auto;height:8px} .nivarad .xptal{font:800 12.5px var(--display);color:var(--pa-scen-d);white-space:nowrap}
+  .nivarad #xptext{text-align:center;font-size:12.5px;color:var(--pa-scen-d)}
+  .statusrad .glodrad .glodikon{display:inline-flex;flex:none;transition:filter .4s,opacity .4s}
+  .statusrad .glodrad .glodnamn{display:inline!important;font:800 14px var(--display);color:var(--pa-scen);margin-right:2px}`;
+  document.head.appendChild(st);
+  const xp = document.querySelector('#s-hem .xp'), niva = document.getElementById('niva'), glod = document.getElementById('glodrad');
+  if(xp && niva && glod){
+    xp.classList.add('nivarad');
+    const rad = document.createElement('div'); rad.className = 'nrad';
+    rad.append(niva, xp.querySelector('.xpbar')); rad.insertAdjacentHTML('beforeend', '<span class="xptal" id="xptal"></span>'); xp.prepend(rad);
+    glod.insertAdjacentHTML('afterbegin', `<span class="glodikon" aria-hidden="true">${stenSvg({w: 22, facetter: false})}</span>`);
+  }
+}
+{ const _rs = ritaStatus; ritaStatus = function(){ _rs.apply(this, arguments);
+    const n = document.getElementById('niva'); if(n) n.innerHTML = stenSvg({w: 24, text: String(S.niva), facetter: false}) + `Nivå ${S.niva}`;
+    const t = document.getElementById('xptal'); if(t) t.textContent = `${Math.round(S.xp)}/${xpBehov(S.niva)} XP`;
+    const x = document.getElementById('xptext'); if(x){ const nasta = NIVABEL.find(([q]) => q > S.niva); x.textContent = nasta ? `Nästa: ${nasta[2]} på nivå ${nasta[0]}` : `Nivå ${S.niva + 1} väntar`; }
+    const ik = document.querySelector('#glodrad .glodikon'); if(ik){ const g = Math.max(0, Math.min(100, S.glod)) / 100; ik.style.opacity = (.35 + .65 * g).toFixed(2); ik.style.filter = `drop-shadow(0 0 ${Math.round(2 + 8 * g)}px #c8f169aa) saturate(${(.3 + .7 * g).toFixed(2)})`; } }; }
+{ const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments); try{ ritaStatus(); }catch(e){} }; }
 
 </script>
 </body>
