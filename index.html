@@ -3337,8 +3337,6 @@ function kanslaKnappar(sov){
   .kanslarad{display:grid!important;grid-template-columns:1fr 1fr;gap:10px}
   .kanslarad button{min-height:56px}
   #humor{cursor:pointer}
-  #humor::after{content:"";display:inline-block;width:14px;height:14px;margin-left:8px;vertical-align:1px;background:var(--lime);opacity:.8;
-    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat;
     mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat}
   .humorvarfor{align-self:stretch;display:flex;flex-direction:column;gap:7px;padding:12px 14px;border-radius:18px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);font-size:13.5px}
   .humorvarfor>span{display:flex;justify-content:space-between;gap:10px;color:var(--pa-scen-d)} .humorvarfor *{text-decoration:none;box-shadow:none;background:none;padding:0;border:0} .humorvarfor b{color:var(--pa-scen)}
@@ -3617,6 +3615,37 @@ setTimeout(() => { if(S.klar) ritaHem(); }, 0);
     if(x) x.textContent = g <= 0 ? `${S.namn} vilar i sin kristall` : g < 30 ? 'Glöden falnar. Ett litet uppdrag får den att lysa igen.' : g < 70 ? `${S.namn} lyser när du är aktiv` : `${S.namn} lyser starkt idag`;
     const ik = document.querySelector('#glodrad .glodikon'); if(ik){ const k = g / 100; ik.style.opacity = (.35 + .65 * k).toFixed(2); ik.style.filter = `drop-shadow(0 0 ${Math.round(2 + 8 * k)}px #c8f169aa) saturate(${(.3 + .7 * k).toFixed(2)})`; } }; }
 { const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments); try{ ritaStatus(); }catch(e){} }; }
+
+// ===== Humörikonen: ett ansikte som visar ditt senaste svar (ersätter pennan) =====
+const ANSIKTE = {
+  pigg: '<circle cx="9" cy="10" r="1.3"/><circle cx="15" cy="10" r="1.3"/><path d="M7.5 14c1.2 2.3 7.8 2.3 9 0"/>',
+  glad: '<path d="M7.6 10.4q1.4-1.6 2.8 0M13.6 10.4q1.4-1.6 2.8 0"/><path d="M7.5 14c1.2 2.6 7.8 2.6 9 0"/>',
+  okej: '<circle cx="9" cy="10" r="1.3"/><circle cx="15" cy="10" r="1.3"/><path d="M8.5 15c1.5 1 5.5 1 7 0"/>',
+  trott: '<path d="M7.6 10.6h2.8M13.6 10.6h2.8"/><path d="M9.5 15.5h5"/>',
+  stressad: '<circle cx="9" cy="10" r="1.3"/><circle cx="15" cy="10" r="1.3"/><path d="M7.5 15.5l1.5-1 1.5 1 1.5-1 1.5 1 1.5-1 1.5 1"/>',
+  ledsen: '<circle cx="9" cy="10" r="1.3"/><circle cx="15" cy="10" r="1.3"/><path d="M8.5 16c1.5-1.6 5.5-1.6 7 0"/>',
+  tom: '<circle cx="9" cy="10" r="1.3"/><circle cx="15" cy="10" r="1.3"/><path d="M9.5 15h5"/>'};
+{ const st = document.createElement('style'); st.textContent = `
+  .humorrad{display:flex;align-items:center;justify-content:center;gap:10px}
+  .humorrad #humor{margin:0}
+  .kanslaikon{appearance:none;border:0;cursor:pointer;flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#c8f1691f;box-shadow:inset 0 0 0 1.5px #c8f16999;color:var(--lime);padding:0}
+  .kanslaikon svg{width:24px;height:24px}
+  .kanslaikon.ny{animation:kpuls 2.4s ease-in-out infinite} @keyframes kpuls{0%,100%{box-shadow:inset 0 0 0 1.5px #c8f16999,0 0 0 0 #c8f16955}50%{box-shadow:inset 0 0 0 1.5px #c8f16999,0 0 0 7px #c8f16900}}`;
+  document.head.appendChild(st);
+  const h = document.getElementById('humor');
+  if(h){ const w = document.createElement('div'); w.className = 'humorrad'; h.parentNode.insertBefore(w, h); w.append(h);
+    w.insertAdjacentHTML('beforeend', '<button class="kanslaikon" id="kanslaikon" aria-label="Säg hur du mår"></button>'); }
+}
+function ritaKanslaIkon(){
+  const b = document.getElementById('kanslaikon'); if(!b) return;
+  const k = typeof kanslaIdag === 'function' ? kanslaIdag() : null, val = k && k.val && ANSIKTE[k.val] ? k.val : 'tom';
+  b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/>${ANSIKTE[val]}</svg>`;
+  b.classList.toggle('ny', val === 'tom'); b.hidden = !S.klar || S.sover || S.glod <= 0;
+  b.setAttribute('aria-label', val === 'tom' ? 'Säg hur du mår' : `Du har sagt ${KANSLA[val][0].toLowerCase()}. Ändra hur du mår`);
+}
+document.addEventListener('click', e => { if(e.target.closest('#kanslaikon')){ e.stopImmediatePropagation(); visaKansla(); } }, true);
+{ const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments); try{ ritaKanslaIkon(); }catch(e){} }; }
+setTimeout(() => { try{ ritaKanslaIkon(); }catch(e){} }, 0);
 
 </script>
 </body>
