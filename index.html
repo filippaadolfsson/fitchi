@@ -1106,7 +1106,7 @@ document.addEventListener('click', e => {
   if(e.target.id==='slöja' || e.target.closest('#stang') || e.target.closest('#tillMat')) stangArk();
   const v = e.target.closest('[data-valj]'); if(v){ const mt = $('#ark').dataset.m; let i = S.uppdrag.findIndex(u => u.m===mt && !u.klar); if(i<0) i = S.uppdrag.findIndex(u => !u.klar); if(i<0) i = 0; S.uppdrag[i] = {m:mt, t:v.dataset.valj, p:POANG[mt], varfor:'Du valde det själv', klar:false}; ritaUppdrag(i); stangArk();
     const t = $('#toast4'); t.textContent = 'Uppdraget har lagts till i dagens tre'; t.classList.add('syns'); setTimeout(() => t.classList.remove('syns'), 1600); }
-  const k = e.target.closest('[data-kansla]'); if(k){ document.querySelectorAll('[data-kansla]').forEach(x => x.setAttribute('aria-pressed', x===k));
+  const k = e.target.closest('[data-kansla]'); if(k && ['Lugn','Okej','Lite stressad','Stressad','Trött'].includes(k.dataset.kansla)){ document.querySelectorAll('[data-kansla]').forEach(x => x.setAttribute('aria-pressed', x===k));
     S.m.lugn = {'Lugn':72,'Okej':58,'Lite stressad':38,'Stressad':26,'Trött':34}[k.dataset.kansla]; ritaHem(); oppnaMatare('lugn'); }
 });
 document.addEventListener('keydown', e => { if(e.key==='Escape') stangArk(); });
@@ -1436,7 +1436,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -1658,7 +1658,7 @@ function loggaDag(){
     const post = {id: 'p' + Date.now(), tid: Date.now(), typ: S.typ, namn: t[1], min: S.min, m: t[2]};
     S.passlogg = (S.passlogg || []).concat(post).slice(-60); _sp();
     post.eff = {m: Object.fromEntries(Object.keys(S.m).map(k => [k, Math.round(S.m[k] - fore.m[k])])), mynt: S.saldo - fore.saldo, xp: Math.min(35, Math.round(S.min * 0.8)), glod: Math.round(S.glod - fore.glod)}; spara(); }; }
-document.addEventListener('click', e => { const k = e.target.closest('[data-kansla]'); if(k){ S.data.kansla = k.dataset.kansla; S.data.kanslaDag = dagNr(new Date()); setTimeout(spara, 100); } }, true);
+// (den gamla incheckningen ersattes av känslan på hemskärmen)
 const _oppnaMatare = oppnaMatare;
 oppnaMatare = function(k){
   const m = MATARE[k], d = S.data, idag = dagNr(new Date()), klocka = !!(HALSA && d.halsa);
@@ -1693,7 +1693,7 @@ oppnaMatare = function(k){
       rader.push(['Sömn', '7 h 20 min', ex], ['Vilopuls', '58 slag/min', ex]);
       if(d.sovSvar) rader.push(['Hur du sov', {bra:'Bra', okej:'Okej', daligt:'Dåligt'}[d.sovSvar], 'Ditt svar i morse']);
     }
-    if(d.kansla && d.kanslaDag === idag) rader.push(['Din incheckning', d.kansla, 'Idag']);
+    { const kk = typeof kanslaIdag === 'function' ? kanslaIdag() : null; if(kk && kk.val && KANSLA[kk.val]) rader.push(['Du har sagt', KANSLA[kk.val][0], 'Idag']); }
   }
   if(k === 'naring'){
     const n = naringNu();
@@ -3683,6 +3683,90 @@ function ritaKanslaIkon(){
 document.addEventListener('click', e => { if(e.target.closest('#kanslaikon')){ e.stopImmediatePropagation(); visaKansla(); } }, true);
 { const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments); try{ ritaKanslaIkon(); }catch(e){} }; }
 setTimeout(() => { try{ ritaKanslaIkon(); }catch(e){} }, 0);
+
+// ===== Dagens uppdrag: större bank, följer humöret, fler bockas av automatiskt =====
+const UBANK = {
+  energi: [{t: '{m} min promenad', typ: 'promenad'}, {t: '{m} min cykel', typ: 'cykel'}, {t: '{m} min dans till favoritlåtar', typ: 'dans'}, {t: '{m} min löpning', typ: 'lopning'},
+    {t: 'Ta trapporna hela dagen'}, {t: '8 000 steg idag', auto: 'steg8000', p: 15, krav: () => S.data && S.data.halsa}, {t: 'Gå av en hållplats tidigare'},
+    {t: 'Gå medan du pratar i telefon'}, {t: '2 × 10 min promenad', typ: 'promenad'}],
+  styrka: [{t: '{m} min styrka hemma', typ: 'hemma'}, {t: '{m} min gympass', typ: 'styrka'}, {t: '3 × 10 knäböj'}, {t: 'Plankan 3 × 30 sekunder'},
+    {t: '20 armhävningar, gärna mot en bänk'}, {t: 'Utfallssteg 3 × 10'}, {t: 'Väggsittning 3 × 30 sekunder'}, {t: 'Styrkepass på minst 20 min', auto: 'styrka20', p: 15}],
+  lugn: [{t: '5 min meditation'}, {t: 'Andas med {namn}', auto: 'andas', krav: () => (S.niva || 1) >= 3}, {t: '{m} min yoga', typ: 'yoga'},
+    {t: 'Promenad i dagsljus utan mobil', nar: h => h < 16}, {t: 'Skärmfritt efter kl. 21'}, {t: 'Natta {namn} före kl. 23', auto: 'natta'},
+    {t: '10 min stretch före sängen'}, {t: '5 min utan skärm efter lunch', nar: h => h < 14}],
+  naring: [{t: 'Proteinrik frukost', auto: 'frukostProtein', nar: h => h < 10.5, f: ['protein', 'balans']},
+    {t: 'Protein på tallriken till lunch', auto: 'lunchProtein', nar: h => h < 14.5, f: ['protein', 'balans']},
+    {t: 'Ät något med protein före kl. 15', auto: 'protein15', nar: h => h < 15, f: ['protein']},
+    {t: 'En näve grönt till middagen', auto: 'middagGront', nar: h => h < 20.5, f: ['gront', 'balans']},
+    {t: 'Frukt till mellanmål', auto: 'frukt', f: ['gront', 'sug']},
+    {t: 'Två glas vatten till lunch', auto: 'vatten2', nar: h => h < 14, f: ['vatten', 'balans']},
+    {t: '6 glas vatten idag', auto: 'vatten6', f: ['vatten']},
+    {t: 'Logga tre måltider idag', auto: 'maltider3', nar: h => h < 19, f: ['regelbundet', 'balans', 'sug']},
+    {t: 'Ät lunch före kl. 13', auto: 'lunch13', nar: h => h < 12.5, f: ['regelbundet']}],
+  gladje: [{t: 'Unna dig något gott, helt utan dåligt samvete'}, {t: 'Ring eller sms:a någon du gillar', ledsen: true}, {t: 'Gör något bara för skojs skull'},
+    {t: 'Lyssna på en låt du älskar, högt', ledsen: true}, {t: 'Sätt dig i solen en stund', ledsen: true, nar: h => h < 17},
+    {t: 'Skicka en pepp till en vän', auto: 'pepp', krav: () => typeof vanLista !== 'undefined' && vanLista && vanLista.length > 0},
+    {t: 'Skriv ner en sak du är tacksam för', ledsen: true}, {t: 'Ta en bild på något fint'}, {t: 'Dansa till en låt'}]};
+const UAUTO = {
+  steg8000: () => (S.data && S.data.halsa && S.data.steg) >= 8000,
+  styrka20: () => (S.passlogg || []).some(p => !p.borttagen && (p.typ === 'styrka' || p.typ === 'hemma') && p.min >= 20 && dagNr(new Date(p.tid)) === dagNr(new Date())),
+  andas: () => S.andasDag === dagNr(new Date()),
+  natta: () => S.sover && new Date().getHours() < 23 && new Date().getHours() >= 17,
+  frukostProtein: () => maltiderIdag().some(x => x.maltid === 'frukost' && (x.tallrik || []).includes('protein')),
+  lunchProtein: () => maltiderIdag().some(x => x.maltid === 'lunch' && (x.tallrik || []).includes('protein')),
+  protein15: () => maltiderIdag().some(x => (x.tallrik || []).includes('protein') && new Date(x.tid).getHours() < 15),
+  middagGront: () => maltiderIdag().some(x => x.maltid === 'middag' && (x.tallrik || []).includes('gront')),
+  frukt: () => maltiderIdag().some(x => (x.tallrik || []).includes('frukt')),
+  vatten2: () => (S.vatten || 0) >= 2, vatten6: () => (S.vatten || 0) >= 6,
+  maltider3: () => ['frukost', 'lunch', 'middag'].every(m => maltiderIdag().some(x => x.maltid === m && x.betyg !== 'hoppade')),
+  lunch13: () => maltiderIdag().some(x => x.maltid === 'lunch' && x.betyg !== 'hoppade' && new Date(x.tid).getHours() < 13),
+  pepp: () => (S.peppIdag || []).length > 0};
+const UVARFOR = {trott: ['lugn', '{namn} är trött. Vila går först idag'], stressad: ['lugn', 'Lugn först idag'], hungrig: ['naring', '{namn} är hungrig'],
+  stark: ['styrka', 'Du är stark idag, passa på'], pigg: ['energi', 'Du är pigg, passa på'], ledsen: ['gladje', 'Något som gör dagen lite ljusare']};
+valjUppdrag = function(matare, utesluten){
+  let min = {'5': 5, '15': 15, '30': 30, '45': 45}[S.pref.tid] || 15; if(S.start === 'igang') min = Math.min(min, 10); if(S.start === 'uppehall') min = Math.min(min, 15);
+  if(S.data && (S.data.borta >= 3 || (S.data.halsa && S.data.steg < 4000))) min = Math.min(min, 10);
+  const h = new Date().getHours() + new Date().getMinutes() / 60, upptagna = (S.uppdrag || []).map(u => u.t), ford = fokusLista();
+  const namn = x => x.t.replace('{m}', min).replace('{namn}', S.namn);
+  let lista = UBANK[matare].filter(x => namn(x) !== utesluten && !upptagna.includes(namn(x)) && (!x.nar || x.nar(h)) && (!x.krav || x.krav()) && !(x.auto && UAUTO[x.auto] && (() => { try{ return UAUTO[x.auto](); }catch(e){ return false; } })()));
+  if(!lista.length) lista = UBANK[matare];
+  const vikt = x => (x.typ && S.pref.typer.has(x.typ) ? 3 : 1) * (x.f && x.f.some(f => ford.includes(f)) ? 3 : 1) * (matare === 'gladje' && x.ledsen && humor()[0] === 'ledsen' ? 4 : 1);
+  const summa = lista.reduce((a, x) => a + vikt(x), 0); let r = Math.random() * summa, val = lista[0];
+  for(const x of lista){ r -= vikt(x); if(r <= 0){ val = x; break; } }
+  return {m: matare, t: namn(val), p: val.p || POANG[matare], varfor: VARFOR[matare], auto: val.auto || null, v: 2, klar: false};
+};
+skapaUppdrag = function(){
+  let ordning = ['energi', 'styrka', 'lugn', 'naring'].sort((a, b) => S.m[a] - S.m[b]);
+  const mood = (() => { try{ return humor()[0]; }catch(e){ return 'neutral'; } })(), u = UVARFOR[mood];
+  if(S.sit.has('glp1')) ordning = ['styrka', 'naring', ...ordning.filter(x => x !== 'styrka' && x !== 'naring')];
+  if(u && u[0] !== 'gladje') ordning = [u[0], ...ordning.filter(x => x !== u[0])];
+  if(S.sit.has('stress') || S.vila || mood === 'trott' || mood === 'stressad') ordning = ['lugn', ...ordning.filter(x => x !== 'lugn' && x !== 'styrka')];
+  S.uppdrag = [];
+  for(const m of ordning.slice(0, 2)) S.uppdrag.push(valjUppdrag(m));
+  S.uppdrag.push(valjUppdrag('gladje'));
+  if(u){ const i = S.uppdrag.findIndex(x => x.m === u[0]); if(i >= 0) S.uppdrag[i].varfor = u[1].replace('{namn}', S.namn); }
+  if(S.vila) S.uppdrag[0] = {m: 'lugn', t: 'Vilodag: 15 min lugn stretch', p: 10, varfor: 'Kroppen behöver återhämtning', klar: false};
+  if(S.data.borta >= 3){ S.uppdrag[0] = {m: 'energi', t: '5 min promenad, bara för att komma igång', p: 10, varfor: 'En mjuk start efter pausen', klar: false};
+    S.uppdrag[1] = {m: 'gladje', t: `Klappa på ${S.namn}`, p: 10, varfor: `${S.namn} har saknat dig`, klar: false}; }
+};
+// automatiska bockar: när det du gör i appen uppfyller uppdraget
+function autoUppdrag(){
+  (S.uppdrag || []).forEach((u, i) => { if(u.klar || !u.auto || !UAUTO[u.auto] || u._bockas) return; let ok = false; try{ ok = UAUTO[u.auto](); }catch(e){}
+    if(!ok) return; u._bockas = true;
+    setTimeout(() => { const k = document.querySelector(`[data-klar="${i}"]`); if(k && !S.uppdrag[i].klar){ k.click(); setTimeout(() => toastG(`Uppdraget "${u.t}" är klart!`, 2600), 1900); } else u._bockas = false; }, 700); });
+}
+{ const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments); try{ autoUppdrag(); }catch(e){} }; }
+// har man inte börjat på dagens uppdrag får de följa humöret när man svarat hur man mår
+document.addEventListener('click', e => { if(!e.target.closest('[data-kansla],[data-nu]')) return;
+  setTimeout(() => { if(S.uppdrag && !S.uppdrag.some(u => u.klar) && S.byten === 2 && S.uppdragHumorDag !== dagNr(new Date())){ S.uppdragHumorDag = dagNr(new Date()); skapaUppdrag(); ritaUppdrag(); spara(); } }, 400); });
+// dagens uppdrag som skapades innan den nya banken laddades byts ut, om man inte har börjat på dem
+setTimeout(() => { try{ if(S.klar && S.uppdrag && !S.uppdrag.some(u => u.v === 2 || u.klar) && S.byten === 2 && !S.data.borta && !S.vila){ skapaUppdrag(); ritaUppdrag(); spara(); } }catch(e){} }, 0);
+// skydd: en mätare får aldrig bli trasig (NaN)
+{ const _rh = ritaHem; ritaHem = function(){ try{ for(const k of ['energi', 'styrka', 'lugn', 'naring']) if(!Number.isFinite(S.m[k])) S.m[k] = 55; }catch(e){} return _rh.apply(this, arguments); }; }
+// visa vilka uppdrag som bockas av av sig själva
+{ const _ru = ritaUppdrag; ritaUppdrag = function(){ _ru.apply(this, arguments);
+    document.querySelectorAll('#uppdrag3 .ukort').forEach((el, i) => { const u = (S.uppdrag || [])[i]; if(!u || u.klar || !u.auto) return;
+      const sm = el.querySelector('.ut small'); if(sm && !sm.querySelector('.auto')) sm.insertAdjacentHTML('beforeend', ' · <span class="auto">klaras av sig själv</span>'); }); }; }
 
 </script>
 </body>
