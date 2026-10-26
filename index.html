@@ -3593,6 +3593,10 @@ setTimeout(() => { if(S.klar) ritaHem(); }, 0);
 { const st = document.createElement('style'); st.textContent = `
   .statusrad .xpbar{flex:1;min-width:50px;width:auto;height:8px;border-radius:99px!important;background:#ffffff1a!important;overflow:hidden}
   .statusrad .xptal{font:800 12px var(--display);color:var(--pa-scen-d);white-space:nowrap;cursor:pointer}
+  #s-hem .horn.statusrad{min-width:0;max-width:100%;box-sizing:border-box} .statusrad > *{min-width:0}
+  .statusrad .xpbar{min-width:36px}
+  @media (max-width:420px){ .statusrad .xptal{font-size:11px} .statusrad #niva{font-size:13.5px;gap:4px} .statusrad .sep{margin:0 1px} #s-hem .horn.statusrad{gap:5px;padding-right:10px} }
+  @media (max-width:350px){ .statusrad .xptal{display:none} }
   #s-hem .xp.glodmitt{display:flex;flex-direction:column;align-items:stretch;gap:4px;width:min(300px,84%);align-self:center;margin:2px auto 0;padding:0;background:none;box-shadow:none}
   .glodmitt .glodrad{align-self:stretch!important;width:auto!important;margin:0!important;padding:0!important;background:none!important;box-shadow:none!important;gap:8px}
   .glodmitt .glodrad > svg{display:none}
