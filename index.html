@@ -1091,7 +1091,7 @@ function oppnaMatare(k){
   <div class="arkhuvud"><svg width="100" height="100" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--glas-kant)" stroke-width="10"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--${k})" stroke-width="10" stroke-linecap="round" stroke-dasharray="${d.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 50 50)"/><text x="50" y="58" text-anchor="middle" fill="var(--pa-scen)" font-family="Bricolage Grotesque" font-weight="800" font-size="26">${v}</text></svg>
     <div style="display:flex;flex-direction:column;gap:4px"><p class="rubrik-liten">${status}</p><h2 id="arkTitel" style="font-size:30px">${m.namn}</h2><p style="font-size:13px;line-height:18px;color:var(--pa-scen-d)">${m.om}</p></div>
     <button class="stang" id="stang" aria-label="Stäng">×</button></div>
-  ${m.checkin ? `<div><p class="rubrik-liten" style="margin-bottom:8px">Hur mår du nu?</p><div class="kansla">${['Lugn','Okej','Lite stressad','Stressad','Trött'].map(t => `<button aria-pressed="${t==='Lite stressad'}" data-kansla="${t}">${t}</button>`).join('')}</div></div>` : ''}
+  
   <div class="insiktark" style="background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant)"><b>Form: steg ${formSteg()[k]} av 4.</b> ${formSteg()[k] >= 4 ? 'Full form. Håll i det!' : `Med jämn aktivitet tar ${S.namn} nästa steg om cirka ${Math.max(1, Math.round((Math.floor(S.form[k])+1 - S.form[k]) / 0.34))} veckor.`}</div>
   <div><p class="rubrik-liten" style="margin-bottom:8px">Idag</p><div class="rader">${m.kallor.map(([a,b,c]) => `<div class="rad2"><span>${a}<small>${c}</small></span><b>${b}</b></div>`).join('')}</div></div>
   <div><p class="rubrik-liten" style="margin-bottom:8px">Senaste veckan</p><div class="vecka">${m.vecka.map((x,i) => `<div class="${i===6?'idag':''}"><i style="height:${x}%;background:var(--${k})"></i><span>${i===6?'idag':DAGAR[i]}</span></div>`).join('')}</div></div>
@@ -3344,7 +3344,7 @@ function kanslaKnappar(sov){
   document.head.appendChild(st); }
 const somnPoang = tim => { const P = [[4, 15], [5, 35], [6, 60], [7, 80], [8, 95]]; if(tim <= 4) return 15; if(tim >= 8) return 95;
   for(let i = 1; i < P.length; i++) if(tim <= P[i][0]){ const [a, pa] = P[i-1], [b, pb] = P[i]; return Math.round(pa + (pb - pa) * (tim - a) / (b - a)); } };
-function kanslaIdag(){ const k = S.kansla; return k && k.dag === dagNr(new Date()) ? k : null; }
+function kanslaIdag(){ const k = S.kansla; if(k && k.val && !KANSLA[k.val]) delete k.val; return k && k.dag === dagNr(new Date()) ? k : null; }
 function mabra(){
   const idag = dagNr(new Date()), h = S.halsa || {};
   const klocka = h.somnDag === idag && h.somnMin > 0 ? somnPoang(h.somnMin / 60) : null;
@@ -3401,7 +3401,7 @@ Object.assign(REAKTION, {
   stressad: {form: 'bubbla', farg: ['#d9b8f0', '#ffffff99'], n: 6, t: 2.2, text: n => `${n} andas ut lite`}});
 // valet i morgonfrågan
 document.addEventListener('click', e => { const b = e.target.closest('[data-kansla]'); if(!b) return;
-  const k = kanslaIdag() || {dag: dagNr(new Date())}; k.val = b.dataset.kansla; k.tid = Date.now(); S.kansla = k; }, true);
+  if(!KANSLA[b.dataset.kansla]) return; const k = kanslaIdag() || {dag: dagNr(new Date())}; k.val = b.dataset.kansla; k.tid = Date.now(); S.kansla = k; }, true);
 // Hur mår du nu? – tryck på humöret
 function visaKansla(){
   const m = mabra(), k = m.kansla, n = S.namn, rad = (a, b) => `<span><span>${a}</span><b>${b}</b></span>`;
