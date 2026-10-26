@@ -3200,6 +3200,9 @@ const STEGORD = {bebis: 'Bebis', barn: 'Barn', tonaring: 'Tonåring', vuxen: 'Vu
   .pval button[aria-pressed=true]{background:var(--lime);color:var(--pa-lime);box-shadow:none;font-weight:700}
   .folj{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:20px;background:#c8f1691a;box-shadow:inset 0 0 0 1px #c8f16966}
   .folj b{display:block;font-size:15px;color:var(--pa-scen)}.folj span{font-size:13px;color:var(--pa-scen-d)}
+  button.folj{appearance:none;border:0;cursor:pointer;font:inherit;color:inherit;width:100%} button.folj.av{background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant)} button.folj.av>span:first-child{opacity:.4;filter:grayscale(.6)}
+  .halsning{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:18px;background:#ffffff14;box-shadow:inset 0 0 0 1px var(--glas-kant);text-align:left}
+  .halsning img{width:40px;height:40px;object-fit:contain;flex:none} .halsning>span{flex:1;display:flex;flex-direction:column;font-size:12.5px;color:var(--pa-scen-d)} .halsning b{font-size:14px;color:var(--pa-scen)} .halsning em{font-style:normal;font-size:12px;color:var(--lime)}
   .hosdig{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:22px;background:#ff7a5c1a;box-shadow:inset 0 0 0 1px #ff7a5c66}
   .hosdig img{height:56px;width:auto;flex:none}
   .hosdig div{flex:1;min-width:0}.hosdig b{display:block;font-size:15px;color:var(--natt)}.hosdig span{font-size:13px;color:var(--dampad)}
@@ -3219,15 +3222,16 @@ async function hamtaBesok(){
     const prof = ids.length ? await sb('/rest/v1/profiler?select=id,namn,art,humor,niva&id=in.(' + ids.join(',') + ')') || [] : [];
     const P = Object.fromEntries(prof.map(p => [p.id, p])), idag = idagStr(), antal = {};
     rader.forEach(r => { const v = r.fran === me ? r.till : r.fran; antal[v] = antal[v] || {ut: 0, inn: 0}; antal[v][r.fran === me ? 'ut' : 'inn']++; });
+    const allaInn = rader.filter(r => r.till === me && r.dag === idag && P[r.fran]).map(r => ({...P[r.fran], text: r.text || '', besok: r.besok !== false}));
+    const allaUt = rader.filter(r => r.fran === me && r.dag === idag && P[r.till]).map(r => ({...P[r.till], sedd: r.sedd, besok: r.besok !== false}));
     BESOK = {
-      inn: rader.filter(r => r.till === me && r.dag === idag && P[r.fran]).map(r => ({...P[r.fran], text: r.text || ''})),
-      ut: rader.filter(r => r.fran === me && r.dag === idag && P[r.till]).map(r => ({...P[r.till], sedd: r.sedd})),
+      inn: allaInn.filter(v => v.besok), ut: allaUt.filter(v => v.besok), halsningar: allaInn.filter(v => !v.besok), allaInn, allaUt,
       logg: rader.filter(r => r.dag >= sedan && P[r.fran === me ? r.till : r.fran]).slice(0, 6).map(r => ({jag: r.fran === me, v: P[r.fran === me ? r.till : r.fran], dag: r.dag})),
       antal};
     besokLaddat = true; if(BESOK.inn.length >= 5) S.popular = S.popular || idagStr();
     // peppade ni varandra idag? båda fitchis får glöd, en gång per vän och dag
     S.besokBonus = S.besokBonus && S.besokBonus.dag === idag ? S.besokBonus : {dag: idag, ids: []};
-    BESOK.inn.filter(v => BESOK.ut.some(u => u.id === v.id) && !S.besokBonus.ids.includes(v.id)).forEach(v => { S.besokBonus.ids.push(v.id); andraGlod(10, `Du och ${v.namn} peppade varandra. Glöd +10`); });
+    BESOK.allaInn.filter(v => BESOK.allaUt.some(u => u.id === v.id) && !S.besokBonus.ids.includes(v.id)).forEach(v => { S.besokBonus.ids.push(v.id); andraGlod(10, `Du och ${v.namn} peppade varandra. Glöd +10`); });
     // bästisar: fem besök åt båda hållen
     const nya = Object.entries(antal).filter(([id, a]) => a.ut >= 5 && a.inn >= 5 && !(S.bastisar || []).includes(id)).map(([id]) => id);
     if(nya.length){ S.bastisar = [...(S.bastisar || []), ...nya]; const v = P[nya[0]]; if(v) setTimeout(() => visaBastisar(v), 1200); }
@@ -3248,6 +3252,8 @@ function ritaBesok(){
     if(fler.length) html += `<button class="bfler" data-gavanner aria-label="Se alla som hälsar på idag">${fler.slice(0, 3).map(f => `<img src="${vanBild(f)}" alt="">`).join('')}${fler.length > 3 ? `<b>+${fler.length - 3}</b>` : ''}<span>${fler.length === 1 ? fler[0].namn + ' hälsar också på' : fler.length + ' till hälsar på'}</span></button>`;
     html += peppad ? `<small>Ni peppade varandra idag</small>` : `<button class="lite" data-peppa="${v.id}">Peppa tillbaka</button><small>Peppar du tillbaka idag får båda +10 glöd</small>`;
   }
+  for(const h of (BESOK.halsningar || []).slice(0, 2)){ const pd = (S.peppIdag || []).includes(h.id);
+    html += `<div class="halsning"><img src="${vanBild(h)}" alt=""><span><b>${h.namn} skickade pepp</b><span>${h.text ? '”' + h.text + '”' : 'En hälsning till dig'}</span></span>${pd ? '<em>Peppad ✓</em>' : `<button class="lite" data-peppa="${h.id}">Peppa tillbaka</button>`}</div>`; }
   if(ut) html += `<div class="utkort"><span class="ubild"><img src="${vanBild(ut)}" alt="" style="left:4px;height:58px"><img src="${(F3DP[S.art] || {}).neutral || F3D[S.art]}" alt="" style="right:2px;height:42px"></span><span><b>${S.namn} hälsar på hos ${ut.namn}</b><span>Resten av dagen</span>${ut.sedd ? '<em>Besöket är sett ✓</em>' : ''}</span></div>`;
   if(html) xp.insertAdjacentHTML('afterend', `<div class="besokrad">${html}</div>`);
 }
@@ -3260,13 +3266,14 @@ function peppaArk(id){
   const v = vanLista.find(x => x.id === id) || BESOK.inn.find(x => x.id === id); if(!v) return;
   oppnaArk(arkHuvud(`Peppa ${v.namn}`, `${v.namn} ${HUMORTEXT[v.humor] || 'mår bra'}`, `Nivå ${v.niva} · ${STEGORD[stegNu(v.niva)]}`)
     + `<div class="pval" role="group" aria-label="Välj pepp">${PEPPTEXT.map((t, i) => `<button data-pval="${i}" aria-pressed="${i === 0}">${t}</button>`).join('')}</div>`
-    + `<div class="folj"><span style="width:58px;flex:none">${ork('pigg', 58)}</span><div><b>${S.namn} följer med peppen</b><span>och hälsar på hos ${v.namn} resten av dagen.</span></div></div>`
-    + `<button class="knapp" data-skickapepp="${v.id}">Skicka pepp och hälsa på</button><p class="liten" style="text-align:center;margin:0">Ett besök per vän och dag</p>`);
+    + `<button class="folj" data-folj aria-pressed="true"><span style="width:58px;flex:none">${ork('pigg', 58)}</span><div style="flex:1;text-align:left"><b class="fb">${S.namn} följer med peppen</b><span class="ft">och hälsar på hos ${v.namn} resten av dagen.</span></div><span class="vaxel pa" aria-hidden="true"></span></button>`
+    + `<button class="knapp" data-skickapepp="${v.id}">Skicka pepp och hälsa på</button><p class="liten" style="text-align:center;margin:0">En pepp per vän och dag</p>`);
 }
-async function skickaPepp(id, text){
-  const kropp = {fran: sbSession.uid, till: id, text};
+async function skickaPepp(id, text, besok){
+  const kropp = {fran: sbSession.uid, till: id, text}; if(besok === false) kropp.besok = false;
   try{ await sb('/rest/v1/pepp', {method: 'POST', body: JSON.stringify(kropp)}); }
-  catch(err){ if(/text/i.test(String(err && err.message))){ delete kropp.text; await sb('/rest/v1/pepp', {method: 'POST', body: JSON.stringify(kropp)}); } else throw err; }
+  catch(err){ if(kropp.besok === false && /besok/i.test(String(err && err.message))) throw new Error('utan besök');
+    if(/text/i.test(String(err && err.message))){ delete kropp.text; await sb('/rest/v1/pepp', {method: 'POST', body: JSON.stringify(kropp)}); } else throw err; }
 }
 document.addEventListener('click', async e => {
   // Peppa-knappen öppnar arket i stället för att skicka direkt
@@ -3275,12 +3282,19 @@ document.addEventListener('click', async e => {
   if(e.target.closest('[data-gavanner]')){ visa('s-vanner'); return; }
   const pv = e.target.closest('[data-pval]'); if(pv){ pv.parentElement.querySelectorAll('[data-pval]').forEach(b => b.setAttribute('aria-pressed', b === pv)); return; }
   const sk = e.target.closest('[data-skickapepp]');
+  const fj = e.target.closest('[data-folj]'); if(fj){ const pa = fj.getAttribute('aria-pressed') !== 'true';
+    fj.setAttribute('aria-pressed', pa); fj.querySelector('.vaxel').classList.toggle('pa', pa); fj.classList.toggle('av', !pa);
+    const vn = (document.querySelector('#ark [data-skickapepp]') || {}).dataset; const v = vn && (vanLista.find(x => x.id === vn.skickapepp) || BESOK.inn.find(x => x.id === vn.skickapepp));
+    fj.querySelector('.fb').textContent = pa ? `${S.namn} följer med peppen` : `${S.namn} stannar hemma`;
+    fj.querySelector('.ft').textContent = pa ? `och hälsar på hos ${v ? v.namn : 'din vän'} resten av dagen.` : 'Bara hälsningen skickas.';
+    const k = document.querySelector('#ark [data-skickapepp]'); if(k) k.textContent = pa ? 'Skicka pepp och hälsa på' : 'Skicka pepp'; return; }
   if(sk){ const id = sk.dataset.skickapepp, val = document.querySelector('#ark [data-pval][aria-pressed=true]'), text = PEPPTEXT[val ? +val.dataset.pval : 0];
+    const folj = (document.querySelector('#ark [data-folj]') || {getAttribute: () => 'true'}).getAttribute('aria-pressed') === 'true', etikett = sk.textContent;
     sk.disabled = true; sk.textContent = 'Skickar …';
-    try{ await skickaPepp(id, text); S.peppIdag = [...new Set([...(S.peppIdag || []), id])]; spara(); stangArk(); klappa();
+    try{ await skickaPepp(id, text, folj); S.peppIdag = [...new Set([...(S.peppIdag || []), id])]; spara(); stangArk(); klappa();
       const v = vanLista.find(x => x.id === id) || BESOK.inn.find(x => x.id === id);
-      toastG(`${S.namn} hälsar på hos ${v ? v.namn : 'din vän'} idag!`, 2600); hamtaBesok(); if(document.querySelector('#s-vanner.aktiv')) ritaVanner(); }
-    catch(err){ sk.disabled = false; sk.textContent = 'Skicka pepp och hälsa på'; toastG(/duplicate|23505|unique/i.test(String(err && err.message)) ? 'Du har redan peppat idag.' : 'Kunde inte peppa just nu.', 2400); }
+      toastG(folj ? `${S.namn} hälsar på hos ${v ? v.namn : 'din vän'} idag!` : `Peppen är skickad till ${v ? v.namn : 'din vän'}!`, 2600); hamtaBesok(); if(document.querySelector('#s-vanner.aktiv')) ritaVanner(); }
+    catch(err){ sk.disabled = false; sk.textContent = etikett; toastG(/duplicate|23505|unique/i.test(String(err && err.message)) ? 'Du har redan peppat idag.' : /utan besök/.test(String(err && err.message)) ? 'Pepp utan besök fungerar snart. Slå på "följer med" så länge.' : 'Kunde inte peppa just nu.', 2600); }
     return; }
 }, true);
 {
