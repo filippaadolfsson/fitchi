@@ -626,7 +626,7 @@ body.testlage .panel,body.testlage .hint{display:flex}
     <p class="etk">Lägg till med ett klick</p>
     <div class="snabb" id="snabb"></div>
     <button class="knapp" id="foto" style="background:var(--vit);color:var(--natt);box-shadow:0 1px 2px #1c142010">Fota måltiden</button>
-    <p class="liten" style="text-align:center">Fitchi räknar protein, grönsaker och vatten. Aldrig kalorier eller vikt.</p>
+    <p class="liten" style="text-align:center">Fitchi räknar protein, grönsaker och vatten. Kalorier bara om du vill, och aldrig vikt.</p>
   </div>
   <nav class="flikar" aria-label="Meny" data-flikar></nav>
 </section>
@@ -1079,7 +1079,7 @@ const MATARE = {
     kallor:[['Sömn','6 h 10 min','Apple Hälsa'],['Vilopuls','58 slag/min','Apple Watch'],['HRV','42 ms, lägre än vanligt','Apple Watch'],['Din incheckning','Lite stressad','I morse']],
     vecka:[60,58,45,52,40,35,38], insikt:'Vilan sjunker de nätter du sover under 7 timmar. Ikväll kan vara ett bra tillfälle för en tidig kväll.',
     uppdrag:[['10 min andning',20],['Promenad i dagsljus',20],['Skärmfritt efter kl. 21',25]], checkin:true},
-  naring:{namn:'Näring', om:'Protein, grönsaker, vatten och regelbundna måltider. Aldrig kalorier.',
+  naring:{namn:'Näring', om:'Protein, grönsaker, vatten och regelbundna måltider. Kalorier bara om du vill.',
     kallor:[['Protein','54 av 90 g','Mat'],['Grönsaker','2 av 5 portioner','Mat'],['Vatten','4 av 8 glas','Mat'],['Måltider','2 av 3 idag','Mat']],
     vecka:[65,72,70,60,75,68,70], insikt:'Du når proteinmålet oftare de dagar du äter frukost före kl. 09.',
     uppdrag:[['Proteinrikt mellanmål',15],['Två glas vatten till lunch',10],['En näve grönt till middagen',10]], mat:true}};
@@ -1436,7 +1436,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -1701,6 +1701,7 @@ oppnaMatare = function(k){
       ['Protein', `${n.medProtein} av ${Math.max(1, n.loggade)} måltider`, S.protein ? `ungefär ${Math.round(S.protein)} g` : 'Ungefär'],
       ['Grönt och frukt', `${n.gront} av 5`, 'Portioner, ungefär'], ['Vatten', `${S.vatten || 0} av 8 glas`, 'Loggas med +'],
       ['Ditt fokus', fokusText(), 'Tryck för att byta']);
+    if(S.visaKcal){ const kc = matloggNu().reduce((a, x) => a + (x.kcal || 0), 0); rader.push(['Kalorier idag', kc ? `ca ${kc.toLocaleString('sv-SE')} kcal` : 'inga loggade', 'Bara om du vill']); }
     insikt = n.tips;
   }
   m.kallor = rader; m.insikt = insikt || '';
@@ -2373,7 +2374,7 @@ document.addEventListener('click', e => { const b = e.target.closest('#snabb [da
   document.head.appendChild(st);
 }
 const klocka = t => new Date(t).toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'});
-const matDetalj = x => x.betyg ? [MBETYG[x.betyg] || '', (x.tallrik || []).map(k => TALLRIK[k]).join(', ')].filter(Boolean).join(' · ') : [x.protein ? x.protein + ' g protein' : '', x.gront ? x.gront + ' grönt' : '', x.vatten ? x.vatten + ' glas vatten' : ''].filter(Boolean).join(' · ') || 'Inget räknat';
+const matDetalj = x => { const d = (x.betyg ? [MBETYG[x.betyg] || '', (x.tallrik || []).map(k => TALLRIK[k]).join(', ')].filter(Boolean).join(' · ') : '') || [x.protein ? x.protein + ' g protein' : '', x.gront ? x.gront + ' grönt' : '', x.vatten ? x.vatten + ' glas vatten' : ''].filter(Boolean).join(' · '); const k = S.visaKcal && x.kcal ? x.kcal + ' kcal' : ''; return [d, k].filter(Boolean).join(' · ') || 'Inget räknat'; };
 let egenRedigera = false;
 function ritaMatlogg(){
   let w = document.getElementById('matloggWrap');
@@ -2688,9 +2689,9 @@ function ritaEgen(){ const w = $('#egenWrap'); if(!w) return; const l = S.egenMa
   $('#egenrad').innerHTML = l.map((m, i) => `<button data-egen="${i}">${m.namn}<small>${m.protein} g protein${m.gront ? ' · grönt' : ''}${m.vatten ? ' · vatten' : ''}</small></button>`).join(''); }
 { const _rm = ritaMat; ritaMat = function(){ _rm.apply(this, arguments); ritaEgen(); }; }
 function laggMat(m, spara2){
-  matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0, mynt: (m._mm = matMynt())});
+  matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0, kcal: Math.round(m.kcal || 0), mynt: (m._mm = matMynt())});
   S.protein += Math.round(m.protein || 0); S.gront += m.gront || 0; S.vatten += m.vatten || 0; S.saldo += m._mm;
-  if(spara2){ const l = (S.egenMat || []).filter(x => x.namn.toLowerCase() !== m.namn.toLowerCase()); l.unshift({namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0}); S.egenMat = l.slice(0, 8); }
+  if(spara2){ const l = (S.egenMat || []).filter(x => x.namn.toLowerCase() !== m.namn.toLowerCase()); l.unshift({namn: m.namn, protein: Math.round(m.protein || 0), gront: m.gront || 0, vatten: m.vatten || 0, kcal: Math.round(m.kcal || 0)}); S.egenMat = l.slice(0, 8); }
   stangArk(); ritaMat(); andraGlod(10, `Du matade ${S.namn}.`); spara();
   setTimeout(() => toastG(`${m.namn} tillagt${m.protein ? ', ' + Math.round(m.protein) + ' g protein' : ''}.${m._mm ? ' +' + m._mm + ' mynt' : ''}`, 2400), 400);
 }
@@ -2702,6 +2703,7 @@ function visaLoggaSjalv(forval){
       <label>Namn<input type="text" id="mNamn" maxlength="30" value="${(f.namn || '').replace(/"/g, '&quot;')}" placeholder="T.ex. Havregrynsgröt med kvarg"></label>
       <label>Protein (gram)<input type="number" id="mProt" inputmode="numeric" min="0" max="150" value="${f.protein ?? ''}" placeholder="0"></label>
       <div class="valrad2" id="mSnabbP">${[5,10,15,20,30].map(n => `<button data-p="${n}">${n} g</button>`).join('')}</div>
+      ${S.visaKcal ? `<label>Kalorier (valfritt)<input type="number" id="mKcal" inputmode="numeric" min="0" max="3000" value="${f.kcal || ''}" placeholder="kcal"></label>` : ''}
       <label class="kryss"><input type="checkbox" id="mGront" ${f.gront ? 'checked' : ''}>Innehöll en näve grönsaker, frukt eller bär</label>
       <label class="kryss"><input type="checkbox" id="mVatten" ${f.vatten ? 'checked' : ''}>Drack ett glas vatten till</label>
       <button class="knapp ljus" id="mLagg">Lägg till</button></div>`);
@@ -2749,10 +2751,11 @@ async function slaUpp(kod){
   if(+p.serving_quantity) port.push([`1 portion (${Math.round(p.serving_quantity)} g)`, +p.serving_quantity]);
   port.push(['100 g', 100], ['200 g', 200]);
   if(+p.product_quantity && +p.product_quantity !== 100 && +p.product_quantity !== 200) port.push([`Hela (${Math.round(p.product_quantity)} g)`, +p.product_quantity]);
-  window.__produkt = {namn: namn.slice(0, 40), per100, gront, vatten, gram: port[0][1]};
+  const kcal100 = +p.nutriments['energy-kcal_100g'] || (+p.nutriments.energy_100g ? Math.round(+p.nutriments.energy_100g / 4.184) : 0);
+  window.__produkt = {namn: namn.slice(0, 40), per100, kcal100, gront, vatten, gram: port[0][1]};
   oppnaArk(arkHuvud('Streckkod', 'Hittad!', '') + `<div class="matform"><div class="produkt"><b>${namn}</b><span class="liten" style="color:var(--pa-scen-d)">${per100 ? per100.toLocaleString('sv-SE') + ' g protein per 100 g' : 'Inget protein angivet'}${gront ? ' · räknas som grönt' : ''}${vatten ? ' · räknas som vatten' : ''}</span></div>
     <label>Hur mycket åt du?</label><div class="valrad2" id="portVal">${port.map(([t, g], i) => `<button data-gram="${g}" aria-pressed="${i === 0}">${t}</button>`).join('')}</div>
-    <div><span class="stor" id="portProt">${Math.round(per100 * port[0][1] / 100)} g</span> <span class="liten" style="color:var(--pa-scen-d)">protein</span></div>
+    <div><span class="stor" id="portProt">${Math.round(per100 * port[0][1] / 100)} g</span> <span class="liten" style="color:var(--pa-scen-d)">protein</span>${S.visaKcal && kcal100 ? ` <span class="liten" style="color:var(--pa-scen-d)">· <span id="portKcal">${Math.round(kcal100 * port[0][1] / 100)}</span> kcal</span>` : ''}</div>
     <button class="knapp ljus" id="prodLagg">Lägg till</button>
     <p class="liten" style="color:var(--pa-scen-d);text-align:center">Data från <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:inherit">Open Food Facts</a>, licens ODbL.</p></div>`);
 }
@@ -2762,9 +2765,9 @@ document.addEventListener('click', e => {
   if(e.target.closest('#kodSjalv')){ visaKodInmatning(''); return; }
   if(e.target.closest('#kodSok')){ const k = ($('#kodIn').value || '').trim(); if(k.length >= 8) slaUpp(k); return; }
   const sp = e.target.closest('[data-p]'); if(sp){ $('#mProt').value = sp.dataset.p; return; }
-  if(e.target.closest('#mLagg')){ const namn = ($('#mNamn').value || '').trim() || 'Måltid'; laggMat({namn, protein: +$('#mProt').value || 0, gront: $('#mGront').checked ? 1 : 0, vatten: $('#mVatten').checked ? 1 : 0}, true); return; }
-  const pg = e.target.closest('[data-gram]'); if(pg){ document.querySelectorAll('[data-gram]').forEach(b => b.setAttribute('aria-pressed', b === pg)); window.__produkt.gram = +pg.dataset.gram; $('#portProt').textContent = Math.round(window.__produkt.per100 * window.__produkt.gram / 100) + ' g'; return; }
-  if(e.target.closest('#prodLagg')){ const p = window.__produkt; laggMat({namn: p.namn, protein: p.per100 * p.gram / 100, gront: p.gront && p.gram >= 80 ? 1 : 0, vatten: p.vatten ? Math.max(1, Math.round(p.gram / 250)) : 0}, true); return; }
+  if(e.target.closest('#mLagg')){ const namn = ($('#mNamn').value || '').trim() || 'Måltid'; laggMat({namn, protein: +$('#mProt').value || 0, gront: $('#mGront').checked ? 1 : 0, vatten: $('#mVatten').checked ? 1 : 0, kcal: +(($('#mKcal') || {}).value) || 0}, true); return; }
+  const pg = e.target.closest('[data-gram]'); if(pg){ document.querySelectorAll('[data-gram]').forEach(b => b.setAttribute('aria-pressed', b === pg)); window.__produkt.gram = +pg.dataset.gram; $('#portProt').textContent = Math.round(window.__produkt.per100 * window.__produkt.gram / 100) + ' g'; if($('#portKcal')) $('#portKcal').textContent = Math.round(window.__produkt.kcal100 * window.__produkt.gram / 100); return; }
+  if(e.target.closest('#prodLagg')){ const p = window.__produkt; laggMat({namn: p.namn, protein: p.per100 * p.gram / 100, gront: p.gront && p.gram >= 80 ? 1 : 0, vatten: p.vatten ? Math.max(1, Math.round(p.gram / 250)) : 0, kcal: (p.kcal100 || 0) * p.gram / 100}, true); return; }
   const eg = e.target.closest('[data-egen]'); if(eg && !egenRedigera){ const m = S.egenMat[+eg.dataset.egen]; laggMat(m, true); return; }
   if(scanStopp && (e.target.id === 'slöja' || e.target.closest('#stang'))) scanStopp();
 }, true);
@@ -3528,16 +3531,17 @@ function ritaMaltid(){
   oppnaArk(arkHuvud('Mat', `Logga ${maltidNamn(v.maltid).toLowerCase()}`, '')
     + `<div class="mrad">${ord}</div><p class="ltext">Hur blev det?</p><div class="betyg">${bet}</div>`
     + `<p class="ltext">Vad fanns på tallriken? <span style="font-weight:400;color:var(--pa-scen-d)">(valfritt)</span></p><div class="tallrik">${tal}</div>`
+    + (S.visaKcal ? `<label class="kcalrad">Kalorier <span>(valfritt)</span><input type="number" inputmode="numeric" min="0" max="3000" placeholder="kcal" data-m-kcal value="${v.kcal || ''}"></label>` : '')
     + `<button class="knapp" data-m-spara ${v.betyg ? '' : 'disabled style="opacity:.45"'}>Logga ${maltidNamn(v.maltid).toLowerCase()}</button>`
     + `<button class="knapp sek" data-m-exakt>Exakt protein eller scanna streckkod</button>`);
 }
 // gissade värden, så att protein och grönt fortsätter fungera för den som vill se gram
-function loggaMaltid(maltid, betyg, tallrik){
+function loggaMaltid(maltid, betyg, tallrik, kcal){
   const t = tallrik || {bra: ['protein', 'gront'], okej: ['protein'], snabbt: [], hoppade: []}[betyg];
   const protein = betyg === 'hoppade' ? 0 : t.includes('protein') ? {bra: 30, okej: 25, snabbt: 15}[betyg] : 5;
   const gront = betyg === 'hoppade' ? 0 : (t.includes('gront') ? (betyg === 'bra' ? 2 : 1) : 0) + (t.includes('frukt') ? 1 : 0);
   const mynt = betyg === 'hoppade' ? 0 : matMynt(); if(mynt) S.saldo += mynt;
-  matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: maltidNamn(maltid), maltid, betyg, tallrik: t, protein, gront, vatten: 0, mynt});
+  matloggNu().push({id: 'm' + Date.now(), tid: Date.now(), namn: maltidNamn(maltid), maltid, betyg, tallrik: t, protein, gront, vatten: 0, kcal: Math.round(kcal || 0), mynt});
   raknaOmMat(); loggaDag(); spara(); ritaHem(); if(typeof ritaMat === 'function') try{ ritaMat(); }catch(e){}
   if(typeof planeraNotiser === 'function') planeraNotiser();
   return mynt;
@@ -3548,7 +3552,7 @@ document.addEventListener('click', e => {
   const mb = t.closest('[data-m-betyg]'); if(mb && mVal){ mVal.betyg = mb.dataset.mBetyg; ritaMaltid(); return; }
   const mt = t.closest('[data-m-tallrik]'); if(mt && mVal){ const k = mt.dataset.mTallrik; mVal.tallrik = mVal.tallrik.includes(k) ? mVal.tallrik.filter(x => x !== k) : [...mVal.tallrik, k]; ritaMaltid(); return; }
   if(t.closest('[data-m-spara]') && mVal && mVal.betyg){ const v = mVal; mVal = null; stangArk();
-    const m = loggaMaltid(v.maltid, v.betyg, v.tallrik.length ? v.tallrik : null); toastG(`${maltidNamn(v.maltid)} loggad${m ? ` · +${m} mynt` : ''}`, 2000); return; }
+    const m = loggaMaltid(v.maltid, v.betyg, v.tallrik.length ? v.tallrik : null, v.kcal); toastG(`${maltidNamn(v.maltid)} loggad${m ? ` · +${m} mynt` : ''}`, 2000); return; }
   if(t.closest('[data-m-exakt]')){ mVal = null; stangArk(); visa('s-mat'); return; }
   // fitchin frågar på hemskärmen
   const fs = t.closest('[data-fraga-svar]'); if(fs){ if(fs.closest('#ark')){ mVal = null; stangArk(); } const [maltid, betyg] = fs.dataset.fragaSvar.split(':'); const m = loggaMaltid(maltid, betyg);
@@ -3565,7 +3569,7 @@ document.addEventListener('click', e => {
 }, true);
 function visaFokus(){
   const f = fokusLista();
-  oppnaArk(arkHuvud('Näring', 'Ditt fokus med maten', 'Välj ett eller flera. Näringen och uppdragen följer det du väljer. Aldrig kalorier.')
+  oppnaArk(arkHuvud('Näring', 'Ditt fokus med maten', 'Välj ett eller flera. Näringen och uppdragen följer det du väljer. Kalorier räknas aldrig in.')
     + `<div class="taggar">${Object.entries(FOKUS).map(([k, t]) => `<button class="tagg" data-fokus="${k}" aria-pressed="${f.includes(k)}">${t}</button>`).join('')}</div>`
     + `<button class="knapp" data-fokus-klar>Klar</button>`);
 }
@@ -3767,6 +3771,22 @@ setTimeout(() => { try{ if(S.klar && S.uppdrag && !S.uppdrag.some(u => u.v === 2
 { const _ru = ritaUppdrag; ritaUppdrag = function(){ _ru.apply(this, arguments);
     document.querySelectorAll('#uppdrag3 .ukort').forEach((el, i) => { const u = (S.uppdrag || [])[i]; if(!u || u.klar || !u.auto) return;
       const sm = el.querySelector('.ut small'); if(sm && !sm.querySelector('.auto')) sm.insertAdjacentHTML('beforeend', ' · <span class="auto">klaras av sig själv</span>'); }); }; }
+
+// ===== Kalorier: bara om man själv vill (av från början, aldrig mål, påverkar inget) =====
+{ const st = document.createElement('style'); st.textContent = `
+  .kcalrad{display:flex;align-items:center;gap:10px;font:700 14.5px var(--text);color:var(--pa-scen)} .kcalrad span{font-weight:400;color:var(--pa-scen-d)}
+  .kcalrad input::-webkit-inner-spin-button,#mKcal::-webkit-inner-spin-button{-webkit-appearance:none;margin:0} .kcalrad input{-moz-appearance:textfield;margin-left:auto;width:110px;min-height:44px;border-radius:14px;border:0;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 15px var(--text);padding:0 12px;text-align:right}
+  .kcalvaxel{appearance:none;border:0;cursor:pointer;width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:#ffffff0d;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 14px var(--text);text-align:left}
+  .kcalvaxel small{display:block;font-weight:400;font-size:12.5px;color:var(--pa-scen-d);margin-top:2px}`;
+  document.head.appendChild(st); }
+document.addEventListener('input', e => { const k = e.target.closest('[data-m-kcal]'); if(k && mVal) mVal.kcal = +k.value || 0; });
+{ const _om = oppnaMatare; oppnaMatare = function(k){ _om.apply(this, arguments); if(k !== 'naring') return;
+    const ark = document.getElementById('ark'); if(!ark || ark.querySelector('.kcalvaxel')) return;
+    const sek = ark.querySelector('#passSek') || ark.lastElementChild;
+    const html = `<button class="kcalvaxel" data-kcal-vaxla aria-pressed="${!!S.visaKcal}"><span>Visa kalorier<small>För dig som vill se dem. Påverkar aldrig ${S.namn} eller näringen.</small></span><span class="vaxel ${S.visaKcal ? 'pa' : ''}" aria-hidden="true"></span></button>`;
+    if(sek && sek.parentElement) sek.insertAdjacentHTML('afterend', html); else ark.insertAdjacentHTML('beforeend', html); }; }
+document.addEventListener('click', e => { if(!e.target.closest('[data-kcal-vaxla]')) return; e.stopImmediatePropagation(); S.visaKcal = !S.visaKcal; spara(); oppnaMatare('naring');
+  toastG(S.visaKcal ? 'Kalorier visas. Du kan fylla i dem när du loggar mat.' : 'Kalorier visas inte längre.', 2400); }, true);
 
 </script>
 </body>
