@@ -1549,7 +1549,7 @@ if(HALSA){
     const delar = [];
     if(typeof d.steg === 'number') delar.push(`<span><b>${d.steg.toLocaleString('sv-SE')}</b> steg</span>`);
     if(d.somnMin > 0) delar.push(`<span><b>${fmtH(d.somnMin)}</b> sömn</span>`);
-    if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> puls nu${d.pulsNuMinSedan > 20 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min sen)</small>` : ''}</span>`);
+    if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> puls${d.pulsNuMinSedan > 20 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min sen)</small>` : ''}</span>`);
     if(vp) delar.push(`<span><b>${vp}</b> ${d.vilopuls ? 'vilopuls' : 'lägsta puls'}</span>`);
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     stegUppdrag(d.steg);
@@ -1687,7 +1687,7 @@ oppnaMatare = function(k){
     if(klocka){
       if(d.somn) rader.push(['Sömn', fmtH(d.somn), HKALLA]);
       if(d.puls) rader.push([d.vilopulsTyp || 'Vilopuls', d.puls + ' slag/min', HKALLA]);
-      if(d.pulsNu) rader.push(['Puls nu', d.pulsNu + ' slag/min', HKALLA]);
+      if(d.pulsNu) rader.push(['Senaste puls', d.pulsNu + ' slag/min', HKALLA]);
       if(d.somn) insikt = d.somn < 7 ? 'Du sov under 7 timmar i natt. En tidig kväll ger mer vila i morgon.' : 'Du sov över 7 timmar i natt. Det märks på vilan.';
     } else {
       rader.push(['Sömn', '7 h 20 min', ex], ['Vilopuls', '58 slag/min', ex]);
