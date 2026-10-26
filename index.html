@@ -2896,27 +2896,63 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
   const tipsLager = () => { const idag = dagNr(new Date()); if(!S.tips || S.tips.dag !== idag) S.tips = {dag: idag, svar: [], vila: (S.tips && S.tips.vila) || {}}; return S.tips; };
   const nastaTips = () => { const t = tipsLager(), idag = t.dag; if(t.svar.length >= 3) return null;
     return TIPS.find(x => !t.svar.includes(x.id) && !(t.vila[x.id] > idag) && (() => { try{ return x.nar(); }catch(e){ return false; } })()) || null; };
-  const ritaTips = () => { const el = document.getElementById('insikt'); if(!el) return;
-    if(!S.klar || (S.data && S.data.borta >= 3)){ el.hidden = true; return; }
-    const tp = nastaTips(); el.hidden = !tp; if(!tp) return;
-    el.dataset.tips = tp.id;
-    el.innerHTML = `<p class="etk">${S.namn} har märkt</p><p style="font-size:15px;line-height:21px;margin:4px 0 10px">${tp.text()}</p>`
-      + `<div style="display:flex;gap:8px;align-items:center"><button class="lite" data-tipsja>${tp.ja}</button><button class="lite sek" data-tipsnej>Nej tack</button><button class="varfor" data-tipsvarfor>Varför?</button></div>`
-      + `<p class="liten" hidden data-tipstext style="margin-top:8px">${tp.varfor} Förslagen räknas fram i telefonen och skickas ingenstans.</p>`; };
+  const KORT = {
+    somnKort: () => `Du sov ${String(S.data.somn).replace('.', ',')} h i natt. Ska jag påminna dig kl 22?`,
+    somnBra: () => `${String(S.data.somn).replace('.', ',')} h sömn! Bra läge för ett tuffare pass idag.`,
+    stegFa: () => `${fmt(S.data.steg || 0)} steg hittills. En promenad på 10 min?`,
+    stegNara: () => `Bara ${fmt(8000 - S.data.steg)} steg kvar till 8 000. Kvällspromenad?`,
+    lugnLagt: () => 'Vill du andas en minut med mig?',
+    energiLag: () => 'Energin är låg. En kort rörelsepaus?',
+    vatten: () => `${S.vatten || 0} glas vatten idag. Ett glas nu?`,
+    protein: () => `${Math.round(S.protein || 0)} g protein idag. Ett proteinrikt mellanmål?`,
+    gront: () => 'Lite grönt till middagen ikväll?',
+    styrkaVecka: () => 'Inget styrkepass än i veckan. 15 min hemma?',
+    bonusNara: () => 'Ett uppdrag kvar till bonusen på +25!'};
+  const kortText = tp => { try{ return KORT[tp.id] ? KORT[tp.id]() : tp.text().split(/(?<=[.!?])\s/)[0]; }catch(e){ return tp.text(); } };
+  { const st = document.createElement('style'); st.textContent = `
+    #djurscen .vandrare{transition:left .5s ease} #djurscen.prat .vandrare{left:-19%}
+    #djurscen .hbubbla{position:absolute;right:3%;top:4%;z-index:3;max-width:52%;padding:10px 12px 10px 14px;border-radius:18px 18px 4px 18px;background:#fffffff0;color:#1b1630;box-shadow:0 8px 24px #00000055;font:600 13.5px/1.35 var(--text);text-align:left;display:flex;flex-direction:column;gap:8px;animation:hbIn .45s cubic-bezier(.3,1.4,.5,1)}
+    @keyframes hbIn{from{opacity:0;transform:translateY(6px) scale(.92)}to{opacity:1;transform:none}}
+    .hbubbla .hbtop{display:flex;gap:8px;align-items:flex-start} .hbubbla .hbtext{flex:1;appearance:none;border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
+    .hbubbla .hbx{appearance:none;border:0;background:#1b16300f;color:#5d5670;width:24px;height:24px;border-radius:50%;flex:none;cursor:pointer;font:700 13px var(--text);line-height:24px;padding:0;margin:-2px -4px 0 0}
+    .hbubbla .hbmer{appearance:none;border:0;background:none;padding:0;cursor:pointer;font:700 12.5px var(--text);color:#5a3fa0;text-align:left}
+    .hbubbla .hbknappar{display:flex;gap:6px} .hbubbla .hbknappar button{appearance:none;border:0;cursor:pointer;min-height:34px;padding:0 12px;border-radius:99px;background:#1b16300f;color:#1b1630;font:700 13px var(--text)}
+    .hbubbla .hbknappar button:first-child{background:#c8f169}
+    .hbubbla .hbetk{font:700 11px var(--text);color:#7a7290;letter-spacing:.02em}`;
+    document.head.appendChild(st); }
+  let senare = {};
+  const ritaTips = () => { try{ ritaTips2(); }catch(e){} };
+  const ritaTips2 = () => { const el = document.getElementById('insikt'); if(el) el.hidden = true;
+    const scen = document.getElementById('djurscen'); if(!scen) return; scen.querySelectorAll('.hbubbla').forEach(x => x.remove());
+    const klar = () => scen.classList.toggle('prat', !!scen.querySelector('.hbubbla')); setTimeout(klar, 0);
+    if(!S.klar || S.sover || S.glod <= 0 || (S.data && S.data.borta >= 3)) return;
+    if(scen.querySelector('.bbubbla')) return; // en vän hälsar på: den bubblan först
+    const nu = Date.now(), maltid = typeof fragaNu === 'function' ? fragaNu() : null;
+    if(maltid && !(senare['m:' + maltid] > nu)){
+      scen.insertAdjacentHTML('beforeend', `<div class="hbubbla" data-hb="m:${maltid}" role="group" aria-label="${S.namn} undrar"><div class="hbtop"><span class="hbtext" style="cursor:default">Vad blev det till ${maltidNamn(maltid).toLowerCase()}?</span><button class="hbx" data-hbx aria-label="Senare">×</button></div>`
+        + `<div class="hbknappar">${['bra', 'okej', 'snabbt'].map(b => `<button data-fraga-svar="${maltid}:${b}">${MBETYG[b]}</button>`).join('')}</div><button class="hbmer" data-fraga-mer="${maltid}">Mer om tallriken · Hoppade över</button></div>`);
+      return; }
+    const tp = nastaTips(); if(!tp || senare['t:' + tp.id] > nu) return;
+    scen.insertAdjacentHTML('beforeend', `<div class="hbubbla" data-hb="t:${tp.id}" data-tips="${tp.id}" role="group" aria-label="${S.namn} har ett tips"><div class="hbtop"><button class="hbtext" data-hbopna>${kortText(tp)}</button><button class="hbx" data-hbx aria-label="Senare">×</button></div><div class="hbknappar"><button data-hbja>${tp.ja}</button><button data-hbopna>Mer</button></div></div>`);
+  };
+  const visaTips = id => { const tp = TIPS.find(x => x.id === id); if(!tp) return;
+    oppnaArk(arkHuvud(`${S.namn} har märkt`, kortText(tp), '') + `<p style="font-size:15px;line-height:22px;margin:0">${tp.text()}</p><p class="liten" style="margin:0">${tp.varfor} Förslagen räknas fram i telefonen och skickas ingenstans.</p>`
+      + `<div style="display:flex;flex-direction:column;gap:10px"><button class="knapp" data-tipsja="${tp.id}">${tp.ja}</button><button class="knapp sek" data-tipsnej="${tp.id}">Nej tack, inte på en vecka</button></div>`); };
+  const svara = (id, ja) => { const t = tipsLager(), tp = TIPS.find(x => x.id === id); if(!tp) return;
+    t.svar.push(tp.id); if(!ja) t.vila[tp.id] = t.dag + 7; spara(); if(ja) try{ tp.gor(); }catch(err){} setTimeout(ritaTips, 600); };
   if(!SPARA.includes('tips')) SPARA.push('tips');
   insikt = () => null; // gamla demo-insikter ersätts
   const _rhT = ritaHem; ritaHem = function(){ _rhT.apply(this, arguments); ritaTips(); };
-  ritaTips(); setInterval(() => { if(!document.hidden && !document.getElementById('insikt')?.dataset.tips) ritaTips(); }, 60000);
+  ritaTips(); setInterval(() => { if(!document.hidden && !document.querySelector('#djurscen .hbubbla') && !$('#slöja').classList.contains('oppen')) ritaTips(); }, 60000);
   document.addEventListener('click', e => {
-    const el = document.getElementById('insikt'); if(!el || !el.contains(e.target)) return;
-    if(e.target.closest('[data-tipsvarfor]')){ const v = el.querySelector('[data-tipstext]'); if(v) v.hidden = !v.hidden; e.stopImmediatePropagation(); return; }
+    const hb = e.target.closest('.hbubbla');
+    if(hb){
+      if(e.target.closest('[data-hbx]')){ senare[hb.dataset.hb] = Date.now() + 2 * 36e5; hb.remove(); document.getElementById('djurscen')?.classList.remove('prat'); e.stopImmediatePropagation(); setTimeout(ritaTips, 300); return; }
+      if(e.target.closest('[data-hbopna]')){ e.stopImmediatePropagation(); visaTips(hb.dataset.tips); return; }
+      if(e.target.closest('[data-hbja]')){ e.stopImmediatePropagation(); svara(hb.dataset.tips, true); return; }
+      return; }
     const ja = e.target.closest('[data-tipsja]'), nej = e.target.closest('[data-tipsnej]'); if(!ja && !nej) return;
-    e.stopImmediatePropagation();
-    const t = tipsLager(), tp = TIPS.find(x => x.id === el.dataset.tips); if(!tp) return;
-    t.svar.push(tp.id); if(nej) t.vila[tp.id] = t.dag + 7;
-    spara(); el.hidden = true;
-    if(ja) try{ tp.gor(); }catch(err){}
-    setTimeout(ritaTips, 900);
+    e.stopImmediatePropagation(); stangArk(); svara((ja || nej).dataset[ja ? 'tipsja' : 'tipsnej'], !!ja);
   }, true);
 }
 
@@ -3543,7 +3579,7 @@ function fragaNu(){
   return m ? m[0] : null;
 }
 function ritaFraga(){
-  document.querySelectorAll('#s-hem .mfraga').forEach(x => x.remove());
+  document.querySelectorAll('#s-hem .mfraga').forEach(x => x.remove()); return; // frågan visas i Hugos pratbubbla
   const id = fragaNu(), h = document.getElementById('humor'); if(!id || !h) return;
   const efter = document.querySelector('#s-hem .xp.glodmitt') || (h.nextElementSibling && h.nextElementSibling.classList.contains('egrad') ? h.nextElementSibling : h);
   efter.insertAdjacentHTML('afterend', `<div class="mfraga" role="group" aria-label="${S.namn} undrar"><b>${S.namn} undrar: Vad blev det till ${maltidNamn(id).toLowerCase()}?</b>`
