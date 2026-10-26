@@ -3628,9 +3628,9 @@ const ANSIKTE = {
 { const st = document.createElement('style'); st.textContent = `
   .humorrad{display:flex;align-items:center;justify-content:center;gap:10px}
   .humorrad #humor{margin:0}
-  .kanslaikon{appearance:none;border:0;cursor:pointer;flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#c8f1691f;box-shadow:inset 0 0 0 1.5px #c8f16999;color:var(--lime);padding:0}
-  .kanslaikon svg{width:24px;height:24px}
-  .kanslaikon.ny{animation:kpuls 2.4s ease-in-out infinite} @keyframes kpuls{0%,100%{box-shadow:inset 0 0 0 1.5px #c8f16999,0 0 0 0 #c8f16955}50%{box-shadow:inset 0 0 0 1.5px #c8f16999,0 0 0 7px #c8f16900}}`;
+  .kanslaikon{appearance:none;border:0;cursor:pointer;flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:none;box-shadow:none;color:var(--lime);padding:0}
+  .kanslaikon svg{width:30px;height:30px}
+  .kanslaikon.ny svg{animation:kpuls 2.4s ease-in-out infinite} @keyframes kpuls{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.92)}}`;
   document.head.appendChild(st);
   const h = document.getElementById('humor');
   if(h){ const w = document.createElement('div'); w.className = 'humorrad'; h.parentNode.insertBefore(w, h); w.append(h);
