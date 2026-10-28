@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="sv">
-<head>
+<head><script id="sprakval">(function(){var L=null;try{L=localStorage.getItem('fitchi-sprak')}catch(e){}
+if(!L){var n=(navigator.languages&&navigator.languages[0])||navigator.language||'sv';L=/^(sv|no|nb|nn|da)/i.test(n)?'sv':'en'}
+var har=document.documentElement.lang==='en'?'en':'sv';if(L!==har){location.replace((L==='en'?'en.html':'index.html')+location.search+location.hash)}})();</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fitchi</title>
@@ -3204,6 +3206,10 @@ tillampaTema();
 
 // ===== Besök: när du peppar en vän hälsar din fitchi på hos den resten av dagen =====
 const PEPPTEXT = ['Heja, du fixar det!', 'Du är stark!', 'Promenad ihop?', 'Kom igen, ser bra ut!'];
+// Färdiga peppar visas på mottagarens språk (samma ordning som PEPPTEXT). Raderna nedan översätts aldrig.
+const PEPP_SV = ['Heja, du fixar det!', 'Du är stark!', 'Promenad ihop?', 'Kom igen, ser bra ut!'];   // sprak:behåll
+const PEPP_EN = ['Go on, you’ve got this!', 'You’re strong!', 'Walk together?', 'Come on, looking good!'];   // sprak:behåll
+const peppSprak = t => { const i = Math.max(PEPP_SV.indexOf(t), PEPP_EN.indexOf(t)); return i >= 0 ? PEPPTEXT[i] : t; };
 let BESOK = {inn: [], ut: [], logg: [], antal: {}}, besokLaddat = false;
 const vanBild = v => (stegNu(v.niva) !== 'vuxen' && F3DS[v.art] && F3DS[v.art][stegNu(v.niva)] && (F3DS[v.art][stegNu(v.niva)][v.humor === 'sover' ? 'neutral' : v.humor] || F3DS[v.art][stegNu(v.niva)].neutral)) || (F3DP[v.art] && F3DP[v.art].neutral) || F3D[v.art] || F3D.bjorn;
 const STEGORD = {bebis: 'Bebis', barn: 'Barn', tonaring: 'Tonåring', vuxen: 'Vuxen'};
@@ -3258,7 +3264,7 @@ async function hamtaBesok(){
     const prof = ids.length ? await sb('/rest/v1/profiler?select=id,namn,art,humor,niva&id=in.(' + ids.join(',') + ')') || [] : [];
     const P = Object.fromEntries(prof.map(p => [p.id, p])), idag = idagStr(), antal = {};
     rader.filter(r => r.besok !== false).forEach(r => { const v = r.fran === me ? r.till : r.fran; antal[v] = antal[v] || {ut: 0, inn: 0}; antal[v][r.fran === me ? 'ut' : 'inn']++; });
-    const allaInn = rader.filter(r => r.till === me && r.dag === idag && P[r.fran]).map(r => ({...P[r.fran], text: r.text || '', besok: r.besok !== false}));
+    const allaInn = rader.filter(r => r.till === me && r.dag === idag && P[r.fran]).map(r => ({...P[r.fran], text: peppSprak(r.text || ''), besok: r.besok !== false}));
     const allaUt = rader.filter(r => r.fran === me && r.dag === idag && P[r.till]).map(r => ({...P[r.till], sedd: r.sedd, besok: r.besok !== false}));
     BESOK = {
       inn: allaInn.filter(v => v.besok), ut: allaUt.filter(v => v.besok), halsningar: allaInn.filter(v => !v.besok), allaInn, allaUt,
@@ -3787,6 +3793,16 @@ document.addEventListener('input', e => { const k = e.target.closest('[data-m-kc
     if(sek && sek.parentElement) sek.insertAdjacentHTML('afterend', html); else ark.insertAdjacentHTML('beforeend', html); }; }
 document.addEventListener('click', e => { if(!e.target.closest('[data-kcal-vaxla]')) return; e.stopImmediatePropagation(); S.visaKcal = !S.visaKcal; spara(); oppnaMatare('naring');
   toastG(S.visaKcal ? 'Kalorier visas. Du kan fylla i dem när du loggar mat.' : 'Kalorier visas inte längre.', 2400); }, true);
+
+// ===== Språk: svenska / English (texterna översätts när appen byggs, se verktyg/sprak.py) =====
+{ const _vr2 = visaResa; visaResa = function(){ _vr2.apply(this, arguments);
+    const inst = document.querySelector('#ark .installningar'); if(!inst || document.getElementById('sprakVaxla')) return;
+    const en = document.documentElement.lang === 'en';
+    inst.insertAdjacentHTML('afterbegin', `<button id="sprakVaxla"><span>${'Språk · Language'}<br><small>${en ? 'English' : 'Svenska'}</small></span><span>${en ? 'Svenska ›' : 'English ›'}</span></button>`); }; }
+document.addEventListener('click', e => { if(!e.target.closest('#sprakVaxla')) return;
+  const till = document.documentElement.lang === 'en' ? 'sv' : 'en';
+  try{ localStorage.setItem('fitchi-sprak', till); }catch(err){}
+  location.replace((till === 'en' ? 'en.html' : 'index.html') + location.search); }, true);
 
 </script>
 </body>
