@@ -75,11 +75,13 @@ jobs:
 
           xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Fitchi.xcarchive" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" PROVISIONING_PROFILE_SPECIFIER="" \
             CURRENT_PROJECT_VERSION="$BYGGNR" MARKETING_VERSION="$VERSION" \
             $AUTH archive 2>&1 | tee ../../../bygg-ios.log | grep -E "error:|ARCHIVE" || true
           grep -q "ARCHIVE SUCCEEDED" ../../../bygg-ios.log
 
+          # Arkivet är ad hoc-signerat (behåller HealthKit-rättigheten). Exporten signerar om för App Store
+          # med Apples molnhanterade distributionscertifikat via API-nyckeln, så inga testenheter behövs.
           cat > "$RUNNER_TEMP/export.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
