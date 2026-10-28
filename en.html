@@ -1438,7 +1438,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -3908,6 +3908,101 @@ document.addEventListener('click', async e => {
     const inst = document.querySelector('#ark .installningar'); if(!inst || document.getElementById('kopiaRad')) return;
     inst.insertAdjacentHTML('afterbegin', `<button id="kopiaRad"><span>Backup<br><small>${kopiaStatus()}</small></span><span>›</span></button>`); }; }
 { const v = document.querySelector('#s-valkommen .botten'); if(v && !document.getElementById('harFitchi')) v.insertAdjacentHTML('beforeend', `<button class="harfitchi" id="harFitchi">Already have a fitchi? Restore it</button>`); }
+
+// ===== Komma tillbaka: välkomstgåvor (dag 1–3) och veckorapporten på söndag =====
+// Välkomstgåvor: nya spelare får en gåva per dag de tre första dagarna. Bara en per dag, missar man en dag väntar den.
+const GAVOR = [
+  {namn: 'Your first item', text: n => `The first item for ${n}. It stands next to them and can be swapped in the shop.`, ge: () => { const p = slumpPryl(false); fapryl(p); S.framme = p; return {pryl: p}; }},
+  {namn: '75 mynt', text: n => `Welcome back! ${n} saved 75 coins for you.`, ge: () => { S.saldo += 75; return {mynt: 75}; }},
+  {namn: 'Another item', text: n => `Three days in a row! ${n} found something nice.`, ge: () => { const p = slumpPryl(Math.random() < .3); fapryl(p); S.saldo += 25; return {pryl: p, mynt: 25}; }}];
+document.getElementById('borja').addEventListener('click', () => { S.valkomst = {start: dagNr(new Date()), tagna: []}; setTimeout(spara, 150); });
+const gavaNu = () => { const v = S.valkomst; if(!v) return null; const idag = dagNr(new Date()), i = v.tagna.length;
+  if(i >= GAVOR.length) return null; const senast = v.senast ?? -1;
+  return {i, kan: idag > senast && idag >= v.start + i, idag}; };
+function ritaGavor(){
+  const plats = document.querySelector('#s-hem .uhuvud'); if(!plats) return;
+  let k = document.getElementById('gavokort'); const g = gavaNu(), v = S.valkomst;
+  if(!g || !S.klar){ if(k) k.remove(); return; }
+  if(!k){ k = document.createElement('div'); k.id = 'gavokort'; plats.before(k); }
+  k.innerHTML = `<div class="gtopp"><b>Welcome gifts</b><span>${g.kan ? 'A gift is waiting!' : 'Next gift tomorrow'}</span></div>
+    <div class="glista">${GAVOR.map((x, i) => { const tagen = i < v.tagna.length, nu = i === g.i && g.kan;
+      return `<button class="gava ${tagen ? 'tagen' : nu ? 'nu' : 'last'}" ${nu ? 'data-gava' : 'disabled'}><span class="gbox">${tagen ? '✓' : GAVSVG}</span><b>Day ${i + 1}</b><small>${tagen ? x.namn : nu ? 'Open' : i === g.i ? 'I morgon' : 'Later'}</small></button>`; }).join('')}</div>`;
+}
+const GAVSVG = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="9" width="17" height="11" rx="2"/><path d="M2.5 9h19M12 9v11M12 9c-1.5-3.5-5.5-4.5-6-2s4 2 6 2zM12 9c1.5-3.5 5.5-4.5 6-2s-4 2-6 2z"/></svg>';
+function oppnaGava(){
+  const g = gavaNu(); if(!g || !g.kan) return;
+  const x = GAVOR[g.i], r = x.ge(); S.valkomst.tagna.push(g.idag); S.valkomst.senast = g.idag; spara(); ritaHem();
+  oppnaArk(arkHuvud('Welcome gift', `Day ${g.i + 1}: ${x.namn}`, x.text(S.namn))
+    + `<div class="vinst" style="padding:8px 0 4px">${r.pryl ? prylHtml(r.pryl, 110) + `<b style="font:800 20px var(--display)">${PRYLAR[r.pryl].namn}</b>` : `<b style="font:800 34px var(--display)">+${r.mynt} mynt</b>`}${r.pryl && r.mynt ? `<span>+${r.mynt} coins</span>` : ''}</div>`
+    + (g.i < GAVOR.length - 1 ? `<p class="kopiainfo" style="text-align:center">Come back tomorrow for the next gift.</p>` : `<p class="kopiainfo" style="text-align:center">That was the last welcome gift. Now this week’s chest takes over – one key for every day you do something.</p>`)
+    + `<button class="knapp ljus" data-stang-ark>${r.pryl ? 'Put it out' : 'Great'}</button>`);
+}
+{ const st = document.createElement('style'); st.textContent = `
+  #gavokort{margin:0 0 18px;padding:14px;border-radius:22px;background:linear-gradient(135deg,#c8f16922,#ff8f9a1a);box-shadow:inset 0 0 0 1px var(--glas-kant)}
+  #gavokort .gtopp{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 10px}
+  #gavokort .gtopp b{font:800 17px var(--display);color:var(--pa-scen)} #gavokort .gtopp span{font-size:13px;color:var(--pa-scen-d)}
+  #gavokort .glista{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .gava{appearance:none;border:0;border-radius:16px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;background:#ffffff0d;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 13px var(--text);cursor:pointer}
+  .gava b{font-size:13px} .gava small{font-size:11.5px;color:var(--pa-scen-d);font-weight:500}
+  .gava .gbox{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:#ffffff12;font-size:18px}
+  .gava.nu{background:#c8f169;color:#1a1225;box-shadow:0 6px 18px #c8f16955;animation:gpuls 1.6s ease-in-out infinite} .gava.nu small{color:#1a1225b0} .gava.nu .gbox{background:#1a122514}
+  .gava.tagen .gbox{background:#c8f16933;color:#c8f169} .gava.last{opacity:.55;cursor:default}
+  @keyframes gpuls{50%{transform:scale(1.04)}}
+  .humorvecka{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+  .humorvecka i{display:block;width:30px;height:30px;margin:0 auto 4px;border-radius:50%;box-shadow:inset 0 0 0 1px #ffffff22}
+  .humorvecka small{font-size:11px;color:var(--pa-scen-d)}
+  .nastavecka{padding:14px;border-radius:18px;background:#c8f16914;box-shadow:inset 0 0 0 1px #c8f16944;font-size:14.5px;line-height:21px;color:var(--pa-scen)}
+  .nastavecka b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#c8f169;margin-bottom:4px}`;
+  document.head.appendChild(st); }
+document.addEventListener('click', e => { if(e.target.closest('[data-gava]')){ e.stopImmediatePropagation(); oppnaGava(); } }, true);
+
+// humöret per dag (till veckorapporten)
+const loggaHumorDag = () => { if(!S.klar || S.sover) return; try{ const [m] = humor(); const d = dagNr(new Date()); S.humorDag = S.humorDag || {};
+  if(S.humorDag[d] !== m){ S.humorDag[d] = m; for(const k of Object.keys(S.humorDag)) if(+k < d - 20) delete S.humorDag[k]; } }catch(e){} };
+{ const _rh2 = ritaHem; ritaHem = function(){ const r = _rh2.apply(this, arguments); loggaHumorDag(); ritaGavor(); return r; }; }
+setTimeout(() => { if(S.klar){ loggaHumorDag(); ritaGavor(); } }, 0);
+
+// veckorapporten: humör per dag + en sak att testa nästa vecka; visas av sig själv på söndagen
+const HUMORFARG = {pigg: 'var(--energi)', glad: 'var(--energi)', stark: 'var(--styrka)', lugn: 'var(--lugn)', vila: 'var(--lugn)', trott: '#9d8bc4', hungrig: 'var(--naring)', ledsen: '#7d8fb8', stressad: '#c98bb0', neutral: '#ffffff40', borta: '#ffffff20'};
+const HUMORVECKA = {pigg: n => `${n} was mostly lively`, glad: n => `${n} was mostly happy`, stark: n => `${n} mostly felt strong`, lugn: n => `${n} was mostly calm`,
+  vila: n => `${n} mostly rested`, trott: n => `${n} was mostly tired`, hungrig: n => `${n} was mostly hungry`, ledsen: n => `${n} was mostly a bit sad`,
+  stressad: n => `${n} was mostly a bit stressed`, neutral: n => `${n} mostly felt good`, borta: n => `${n} was mostly on their own`};
+const NASTA = {energi: 'Move a little every day – a walk after lunch on three days goes a long way.', styrka: 'Two short strength workouts at home – 15 minutes is enough. Your fitchi will notice right away.',
+  lugn: 'Go to bed half an hour earlier on two evenings and see what happens to rest.', naring: 'One meal a day with protein and something green. One tap after you’ve eaten.'};
+{ const _vv = visaVeckan; visaVeckan = function(sondag){
+    _vv.apply(this, arguments);
+    const ark = document.querySelector('#ark .veckan'); if(!ark) return;
+    const idag = dagNr(new Date()), dagar = [...Array(7)].map((_, i) => idag - 6 + i), hd = S.humorDag || {};
+    const har = dagar.filter(d => hd[d]); const knapp = ark.querySelector('[data-stang-ark]');
+    if(har.length >= 2){ const antal = {}; har.forEach(d => antal[hd[d]] = (antal[hd[d]] || 0) + 1);
+      const [mest, n] = Object.entries(antal).sort((a, b) => b[1] - a[1])[0];
+      const kort = d => new Date(d * 864e5).toLocaleDateString('en-GB', {weekday: 'short', timeZone: 'UTC'}).replace('.', '');
+      (knapp || ark.lastChild).insertAdjacentHTML('beforebegin', `<p class="rubrik-liten" style="margin:6px 0 -2px">How ${S.namn} felt</p>
+        <div class="humorvecka">${dagar.map(d => `<div><i style="background:${hd[d] ? HUMORFARG[hd[d]] || '#ffffff40' : 'transparent'}"></i><small>${kort(d)}</small></div>`).join('')}</div>
+        <p class="kopiainfo" style="margin-top:-4px">${(HUMORVECKA[mest] || HUMORVECKA.neutral)(S.namn)} – ${n} of 7 days.</p>`); }
+    const v = veckoData(), lagst = v.matare.filter(([, a]) => a != null).sort((a, b) => a[1] - b[1])[0];
+    if(lagst) (knapp || ark.lastChild).insertAdjacentHTML('beforebegin', `<div class="nastavecka"><b>Try next week</b>${NASTA[lagst[0]]}</div>`);
+    if(sondag === true && knapp){ const k = kistaNu(); if(k.dagar.length && !k.oppnad || k.vantar){ knapp.outerHTML = `<button class="knapp ljus" data-vecka-kista>Open this week’s chest</button><button class="knapp sek" data-stang-ark>Later</button>`; } }
+  }; }
+document.addEventListener('click', e => { if(e.target.closest('[data-vecka-kista]')){ e.stopImmediatePropagation(); visaKista(); } }, true);
+const kollaSondag = () => { try{
+  if(!S.klar || S.sover || new Date().getDay() !== 0 || new Date().getHours() < 9) return;
+  const v = veckoStart(dagNr(new Date())); if(S.veckaVisad === v) return;
+  const ark = document.getElementById('slöja'); if(ark && ark.classList.contains('oppen')) return setTimeout(kollaSondag, 4000);
+  S.veckaVisad = v; spara(); visaVeckan(true); }catch(e){} };
+setTimeout(kollaSondag, 3500);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) setTimeout(kollaSondag, 2500); });
+
+// notis: välkomstgåvan dag 2 och 3 ersätter morgonnotisen
+{ const _pn = planeraNotiser; planeraNotiser = async function(){ await _pn.apply(this, arguments);
+  try{ const v = S.valkomst; if(!NOTIS || !S.notis || !S.klar || !v || v.tagna.length >= GAVOR.length) return;
+    const p = await NOTIS.getPending(), nu = new Date();
+    for(let i = 1; i <= 2; i++){ const d = new Date(); d.setDate(d.getDate() + i); d.setHours(9, 0, 0, 0);
+      const dn = dagNr(d), nr = v.tagna.length + (i - 1); if(nr >= GAVOR.length || dn < v.start + nr) continue;
+      const bort = (p.notifications || []).filter(n => n.schedule && n.schedule.at && new Date(n.schedule.at).toDateString() === d.toDateString() && [1, 11].includes(n.id));
+      if(bort.length) await NOTIS.cancel({notifications: bort.map(n => ({id: n.id}))});
+      await NOTIS.schedule({notifications: [{id: 20 + i, title: `🎁 Your day ${nr + 1} gift is waiting`, body: `${S.namn} has something for you. Take a look and open it!`, schedule: {at: d, allowWhileIdle: true}}]}); }
+  }catch(e){ console.log('gåvonotis', e); } }; }
 
 </script>
 </body>
