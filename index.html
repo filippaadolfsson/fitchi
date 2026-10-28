@@ -1438,7 +1438,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -4004,37 +4004,51 @@ document.addEventListener('visibilitychange', () => { if(!document.hidden) setTi
       await NOTIS.schedule({notifications: [{id: 20 + i, title: `🎁 Dag ${nr + 1}-gåvan väntar`, body: `${S.namn} har något åt dig. Kika in och öppna den!`, schedule: {at: d, allowWhileIdle: true}}]}); }
   }catch(e){ console.log('gåvonotis', e); } }; }
 
-// ===== Veckans lagmål: du och dina vänner klarar uppdrag tillsammans (räknas i uppdrag, aldrig steg) =====
-// Varje dag sparas bara antalet klarade uppdrag (0–3) i tabellen dagsuppdrag. Målet: 10 uppdrag per person och vecka.
+// ===== Veckans lagmål: frivilligt – man väljer själv att vara med. Räknas i uppdrag, aldrig steg =====
+// Den som är med skickar antalet klarade uppdrag per dag (0–3) till tabellen dagsuppdrag. Laget = du + vänner som också är med.
 const LAG_PER = 10, LAG_BELONING = 60;
 const veckaStr = () => new Date(veckoStart(dagNr(new Date())) * 864e5).toISOString().slice(0, 10);
-let lagData = null;   // {summa, mal, per: {id: antal}}
+let lagData = null;   // {per: {id: antal}, med: Set(id)}
 async function synkaDagsuppdrag(){
-  if(!sbSession || !sbSession.uid || !S.moln) return;
+  if(!sbSession || !sbSession.uid || !S.moln || !S.lagmalMed) return;
   const antal = Math.min(3, (S.uppdrag || []).filter(u => u.klar).length);
   try{ await sb('/rest/v1/dagsuppdrag?on_conflict=id,dag', {method: 'POST', headers: {Prefer: 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify({id: sbSession.uid, dag: idagStr(), antal})}); }catch(e){}
 }
+async function raderaDagsuppdrag(){ try{ await sbToken(); if(sbSession) await sb('/rest/v1/dagsuppdrag?id=eq.' + sbSession.uid, {method: 'DELETE'}); return true; }catch(e){ return false; } }
 async function hamtaLagmal(){
   if(!sbSession || !sbSession.uid || !vanLista.length){ lagData = null; return; }
   try{ const r = await sb('/rest/v1/dagsuppdrag?select=id,antal&dag=gte.' + veckaStr()) || [];
-    const per = {}; r.forEach(x => per[x.id] = (per[x.id] || 0) + x.antal);
-    const medlemmar = 1 + vanLista.length; lagData = {summa: Object.values(per).reduce((a, b) => a + b, 0), mal: medlemmar * LAG_PER, per};
+    const per = {}, med = new Set(); r.forEach(x => { per[x.id] = (per[x.id] || 0) + x.antal; med.add(x.id); });
+    lagData = {per, med};
   }catch(e){ lagData = null; }
 }
 { const _sp2 = synkaProfil; synkaProfil = async function(){ const r = await _sp2.apply(this, arguments); synkaDagsuppdrag(); return r; }; }
 { const _hv = hamtaVanner; hamtaVanner = async function(){ const r = await _hv.apply(this, arguments); await hamtaLagmal(); return r; }; }
+// före valet fanns lagmålet automatiskt: den som inte valt att vara med får sina rader borttagna en gång
+setTimeout(async () => { if(S.klar && S.moln && !S.lagmalMed && !S.lagmalRensat && await raderaDagsuppdrag()){ S.lagmalRensat = true; spara(); } }, 5000);
 { const _rv = ritaVanner; ritaVanner = function(){ _rv.apply(this, arguments);
     const plats = document.querySelector('#s-vanner .laggtill'); if(!plats || !lagData || !vanLista.length) return;
-    const {summa, mal, per} = lagData, klar = summa >= mal, v = veckaStr(), tagen = S.lagmal && S.lagmal.vecka === v;
-    const jag = sbSession && sbSession.uid, folk = [{id: jag, namn: S.namn, art: S.art, niva: S.niva}, ...vanLista];
-    const bild = x => (stegNu(x.niva) !== 'vuxen' && F3DS[x.art] && F3DS[x.art][stegNu(x.niva)] && F3DS[x.art][stegNu(x.niva)].neutral) || F3D[x.art] || F3D.bjorn;
-    const dagarKvar = 6 - ((new Date().getDay() + 6) % 7);
+    const jag = sbSession && sbSession.uid, bild = x => (stegNu(x.niva) !== 'vuxen' && F3DS[x.art] && F3DS[x.art][stegNu(x.niva)] && F3DS[x.art][stegNu(x.niva)].neutral) || F3D[x.art] || F3D.bjorn;
+    const vannerMed = vanLista.filter(v => lagData.med.has(v.id)), namnLista = l => l.map(v => v.namn).join(', ').replace(/, ([^,]*)$/, ' och $1');
+    if(!S.lagmalMed){
+      plats.insertAdjacentHTML('afterend', `<div id="lagmal">
+        <div class="ltopp"><b>Veckans lagmål</b><span>Frivilligt</span></div>
+        <p class="ltext">Klara uppdrag tillsammans med dina vänner. Når ni målet får alla ${LAG_BELONING} mynt.</p>
+        ${vannerMed.length ? `<div class="lfolk">${vannerMed.map(x => `<span><img src="${bild(x)}" alt=""><small>${x.namn}</small></span>`).join('')}</div><p class="liten" style="margin:0;color:var(--pa-scen-d)">${namnLista(vannerMed)} är redan med.</p>` : ''}
+        <p class="liten" style="margin:0;color:var(--pa-scen-d)">Är du med ser dina vänner hur många uppdrag du klarar varje dag. Aldrig steg eller annan hälsodata. Du kan lämna när du vill.</p>
+        <button class="knapp ljus" data-lagmal-med>Var med</button></div>`);
+      return; }
+    const folk = [{id: jag, namn: S.namn, art: S.art, niva: S.niva}, ...vannerMed], mal = folk.length * LAG_PER;
+    const summa = folk.reduce((a, x) => a + (lagData.per[x.id] || 0), 0), klar = folk.length > 1 && summa >= mal, v = veckaStr(), tagen = S.lagmal && S.lagmal.vecka === v;
+    const dagarKvar = 6 - ((new Date().getDay() + 6) % 7), ute = vanLista.filter(x => !lagData.med.has(x.id));
     plats.insertAdjacentHTML('afterend', `<div id="lagmal" class="${klar ? 'klart' : ''}">
       <div class="ltopp"><b>Veckans lagmål</b><span>${klar ? 'Klart!' : dagarKvar === 1 ? 'En dag kvar' : dagarKvar ? `${dagarKvar} dagar kvar` : 'Sista dagen'}</span></div>
-      <p class="ltext">${klar ? `Ni klarade ${summa} uppdrag tillsammans den här veckan.` : `Klara ${mal} uppdrag tillsammans den här veckan.`}</p>
-      <div class="lbar"><i style="width:${Math.min(100, summa / mal * 100)}%"></i><span>${Math.min(summa, mal)} av ${mal}</span></div>
-      <div class="lfolk">${folk.map(x => `<span><img src="${bild(x)}" alt=""><small>${per[x.id] || 0}</small></span>`).join('')}</div>
-      ${klar ? (tagen ? `<p class="ltext" style="margin:0;text-align:center">Belöningen är hämtad · +${LAG_BELONING} mynt</p>` : `<button class="knapp ljus" data-lagmal>Hämta ${LAG_BELONING} mynt</button>`) : `<p class="liten" style="margin:0;color:var(--pa-scen-d)">Alla får ${LAG_BELONING} mynt när ni når målet. Bara antalet uppdrag räknas – aldrig steg eller annan hälsodata.</p>`}
+      ${folk.length < 2 ? `<p class="ltext">Du är med! Målet startar när en vän också går med.</p>` : `<p class="ltext">${klar ? `Ni klarade ${summa} uppdrag tillsammans den här veckan.` : `Klara ${mal} uppdrag tillsammans den här veckan.`}</p>
+      <div class="lbar"><i style="width:${Math.min(100, summa / mal * 100)}%"></i><span>${Math.min(summa, mal)} av ${mal}</span></div>`}
+      <div class="lfolk">${folk.map(x => `<span><img src="${bild(x)}" alt=""><small>${lagData.per[x.id] || 0}</small></span>`).join('')}</div>
+      ${ute.length ? `<p class="liten" style="margin:0;color:var(--pa-scen-d)">${namnLista(ute)} är inte med än.</p>` : ''}
+      ${klar ? (tagen ? `<p class="ltext" style="margin:0;text-align:center">Belöningen är hämtad · +${LAG_BELONING} mynt</p>` : `<button class="knapp ljus" data-lagmal>Hämta ${LAG_BELONING} mynt</button>`) : ''}
+      <button class="lamna" data-lagmal-lamna>Lämna lagmålet</button>
     </div>`); }; }
 { const st = document.createElement('style'); st.textContent = `
   #lagmal{margin:14px 0 4px;padding:16px;border-radius:22px;background:linear-gradient(135deg,#c8f1691f,#7fc8ff14);box-shadow:inset 0 0 0 1px var(--glas-kant);display:flex;flex-direction:column;gap:10px}
@@ -4045,12 +4059,16 @@ async function hamtaLagmal(){
   #lagmal .lbar span{position:relative;display:block;text-align:center;font:700 13px/26px var(--text);color:var(--pa-scen);mix-blend-mode:difference}
   #lagmal .lfolk{display:flex;gap:10px;flex-wrap:wrap} #lagmal .lfolk span{display:flex;flex-direction:column;align-items:center;gap:2px}
   #lagmal .lfolk img{width:40px;height:40px;object-fit:contain;border-radius:50%;background:#ffffff10} #lagmal .lfolk small{font:700 12px var(--text);color:var(--pa-scen-d)}
+  #lagmal .lamna{appearance:none;border:0;background:none;color:var(--pa-scen-d);font:600 13px var(--text);text-decoration:underline;cursor:pointer;align-self:center}
   #lagmal.klart{box-shadow:inset 0 0 0 2px #c8f169}`; document.head.appendChild(st); }
-document.addEventListener('click', e => { if(!e.target.closest('[data-lagmal]')) return; e.stopImmediatePropagation();
-  const v = veckaStr(); if(S.lagmal && S.lagmal.vecka === v) return;
-  S.lagmal = {vecka: v}; S.saldo += LAG_BELONING; spara(); ritaHem(); ritaVanner(); toastG(`Lagmålet är klart! +${LAG_BELONING} mynt`, 2400); }, true);
-// när ett uppdrag bockas av: skicka nya antalet (för den som använder Vänner)
-{ const _sp3 = spara; let senast = -1; spara = function(){ _sp3.apply(this, arguments); const n = (S.uppdrag || []).filter(u => u.klar).length; if(n !== senast && S.moln){ senast = n; setTimeout(synkaDagsuppdrag, 1500); } }; }
+document.addEventListener('click', async e => {
+  if(e.target.closest('[data-lagmal]')){ e.stopImmediatePropagation(); const v = veckaStr(); if(S.lagmal && S.lagmal.vecka === v) return;
+    S.lagmal = {vecka: v}; S.saldo += LAG_BELONING; spara(); ritaHem(); ritaVanner(); toastG(`Lagmålet är klart! +${LAG_BELONING} mynt`, 2400); return; }
+  if(e.target.closest('[data-lagmal-med]')){ e.stopImmediatePropagation(); S.lagmalMed = true; spara(); await synkaDagsuppdrag(); await hamtaLagmal(); ritaVanner(); toastG('Du är med i veckans lagmål!', 2200); return; }
+  if(e.target.closest('[data-lagmal-lamna]')){ e.stopImmediatePropagation(); S.lagmalMed = false; S.lagmalRensat = true; spara(); await raderaDagsuppdrag(); await hamtaLagmal(); ritaVanner(); toastG('Du har lämnat lagmålet. Dina siffror är borttagna.', 2400); return; }
+}, true);
+// när ett uppdrag bockas av: skicka nya antalet (bara för den som är med)
+{ const _sp3 = spara; let senast = -1; spara = function(){ _sp3.apply(this, arguments); const n = (S.uppdrag || []).filter(u => u.klar).length; if(n !== senast && S.moln && S.lagmalMed){ senast = n; setTimeout(synkaDagsuppdrag, 1500); } }; }
 
 </script>
 </body>
