@@ -3909,6 +3909,53 @@ document.addEventListener('click', async e => {
     inst.insertAdjacentHTML('afterbegin', `<button id="kopiaRad"><span>Backup<br><small>${kopiaStatus()}</small></span><span>›</span></button>`); }; }
 { const v = document.querySelector('#s-valkommen .botten'); if(v && !document.getElementById('harFitchi')) v.insertAdjacentHTML('beforeend', `<button class="harfitchi" id="harFitchi">Already have a fitchi? Restore it</button>`); }
 
+// ===== Felrapporter och "Tyck till" (Supabase-tabellerna fel och tyck, bara skrivning, inget id, ingen hälsodata) =====
+const BYGGE = '2026-10-28 19:57';
+const plattform = () => { try{ return window.Capacitor && Capacitor.getPlatform ? Capacitor.getPlatform() : (FRISTAENDE ? 'webb-hem' : 'webb'); }catch(e){ return 'okand'; } };
+const sidaNu = () => { const s = document.querySelector('.skarm.aktiv'), a = document.getElementById('arkTitel');
+  return ((s && s.id) || '') + (a && document.getElementById('ark') && document.getElementById('ark').offsetParent ? ' / ' + a.textContent.slice(0, 30) : ''); };
+const skickaAnon = (tabell, rad) => fetch(SB_URL + '/rest/v1/' + tabell, {method: 'POST', headers: {apikey: SB_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal'}, body: JSON.stringify(rad)});
+{ const sett = new Set(); let antal = 0;
+  const rapportera = (meddelande, stack) => { try{
+      meddelande = String(meddelande || 'okänt fel').slice(0, 500); if(sett.has(meddelande) || antal >= 5) return; sett.add(meddelande); antal++;
+      if(/ResizeObserver|Script error\.?$|NetworkError|Failed to fetch|Load failed|AbortError/i.test(meddelande)) return;
+      skickaAnon('fel', {version: BYGGE, plattform: plattform(), sprak: document.documentElement.lang, meddelande, stack: String(stack || '').slice(0, 2000), sida: sidaNu().slice(0, 60)}).catch(() => {});
+    }catch(e){} };
+  window.addEventListener('error', e => rapportera(e.message, e.error && e.error.stack));
+  window.addEventListener('unhandledrejection', e => { const r = e.reason; rapportera(r && r.message || r, r && r.stack); }); }
+
+const TYCKTYP = [['bugg', 'Something’s not working'], ['ide', 'An idea'], ['berom', 'Something I like'], ['annat', 'Other']];
+let tyckVal = 'bugg';
+function visaTyck(){
+  oppnaArk(arkHuvud('Feedback', 'What do you think?', '')
+    + `<p class="kopiainfo">Everything you write is read by the people who build Fitchi. If something went wrong, tell us what you were doing.</p>`
+    + `<div class="valrad2" style="display:flex;flex-wrap:wrap;gap:8px">${TYCKTYP.map(([k, t]) => `<button class="chip" data-tyck-typ="${k}" aria-pressed="${k === tyckVal}">${t}</button>`).join('')}</div>`
+    + `<textarea id="tyckText" rows="5" maxlength="2000" placeholder="Write here …"></textarea>`
+    + `<input id="tyckKontakt" maxlength="120" placeholder="Your email if we may reply (optional)">`
+    + `<p class="kopiainfo">We also send the app version, phone type, language, level and which screen you were on. No health data.</p>`
+    + `<button class="knapp" data-tyck-skicka>Send</button>`);
+}
+{ const st = document.createElement('style'); st.textContent = `
+  #tyckText,#tyckKontakt{width:100%;border-radius:16px;border:0;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:500 15px/21px var(--text);padding:12px 14px;resize:vertical}
+  #tyckKontakt{min-height:48px}
+  [data-tyck-typ]{appearance:none;border:0;border-radius:99px;padding:9px 14px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 14px var(--text);cursor:pointer}
+  [data-tyck-typ][aria-pressed=true]{background:#c8f169;color:#1a1225;box-shadow:none}`; document.head.appendChild(st); }
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-tyck-typ]'); if(t){ tyckVal = t.dataset.tyckTyp; document.querySelectorAll('[data-tyck-typ]').forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
+  if(e.target.closest('#tyckRad')){ visaTyck(); return; }
+  const sk = e.target.closest('[data-tyck-skicka]'); if(!sk) return;
+  const text = (document.getElementById('tyckText').value || '').trim(); if(!text){ document.getElementById('tyckText').focus(); return; }
+  sk.disabled = true; sk.textContent = 'Sending …';
+  try{ const r = await skickaAnon('tyck', {typ: tyckVal, text: text.slice(0, 2000), kontakt: (document.getElementById('tyckKontakt').value || '').trim().slice(0, 120) || null,
+      version: BYGGE, plattform: plattform(), sprak: document.documentElement.lang, niva: S.niva || null, sida: sidaNu().slice(0, 60)});
+    if(!r.ok) throw new Error(r.status);
+    stangArk(); toastG('Thanks! We read everything.', 2200); }
+  catch(err){ sk.disabled = false; sk.textContent = 'Send'; toastG('Couldn’t send right now. Check your internet connection and try again.', 2600); }
+}, true);
+{ const _vr4 = visaResa; visaResa = function(){ _vr4.apply(this, arguments);
+    const inst = document.querySelector('#ark .installningar'); if(!inst || document.getElementById('tyckRad')) return;
+    inst.insertAdjacentHTML('afterbegin', `<button id="tyckRad"><span>Feedback<br><small>Tell us what’s not working or what you like</small></span><span>›</span></button>`); }; }
+
 </script>
 </body>
 </html>
