@@ -1438,7 +1438,7 @@ const TEST = new URLSearchParams(location.search).has('test');
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -2573,8 +2573,8 @@ document.addEventListener('click', async e => {
 { const vk = new URLSearchParams(location.search).get('van'); if(vk){ history.replaceState(null, '', location.pathname); const forsok = () => S.klar ? laggTillVan(vk) : setTimeout(forsok, 3000); setTimeout(forsok, 2500); } }
 // synka kortet och kolla pepp när appen öppnas – bara för den som har börjat använda Vänner
 // (vänkontot skapas först när man öppnar Vänner eller tar emot en inbjudan)
-setTimeout(() => { if(S.klar && sbSession){ synkaProfil(); kollaPepp(); } }, 3500);
-document.addEventListener('visibilitychange', () => { if(!sbSession) return; if(!document.hidden && S.klar){ kollaPepp(); } else if(document.hidden){ synkaProfil(); } });
+setTimeout(() => { if(S.klar && sbSession && S.moln){ synkaProfil(); kollaPepp(); } }, 3500);
+document.addEventListener('visibilitychange', () => { if(!sbSession || !S.moln) return; if(!document.hidden && S.klar){ kollaPepp(); } else if(document.hidden){ synkaProfil(); } });
 
 { const _rh = ritaHem;
   ritaHem = function(){ _rh.apply(this, arguments);
@@ -3312,6 +3312,8 @@ function peppaArk(id){
     + `<button class="knapp" data-skickapepp="${v.id}">Send a cheer and visit</button><p class="liten" style="text-align:center;margin:0">One cheer per friend per day</p>`);
 }
 async function skickaPepp(id, text, besok){
+  // färdiga peppar sparas alltid med den svenska texten (servern godkänner bara dem); mottagaren ser dem på sitt språk
+  if(PEPPTEXT.indexOf(text) >= 0) text = PEPP_SV[PEPPTEXT.indexOf(text)];
   const kropp = {fran: sbSession.uid, till: id, text}; if(besok === false) kropp.besok = false;
   try{ await sb('/rest/v1/pepp', {method: 'POST', body: JSON.stringify(kropp)}); }
   catch(err){ if(kropp.besok === false && /besok/i.test(String(err && err.message))) throw new Error('utan besök');
@@ -3359,8 +3361,8 @@ document.addEventListener('click', async e => {
 }
 { const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments); if(besokLaddat) ritaBesok(); }; }
 { const _hv = hamtaVanner; hamtaVanner = async function(){ await _hv.apply(this, arguments); await hamtaBesok(); }; }
-setTimeout(() => { if(S.klar && sbSession) hamtaBesok(); }, 4500);
-document.addEventListener('visibilitychange', () => { if(sbSession && !document.hidden && S.klar) setTimeout(hamtaBesok, 1500); });
+setTimeout(() => { if(S.klar && sbSession && S.moln) hamtaBesok(); }, 4500);
+document.addEventListener('visibilitychange', () => { if(sbSession && S.moln && !document.hidden && S.klar) setTimeout(hamtaBesok, 1500); });
 
 // ===== Morgonfrågan: stängs den med × frågar vi inte igen idag (tidsgränsen kl 4 sitter i visaMorgon) =====
 document.addEventListener('click', e => {
@@ -3817,6 +3819,95 @@ document.addEventListener('click', e => { if(!e.target.closest('#sprakVaxla')) r
     new MutationObserver(snart).observe(h, {childList: true, characterData: true, subtree: true}); snart(); };
   koppla(); window.addEventListener('resize', snart); document.fonts && document.fonts.ready.then(snart);
   const _rh = ritaHem; ritaHem = function(){ const r = _rh.apply(this, arguments); snart(); return r; }; }
+
+// ===== Säkerhetskopia i molnet (frivillig) + återställningskod =====
+// Spelet sparas packat (gzip) i Supabase-tabellen kopior, högst var 15:e minut och när appen stängs, bara om något ändrats.
+// Koden visas för användaren; servern sparar bara en hash av den. På ny telefon: "Har du redan en fitchi?" -> koden -> allt tillbaka.
+const KOPIA_INTERVALL = 15 * 60 * 1000;
+const kodNorm = k => String(k || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const nyKopiaKod = () => { const t = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(12));
+  const s = [...r].map(x => t[x % t.length]).join(''); return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}`; };
+const sha256 = async s => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, '0')).join('');
+const packa = async s => b64u(new Uint8Array(await new Response(new Blob([s]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()));
+const packaUpp = async p => { const b = atob(p.replace(/-/g, '+').replace(/_/g, '/')), u = Uint8Array.from(b, c => c.charCodeAt(0));
+  return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); };
+let kopiaSenastData = '', kopiaPagar = false;
+async function sparaKopia(tvinga){
+  if(!S.klar || !S.kopia || FLYTTAR || kopiaPagar) return;
+  if(!tvinga && S.kopiaTid && Date.now() - S.kopiaTid < KOPIA_INTERVALL) return;
+  let data; try{ data = localStorage.getItem(LAGER) || ''; }catch(e){ return; }
+  if(!data || data === kopiaSenastData) return;
+  kopiaPagar = true;
+  try{
+    await sbToken(); if(!sbSession) return;
+    if(!S.kopiaKod) S.kopiaKod = nyKopiaKod();
+    const kropp = {id: sbSession.uid, kod_hash: await sha256(kodNorm(S.kopiaKod)), data: await packa(data)};
+    await sb('/rest/v1/kopior?on_conflict=id', {method: 'POST', headers: {Prefer: 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(kropp)});
+    kopiaSenastData = data; S.kopiaTid = Date.now(); S.kopiaFel = false; spara();
+  }catch(e){ console.log('kopia', e); S.kopiaFel = true; }
+  finally{ kopiaPagar = false; }
+}
+{ const _sp = spara; spara = function(){ _sp.apply(this, arguments); if(S.kopia) setTimeout(() => sparaKopia(false), 2000); }; }
+document.addEventListener('visibilitychange', () => { if(document.hidden && S.kopia) sparaKopia(true); });
+setTimeout(() => { if(S.klar && S.kopia) sparaKopia(false); }, 6000);
+
+async function aterstallKopia(kod){
+  await sbToken(); if(!sbSession) throw new Error('nät');
+  const r = await sb('/rest/v1/rpc/hamta_kopia', {method: 'POST', body: JSON.stringify({kod: kodNorm(kod)})});
+  if(!r || !r.ok) return false;
+  const data = await packaUpp(r.data); JSON.parse(data);
+  localStorage.setItem(LAGER, data);
+  return true;
+}
+
+{ const st = document.createElement('style'); st.textContent = `
+  .kopiakod{font:800 22px var(--display);letter-spacing:.06em;text-align:center;padding:16px;border-radius:18px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);user-select:all}
+  .kopiainfo{font-size:14px;line-height:20px;color:var(--pa-scen-d);margin:0}
+  #kodIn{width:100%;min-height:52px;border-radius:16px;border:0;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:700 18px var(--text);letter-spacing:.06em;text-align:center;text-transform:uppercase}
+  .harfitchi{appearance:none;border:0;background:none;color:var(--pa-scen-d);font:600 14px var(--text);text-decoration:underline;cursor:pointer;margin-top:10px}`;
+  document.head.appendChild(st); }
+
+const kopiaStatus = () => !S.kopia ? 'Off' : S.kopiaFel ? 'Last save failed' : S.kopiaTid ? `Saved ${new Date(S.kopiaTid).toLocaleString('en-GB', {weekday: 'short', hour: '2-digit', minute: '2-digit'})}` : 'Saving soon';
+function visaKopia(){
+  oppnaArk(arkHuvud('Backup', 'Save your fitchi in the cloud', '')
+    + `<p class="kopiainfo">If you switch or lose your phone, your recovery code brings back ${S.namn}, levels, coins, items and friends. The backup is stored encrypted in Stockholm and isn’t used for anything else.</p>`
+    + `<button class="kcalvaxel" data-kopia-vaxla aria-pressed="${!!S.kopia}"><span>Cloud backup<small>${kopiaStatus()}</small></span><span class="vaxel ${S.kopia ? 'pa' : ''}" aria-hidden="true"></span></button>`
+    + (S.kopia && S.kopiaKod ? `<p class="rubrik-liten" style="margin:4px 0 -6px">Your recovery code</p><div class="kopiakod">${S.kopiaKod}</div>
+       <button class="knapp ljus" data-kopia-kopiera>Copy code</button>
+       <p class="kopiainfo">Keep the code somewhere you’ll find it, for example in your password manager or as a screenshot. Without the code, the backup can’t be restored.</p>` : '')
+    + `<button class="knapp sek" data-kopia-hamta>Restore from a code</button>`);
+}
+function visaHamtaKopia(nystart){
+  oppnaArk(arkHuvud('Backup', 'Already have a fitchi?', '')
+    + `<p class="kopiainfo">Enter your recovery code to bring your fitchi to this phone.${nystart ? '' : ' What’s on this phone will be replaced.'}</p>`
+    + `<input id="kodIn" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" maxlength="16">`
+    + `<p class="kopiainfo" id="kodFel" style="color:#ffb07a;min-height:20px"></p>`
+    + `<button class="knapp" data-kopia-aterstall>Restore my fitchi</button>`);
+}
+document.addEventListener('click', async e => {
+  if(e.target.closest('[data-kopia-vaxla]')){ e.stopImmediatePropagation();
+    S.kopia = !S.kopia; if(S.kopia && !S.kopiaKod) S.kopiaKod = nyKopiaKod(); spara(); visaKopia();
+    if(S.kopia){ await sparaKopia(true); visaKopia(); toastG('Backup is on. Save your code!', 2600); }
+    else{ try{ await sbToken(); if(sbSession) await sb('/rest/v1/kopior?id=eq.' + sbSession.uid, {method: 'DELETE'}); }catch(err){} S.kopiaTid = 0; spara(); toastG('Backup is off and deleted from the cloud.', 2600); }
+    return; }
+  if(e.target.closest('[data-kopia-kopiera]')){ try{ await navigator.clipboard.writeText(S.kopiaKod); toastG('Copied!', 1600); }catch(err){ toastG(S.kopiaKod, 4000); } return; }
+  if(e.target.closest('[data-kopia-hamta]')){ visaHamtaKopia(false); return; }
+  if(e.target.closest('#harFitchi')){ visaHamtaKopia(true); return; }
+  if(e.target.closest('#kopiaRad')){ visaKopia(); return; }
+  const at = e.target.closest('[data-kopia-aterstall]');
+  if(at){ const kod = (document.getElementById('kodIn') || {}).value, fel = document.getElementById('kodFel');
+    if(kodNorm(kod).length !== 12){ fel.textContent = 'The code has 12 characters, for example 7KQ2-M9XA-P4RT.'; return; }
+    at.disabled = true; at.textContent = 'Restoring …';
+    try{ if(await aterstallKopia(kod)){ toastG('Your fitchi is back!', 1800); setTimeout(() => location.replace(location.pathname), 900); }
+      else{ fel.textContent = 'No backup found for that code. Check that it’s correct.'; at.disabled = false; at.textContent = 'Restore my fitchi'; } }
+    catch(err){ fel.textContent = 'Couldn’t reach the cloud right now. Check your internet connection and try again.'; at.disabled = false; at.textContent = 'Restore my fitchi'; }
+  }
+}, true);
+// rad i Din resa + länk på välkomstskärmen
+{ const _vr3 = visaResa; visaResa = function(){ _vr3.apply(this, arguments);
+    const inst = document.querySelector('#ark .installningar'); if(!inst || document.getElementById('kopiaRad')) return;
+    inst.insertAdjacentHTML('afterbegin', `<button id="kopiaRad"><span>Backup<br><small>${kopiaStatus()}</small></span><span>›</span></button>`); }; }
+{ const v = document.querySelector('#s-valkommen .botten'); if(v && !document.getElementById('harFitchi')) v.insertAdjacentHTML('beforeend', `<button class="harfitchi" id="harFitchi">Already have a fitchi? Restore it</button>`); }
 
 </script>
 </body>
