@@ -1048,7 +1048,7 @@ const FORM = {
 const REAKTION = {
   pigg:{form:'hjarta', farg:['#ff8f9a','#ffb07a','#c8f169'], n:8, t:1.2, text:n => `${n} blir glad!`},
   stark:{form:'stjarna', farg:['#d9a441','#f2d48a'], n:9, t:1.1, text:n => `${n} visar musklerna`},
-  lugn:{form:'bubbla', farg:['#d9b8f0','#ffffff99'], n:6, t:2.2, text:n => `${n} andas lugnt med dig`},
+  lugn:{form:'bubbla', farg:['#d9b8f0','#ffffff99'], n:6, t:2.2, text:n => `${n} andas med dig`},
   trott:{form:'z', farg:['#d9b8f0'], n:3, t:2, text:n => `${n} gäspar stort`}};
 let reagerar = false;
 function klappa(){
@@ -3439,7 +3439,7 @@ Object.assign(HUMORTEXT, {hungrig: 'är hungrig', stressad: 'är lite stressad',
 Object.assign(REAKTION, {
   neutral: REAKTION.pigg, glad: REAKTION.pigg,
   ledsen: {form: 'hjarta', farg: ['#d9b8f0', '#ff8f9a'], n: 5, t: 2, text: n => `${n} ger dig en kram`},
-  hungrig: {form: 'hjarta', farg: ['#ffb07a', '#f6d27a'], n: 5, t: 1.4, text: n => `${n} hoppas på mat snart`},
+  hungrig: {form: 'hjarta', farg: ['#ffb07a', '#f6d27a'], n: 5, t: 1.4, text: n => `${n} är sugen på mat`},
   stressad: {form: 'bubbla', farg: ['#d9b8f0', '#ffffff99'], n: 6, t: 2.2, text: n => `${n} andas ut lite`}});
 // valet i morgonfrågan
 document.addEventListener('click', e => { const b = e.target.closest('[data-kansla]'); if(!b) return;
@@ -3803,6 +3803,20 @@ document.addEventListener('click', e => { if(!e.target.closest('#sprakVaxla')) r
   const till = document.documentElement.lang === 'en' ? 'sv' : 'en';
   try{ localStorage.setItem('fitchi-sprak', till); }catch(err){}
   location.replace((till === 'en' ? 'en.html' : 'index.html') + location.search); }, true);
+
+// ===== Rubriken under fitchin ryms alltid på en rad (krymper texten vid behov) =====
+{ const st = document.createElement('style'); st.textContent = `#humor.enrad{white-space:nowrap}`; document.head.appendChild(st);
+  const passa = () => { const h = document.getElementById('humor'); if(!h || !h.offsetParent) return;
+    const rad = h.closest('.humorrad') || h.parentElement; const ikon = rad.querySelector('#kanslaikon');
+    h.style.fontSize = ''; h.classList.add('enrad');
+    const bas = parseFloat(getComputedStyle(h).fontSize), plats = rad.clientWidth - (ikon ? ikon.offsetWidth + 10 : 0) - 4;
+    if(h.scrollWidth > plats){ const ny = Math.max(bas * 0.6, bas * plats / h.scrollWidth); h.style.fontSize = ny.toFixed(1) + 'px';
+      if(h.scrollWidth > plats) h.classList.remove('enrad'); } };
+  let vantar = false; const snart = () => { if(vantar) return; vantar = true; requestAnimationFrame(() => { vantar = false; passa(); }); };
+  const koppla = () => { const h = document.getElementById('humor'); if(!h) return setTimeout(koppla, 300);
+    new MutationObserver(snart).observe(h, {childList: true, characterData: true, subtree: true}); snart(); };
+  koppla(); window.addEventListener('resize', snart); document.fonts && document.fonts.ready.then(snart);
+  const _rh = ritaHem; ritaHem = function(){ const r = _rh.apply(this, arguments); snart(); return r; }; }
 
 </script>
 </body>
