@@ -2839,7 +2839,7 @@ document.addEventListener('click', e => {
     bo.disabled = true; bo.querySelector('span').innerHTML = 'Deleting…';
     const klart = () => { try{ localStorage.removeItem(LAGER); localStorage.removeItem('fitchi-sb'); }catch(err){} S.klar = false; location.replace(location.pathname); };
     const uid = sbSession && sbSession.uid;
-    if(uid) Promise.race([sb('/rest/v1/profiler?id=eq.' + uid, {method: 'DELETE'}), new Promise(r => setTimeout(r, 5000))]).catch(() => {}).finally(klart);
+    if(uid) Promise.race([Promise.allSettled([sb('/rest/v1/profiler?id=eq.' + uid, {method: 'DELETE'}), sb('/rest/v1/kopior?id=eq.' + uid, {method: 'DELETE'})]), new Promise(r => setTimeout(r, 5000))]).catch(() => {}).finally(klart);
     else klart();
     return; }
 }, true);
@@ -3870,7 +3870,7 @@ async function aterstallKopia(kod){
 const kopiaStatus = () => !S.kopia ? 'Off' : S.kopiaFel ? 'Last save failed' : S.kopiaTid ? `Saved ${new Date(S.kopiaTid).toLocaleString('en-GB', {weekday: 'short', hour: '2-digit', minute: '2-digit'})}` : 'Saving soon';
 function visaKopia(){
   oppnaArk(arkHuvud('Backup', 'Save your fitchi in the cloud', '')
-    + `<p class="kopiainfo">If you switch or lose your phone, your recovery code brings back ${S.namn}, levels, coins, items and friends. The backup is stored encrypted in Stockholm and isn’t used for anything else.</p>`
+    + `<p class="kopiainfo">If you switch or lose your phone, your recovery code brings back ${S.namn}, levels, coins, items and friends. The backup is stored encrypted on a server in the EU and isn’t used for anything else.</p>`
     + `<button class="kcalvaxel" data-kopia-vaxla aria-pressed="${!!S.kopia}"><span>Cloud backup<small>${kopiaStatus()}</small></span><span class="vaxel ${S.kopia ? 'pa' : ''}" aria-hidden="true"></span></button>`
     + (S.kopia && S.kopiaKod ? `<p class="rubrik-liten" style="margin:4px 0 -6px">Your recovery code</p><div class="kopiakod">${S.kopiaKod}</div>
        <button class="knapp ljus" data-kopia-kopiera>Copy code</button>

@@ -2839,7 +2839,7 @@ document.addEventListener('click', e => {
     bo.disabled = true; bo.querySelector('span').innerHTML = 'Raderar…';
     const klart = () => { try{ localStorage.removeItem(LAGER); localStorage.removeItem('fitchi-sb'); }catch(err){} S.klar = false; location.replace(location.pathname); };
     const uid = sbSession && sbSession.uid;
-    if(uid) Promise.race([sb('/rest/v1/profiler?id=eq.' + uid, {method: 'DELETE'}), new Promise(r => setTimeout(r, 5000))]).catch(() => {}).finally(klart);
+    if(uid) Promise.race([Promise.allSettled([sb('/rest/v1/profiler?id=eq.' + uid, {method: 'DELETE'}), sb('/rest/v1/kopior?id=eq.' + uid, {method: 'DELETE'})]), new Promise(r => setTimeout(r, 5000))]).catch(() => {}).finally(klart);
     else klart();
     return; }
 }, true);
@@ -3870,7 +3870,7 @@ async function aterstallKopia(kod){
 const kopiaStatus = () => !S.kopia ? 'Av' : S.kopiaFel ? 'Kunde inte spara senast' : S.kopiaTid ? `Sparad ${new Date(S.kopiaTid).toLocaleString('sv-SE', {weekday: 'short', hour: '2-digit', minute: '2-digit'})}` : 'Sparas snart';
 function visaKopia(){
   oppnaArk(arkHuvud('Säkerhetskopia', 'Spara din fitchi i molnet', '')
-    + `<p class="kopiainfo">Om du byter eller tappar telefonen får du tillbaka ${S.namn}, nivåer, mynt, prylar och vänner med din återställningskod. Kopian sparas krypterat i Stockholm och används inte till något annat.</p>`
+    + `<p class="kopiainfo">Om du byter eller tappar telefonen får du tillbaka ${S.namn}, nivåer, mynt, prylar och vänner med din återställningskod. Kopian sparas krypterad på en server inom EU och används inte till något annat.</p>`
     + `<button class="kcalvaxel" data-kopia-vaxla aria-pressed="${!!S.kopia}"><span>Säkerhetskopia i molnet<small>${kopiaStatus()}</small></span><span class="vaxel ${S.kopia ? 'pa' : ''}" aria-hidden="true"></span></button>`
     + (S.kopia && S.kopiaKod ? `<p class="rubrik-liten" style="margin:4px 0 -6px">Din återställningskod</p><div class="kopiakod">${S.kopiaKod}</div>
        <button class="knapp ljus" data-kopia-kopiera>Kopiera koden</button>
