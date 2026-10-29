@@ -2799,8 +2799,8 @@ document.addEventListener('click', e => {
   .linje li.nasta .txt b{color:#c8f169}
   .visamer{appearance:none;border:0;background:none;color:var(--pa-scen-d);font:600 13px var(--text);text-decoration:underline;cursor:pointer;align-self:flex-start;padding:0 0 0 40px}
   .installningar{border-radius:20px;background:#ffffff0d;box-shadow:inset 0 0 0 1px var(--glas-kant);overflow:hidden}
-  .installningar button{appearance:none;border:0;background:none;width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;color:var(--pa-scen);font:600 15px var(--text);text-align:left;cursor:pointer}
-  .installningar button+button{border-top:1px solid var(--glas-kant)}
+  .installningar button,.installningar a{text-decoration:none;appearance:none;border:0;background:none;width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;color:var(--pa-scen);font:600 15px var(--text);text-align:left;cursor:pointer}
+  .installningar>*+*{border-top:1px solid var(--glas-kant)}
   .installningar small{font-weight:500;font-size:13px;color:var(--pa-scen-d)}
   .vaxel{width:44px;height:26px;border-radius:99px;background:#ffffff22;position:relative;flex:none;transition:background .2s}
   .vaxel::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
@@ -2824,6 +2824,7 @@ visaResa = function(){
       <button class="knapp ljus" id="visaVeckan">Veckan med ${S.namn}</button>
       <div class="installningar">
         ${NOTIS ? `<button id="notisVaxla"><span>Påminnelser<br><small>Högst två om dagen</small></span><span class="vaxel ${S.notis ? 'pa' : ''}"></span></button>` : ''}
+        <a id="integritetLank" href="https://fitchi.app/integritet/" target="_blank" rel="noopener"><span>Integritetspolicy<br><small>Så hanterar vi dina uppgifter</small></span><span>›</span></a>
         <button id="borjaOm"><span>Börja om från början<br><small>Raderar din fitchi, dina vänner och allt du har samlat</small></span><span>›</span></button>
       </div>
       <p class="resafot">Nivåer går aldrig förlorade. Varje nivå ger mynt, och nya nivåer låser upp beteenden, minispel och prylar.</p>
