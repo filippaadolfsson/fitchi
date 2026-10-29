@@ -24,7 +24,7 @@ jobs:
     runs-on: macos-latest
     env:
       HAR_APPLE: ${{ secrets.ASC_KEY_P8 != '' && secrets.APPLE_TEAM_ID != '' && 'ja' || 'nej' }}
-      VERSION: 0.9.${{ github.run_number }}
+      VERSION: 0.9.33  # låst: samma version = ingen ny Beta App Review. Höj vid större släpp.
       BYGGNR: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
