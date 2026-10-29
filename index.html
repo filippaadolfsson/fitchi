@@ -432,7 +432,7 @@ body{background:#0b0712}
 @media (prefers-reduced-motion:reduce){.lev *{animation:none!important}}
 
 .panel,.hint{display:none}
-body.testlage .panel,body.testlage .hint{display:flex}
+
 @media (max-width:520px){
   body{padding:0;background:#120c1c}
   .yta{gap:0}
@@ -444,7 +444,6 @@ body.testlage .panel,body.testlage .hint{display:flex}
 </style>
 </head>
 <body>
-<p class="hint">Prototyp av Fitchi. Klicka dig igenom. Inget sparas och ingen data skickas någonstans.</p>
 <div class="yta">
 <div class="telefon" id="tel">
 
@@ -671,7 +670,7 @@ body.testlage .panel,body.testlage .hint{display:flex}
 <div class="toast" id="toast" role="status"></div>
 <div class="slöja" id="slöja"><div class="ark scen" id="ark" role="dialog" aria-modal="true" aria-labelledby="arkTitel"></div></div>
 </div>
-<aside class="panel" aria-label="Testpanel">
+<aside class="panel" hidden aria-label="">
   <div><h3>Testpanel</h3><p class="liten" style="margin-top:4px">Låtsas vara data från telefon och klocka. Syns bara när vi testar.</p></div>
   <div class="grupp"><span class="gt">Scenarier</span><div class="scen-knappar" id="scenarier"></div></div>
   <div class="grupp"><span class="gt">Data från telefon och klocka</span><div class="reglage" id="reglage"></div></div>
@@ -684,7 +683,6 @@ body.testlage .panel,body.testlage .hint{display:flex}
   <details class="logik"><summary style="cursor:pointer;font-weight:600">Hur räknas det?</summary><p style="margin-top:6px">Energi = steg + pass senaste veckan. Styrka = styrkepass + protein. Vila = sömn + HRV + vilopuls + incheckning. Näring = protein + vatten + grönsaker. Tränat hårt flera dagar och låg HRV ger en vilodag. Borta i 3 dagar eller mer ger ett varmt välkommen tillbaka och lättare uppdrag. Formen bygger på snittet över flera veckor: ett steg upp per cirka 3 aktiva veckor, ett steg ner per cirka 5 inaktiva, och tillbaka till tidigare nivå går dubbelt så snabbt (muskelminne). Prylar försvinner aldrig.</p></details>
 </aside>
 </div>
-<p class="hint">Tips: gå igenom matchningen, eller använd testpanelen för att hoppa direkt till startvyn med olika scenarier.</p>
 
 <script>
 function levande(a,p,attrs){ return ''; }
@@ -1434,7 +1432,7 @@ if(document.getElementById('storAgg')) document.getElementById('storAgg').innerH
 
 // ===== Webbapp: sparas i telefonen, riktig tid =====
 const LAGER = 'fitchi-v1';
-const TEST = new URLSearchParams(location.search).has('test');
+const TEST = false; // release: ingen testpanel
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);

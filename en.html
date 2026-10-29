@@ -432,7 +432,7 @@ body{background:#0b0712}
 @media (prefers-reduced-motion:reduce){.lev *{animation:none!important}}
 
 .panel,.hint{display:none}
-body.testlage .panel,body.testlage .hint{display:flex}
+
 @media (max-width:520px){
   body{padding:0;background:#120c1c}
   .yta{gap:0}
@@ -444,7 +444,6 @@ body.testlage .panel,body.testlage .hint{display:flex}
 </style>
 </head>
 <body>
-<p class="hint">Fitchi prototype. Click your way through. Nothing is saved and no data is sent anywhere.</p>
 <div class="yta">
 <div class="telefon" id="tel">
 
@@ -671,7 +670,7 @@ body.testlage .panel,body.testlage .hint{display:flex}
 <div class="toast" id="toast" role="status"></div>
 <div class="slöja" id="slöja"><div class="ark scen" id="ark" role="dialog" aria-modal="true" aria-labelledby="arkTitel"></div></div>
 </div>
-<aside class="panel" aria-label="Test panel">
+<aside class="panel" hidden aria-label="">
   <div><h3>Test panel</h3><p class="liten" style="margin-top:4px">Pretend data from phone and watch. Only visible while we test.</p></div>
   <div class="grupp"><span class="gt">Scenarios</span><div class="scen-knappar" id="scenarier"></div></div>
   <div class="grupp"><span class="gt">Data from phone and watch</span><div class="reglage" id="reglage"></div></div>
@@ -684,7 +683,6 @@ body.testlage .panel,body.testlage .hint{display:flex}
   <details class="logik"><summary style="cursor:pointer;font-weight:600">How is it calculated?</summary><p style="margin-top:6px">Energy = steps + workouts in the last week. Strength = strength workouts + protein. Rest = sleep + HRV + resting heart rate + check-in. Nutrition = protein + water + greens. Training hard several days in a row with low HRV gives a rest day. Being away for 3 days or more gives a warm welcome back and easier quests. Fitness is based on the average over several weeks: one step up per roughly 3 active weeks, one step down per roughly 5 inactive ones, and getting back to a previous level goes twice as fast (muscle memory). Items never disappear.</p></details>
 </aside>
 </div>
-<p class="hint">Tip: go through the matching, or use the test panel to jump straight to the home view with different scenarios.</p>
 
 <script>
 function levande(a,p,attrs){ return ''; }
@@ -1434,7 +1432,7 @@ if(document.getElementById('storAgg')) document.getElementById('storAgg').innerH
 
 // ===== Webbapp: sparas i telefonen, riktig tid =====
 const LAGER = 'fitchi-v1';
-const TEST = new URLSearchParams(location.search).has('test');
+const TEST = false; // release: ingen testpanel
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
