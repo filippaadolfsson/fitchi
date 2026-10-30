@@ -2882,6 +2882,17 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     {id: 'energiLag', nar: () => S.m.energi < 35 && kl() >= 9 && kl() < 20,
      text: () => `Energy is low. Five minutes of movement – a flight of stairs, a short walk – often does more than a coffee.`,
      ja: 'Add quest', gor: () => lagUppdrag({m: 'energi', t: '5 min movement break', p: 15}, 'The movement break has been added.'), varfor: 'Based on the energy meter.'},
+    // mattips: bara när något hänt, alltid "lägg till", inga siffror (beslut 2026-10-30)
+    {id: 'matEfterStyrka', nar: () => kl() >= 7 && kl() < 21 && (S.passlogg || []).some(p => !p.borttagen && p.m === 'styrka' && Date.now() - p.tid < 3 * 36e5),
+     text: () => `Your muscles will thank you for some protein in the next few hours – eggs, yoghurt, chicken or beans, for example. Make it one of today's missions?`,
+     ja: 'Add quest', gor: () => { const u = {m: 'styrka', t: 'Eat something with protein after your workout', p: 15}, i = (S.uppdrag || []).findIndex(x => !x.klar && typeof MATUPP !== 'undefined' && MATUPP.includes(x.t));
+       if(i >= 0){ S.uppdrag[i] = {...u, varfor: 'Suggested by ' + S.namn, klar: false}; ritaUppdrag(i); spara(); toastG('The mission has been added.', 2400); } else lagUppdrag(u, 'The mission has been added.'); }, varfor: 'Based on the workout you just did.'},
+    {id: 'matRorelse', nar: () => halsa() && kl() >= 15 && kl() < 21 && (S.data.steg || 0) >= 12000,
+     text: () => `Lots of movement today! Refuel with a proper meal and a little extra water.`,
+     ja: 'Yes, a glass of water', gor: () => { S.vatten = (S.vatten || 0) + 1; spara(); toastG('+1 glass of water logged.'); }, varfor: `Based on today’s steps from ${HNAV}.`},
+    {id: 'matTrott', nar: () => kl() >= 8 && kl() < 13 && S.data.somn > 0 && S.data.somn < 6 && (halsa() || (S.halsa && S.halsa.somnDag === dagNr(new Date()))),
+     text: () => `Short night? Regular meals today keep your energy steadier than something sweet.`,
+     ja: 'Good tip', gor: () => {}, varfor: 'Based on last night\'s sleep.'},
     {id: 'vatten', nar: () => kl() >= 12 && (S.vatten || 0) < 3,
      text: () => `You’ve logged ${S.vatten || 0} glasses of water today. Have a glass now?`,
      ja: 'Yes, one glass', gor: () => { S.vatten = (S.vatten || 0) + 1; if(typeof ritaMat === 'function') ritaMat(); spara(); toastG('+1 glass of water logged.'); }, varfor: 'Water helps both you and your fitchi.'},
@@ -2906,6 +2917,9 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     protein: () => `${Math.round(S.protein || 0)} g protein today. A protein-rich snack?`,
     gront: () => 'Some greens with dinner tonight?',
     styrkaVecka: () => 'No strength workout yet this week. 15 min at home?',
+    matEfterStyrka: () => 'Great workout! Some protein now?',
+    matRorelse: () => 'Lots of movement today! Eat well.',
+    matTrott: () => 'Short night? Eat regularly today.',
     bonusNara: () => 'One quest left until the +25 bonus!'};
   const radbryt = s => s.split(/(?<=[.!?])\s+/).map((x, i, l) => `<span class="mr">${x}${i === l.length - 1 ? '<i aria-hidden="true">\u00a0›</i>' : ''}</span>`).join('<br>');
   const kortText = tp => { try{ return KORT[tp.id] ? KORT[tp.id]() : tp.text().split(/(?<=[.!?])\s/)[0]; }catch(e){ return tp.text(); } };
@@ -4087,6 +4101,14 @@ document.addEventListener('click', async e => {
   setTimeout(() => { try{ let bytt = false;
     (S.uppdrag || []).forEach((u, i) => { if(u.m === 'naring' && !u.klar){ const ny = ['energi', 'lugn', 'styrka'].find(k => !(S.uppdrag || []).some(x => x.m === k)) || 'energi'; S.uppdrag[i] = valjUppdrag(ny); bytt = true; } });
     if(bytt){ ritaUppdrag(); spara(); } }catch(e){} }, 0);
+  // mat som vanliga uppdrag (beslut 2026-10-30): högst ett om dagen, man bockar av själv
+  var MATUPP = ['Eat something with protein after your workout', 'Breakfast before 10 am', 'A filling lunch', 'Something green with dinner', 'Fruit as a snack', 'A glass of water with every meal'];
+  const ingenMat = () => !(S.uppdrag || []).some(u => MATUPP.includes(u.t));
+  const ibland = () => ingenMat() && Math.random() < 0.4; // mat är ett uppdrag bland andra, inte varje dag
+  const styrkaIdag = () => (S.passlogg || []).some(p => !p.borttagen && p.m === 'styrka' && dagNr(new Date(p.tid)) === dagNr(new Date()));
+  UBANK.styrka.push({t: MATUPP[0], krav: () => ingenMat() && styrkaIdag()});
+  UBANK.energi.push({t: MATUPP[1], nar: h => h < 9.5, krav: ibland}, {t: MATUPP[2], nar: h => h < 12.5, krav: ibland});
+  UBANK.gladje.push({t: MATUPP[3], nar: h => h < 19, krav: ibland}, {t: MATUPP[4], nar: h => h < 16, krav: ibland}, {t: MATUPP[5], nar: h => h < 13, krav: ibland});
   // veckan: bara de tre mätarna
   const _vd = veckoData; veckoData = function(){ const v = _vd.apply(this, arguments); v.matare = (v.matare || []).filter(x => x[0] !== 'naring'); return v; };
   // Mata är lek: fitchin får något gott, glöd de tre första gångerna varje dag
