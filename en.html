@@ -1436,7 +1436,7 @@ const TEST = false; // release: ingen testpanel
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag','somnLogg','notisPlan'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','egenskaper','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag','somnLogg','notisPlan'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -3390,6 +3390,58 @@ document.addEventListener('click', async e => {
 { const _hv = hamtaVanner; hamtaVanner = async function(){ await _hv.apply(this, arguments); await hamtaBesok(); }; }
 setTimeout(() => { if(S.klar && sbSession && S.moln) hamtaBesok(); }, 4500);
 document.addEventListener('visibilitychange', () => { if(sbSession && S.moln && !document.hidden && S.klar) setTimeout(hamtaBesok, 1500); });
+
+// ===== Egenskaper: fitchin lär sig av det du gör (börjar med På språng) =====
+const EGENSKAPER = [
+  {id: 'promenad', namn: 'På språng',
+   text: n => `${n} har fått egna skor och vill röra på sig precis som du.`,
+   krav: () => { const nu = Date.now(), tjugo = 30 * 864e5, idag = dagNr(new Date());
+     const pass = (S.passlogg || []).filter(p => (p.typ === 'promenad' || p.typ === 'lopning') && nu - (p.tid || 0) < tjugo).length;
+     const steg = Object.entries(S.dagbok || {}).filter(([d, b]) => idag - d <= 30 && b && b.steg >= 8000).length;
+     return pass >= 5 || steg >= 7; }}
+];
+let trickTimer = null;
+{
+  const st = document.createElement('style'); st.textContent = `
+  .egrad{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:-4px}
+  .egrad button{appearance:none;border:0;padding:4px 11px;border-radius:99px;background:var(--glas);box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:700 11.5px var(--text);cursor:pointer;min-height:28px}
+  .egrad button::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--lime);margin-right:6px;vertical-align:1px}`;
+  document.head.appendChild(st);
+}
+const aktivaEgenskaper = () => EGENSKAPER.filter(e => S.egenskaper && S.egenskaper[e.id] && (() => { try{ return e.krav(); }catch(x){ return false; } })());
+function trick(id, ms){
+  if(!(F3DP[S.art] || {})[id] || S.sover) return false;
+  clearTimeout(trickTimer); S.trick = id; ritaHem();
+  trickTimer = setTimeout(() => { S.trick = null; ritaHem(); }, ms || 9000); return true;
+}
+{ const _ork = ork;
+  ork = (mood, w) => { const p = F3DP[S.art] || {};
+    const eg = S.trick || (w >= 150 && mood !== 'trott' && mood !== 'sover' && (aktivaEgenskaper().find(e => p[e.id]) || {}).id);
+    if(eg && !S.dansar && !S.sover && S.glod > 0 && p[eg] && w >= 150)
+      return `<span class="f3d orkis vid" style="width:${w}px;height:${Math.round(w*200/170)}px"><img src="${p[eg]}" alt="" draggable="false" style="height:100%;top:auto;bottom:0"></span>`;
+    return _ork(mood, w); }; }
+document.addEventListener('click', e => { if(S.trick && e.target.closest('#hemOrkis')){ clearTimeout(trickTimer); S.trick = null; setTimeout(ritaHem, 50); } }, true);
+function visaNyEgenskap(e){
+  const p = F3DP[S.art] || {};
+  const bild = p[e.id] ? `<span class="f3d orkis vid" style="width:150px;height:176px"><img src="${p[e.id]}" alt="" style="height:100%;top:auto;bottom:0"></span>` : `${ork('pigg', 130)}${e.pryl ? prylHtml(e.pryl, 70) : ''}`;
+  oppnaArk(arkHuvud(`${S.namn} har lärt sig något!`, e.namn, e.text(S.namn))
+    + `<div class="arkfitchi djurscen" style="min-height:160px;align-items:flex-end;gap:6px">${bild}</div>`
+    + `<p class="liten" style="text-align:center;margin:0">${S.namn} tar efter dig. Fortsätt så märks det på ${S.namn}.</p>`
+    + `<button class="knapp" data-stang-ark>Härligt!</button>`);
+}
+function kollaEgenskaper(){
+  if(!S.klar) return; S.egenskaper = S.egenskaper || {};
+  for(const e of EGENSKAPER){ if(S.egenskaper[e.id]) continue; let ok = false; try{ ok = e.krav(); }catch(x){}
+    if(ok){ S.egenskaper[e.id] = dagNr(new Date()); if(e.pryl) fapryl(e.pryl); spara(); ritaHem(); setTimeout(() => visaNyEgenskap(e), 1500); break; } }
+}
+{ const _rh = ritaHem; ritaHem = function(){ _rh.apply(this, arguments);
+    document.querySelectorAll('#s-hem .egrad').forEach(x => x.remove());
+    const akt = aktivaEgenskaper().slice(0, 3), h = document.getElementById('humor'); if(!akt.length || !h) return;
+    h.insertAdjacentHTML('afterend', `<div class="egrad">${akt.map(e => `<button data-trick="${e.id}" aria-label="${S.namn} är ${e.namn}">${e.namn}</button>`).join('')}</div>`); }; }
+document.addEventListener('click', e => { const t = e.target.closest('[data-trick]'); if(!t) return; const eg = EGENSKAPER.find(x => x.id === t.dataset.trick);
+  if(eg) toastG(eg.text(S.namn), 2600); });
+setTimeout(kollaEgenskaper, 4000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) setTimeout(kollaEgenskaper, 2000); });
 
 // ===== Morgonfrågan: stängs den med × frågar vi inte igen idag (tidsgränsen kl 4 sitter i visaMorgon) =====
 document.addEventListener('click', e => {
