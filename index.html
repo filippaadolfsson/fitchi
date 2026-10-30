@@ -1436,7 +1436,7 @@ const TEST = false; // release: ingen testpanel
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag','somnLogg'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -1540,7 +1540,7 @@ if(HALSA){
         h.stegGivna = Math.floor(d.steg/2000); }
     }
     // sömn: styr lugn och morgonen
-    if(d.somnMin > 0){
+    if(d.somnMin > 0 && !(S.somnLogg && S.somnLogg.dag === idag && S.somnLogg.min)){
       const tim = d.somnMin/60; S.data.somn = Math.round(tim*10)/10; h.somnMin = d.somnMin;
       if(h.somnDag !== idag){ h.somnDag = idag; S.m.lugn = Math.max(0, Math.min(100, Math.round(25 + (tim-5)*16))); }
     }
@@ -2967,6 +2967,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     const kort = (attr, farg, ikon, titel, text) => `<button class="lekkort" ${attr}><span class="lik" style="background:${farg}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ikon}</svg></span><span class="ltx"><b>${titel}</b><small>${text}</small></span></button>`;
     oppnaArk(arkHuvud('Logga', 'Vad vill du logga?', '') + `<div class="lekar">`
       + kort('data-plus="traning"', 'var(--styrka)', '<path d="M6.5 8v8M17.5 8v8M3.5 10v4M20.5 10v4M6.5 12h11"/>', 'Träning', 'Promenad, gym, yoga, padel …')
+      + kort('data-plus="somn"', 'var(--lugn)', '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>', 'Sömn', 'I natt eller en tupplur')
       + kort('data-plus="mat"', 'var(--naring)', '<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7.5c0-1.4 1.2-1.8 1.2-3.3M13.5 7.5c0-1.4 1.2-1.8 1.2-3.3"/>', 'Mat', 'Ett tryck per måltid')
       + kort('data-plus="vatten"', '#7cc4f2', '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>', '+1 glas vatten', `${S.vatten || 0} av 8 glas idag · loggas direkt`)
       + `</div>`); };
@@ -2974,6 +2975,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     if(e.target.closest('[data-plusval]')){ e.stopImmediatePropagation(); plusVal(); return; }
     const p = e.target.closest('[data-plus]'); if(!p) return; e.stopImmediatePropagation();
     if(p.dataset.plus === 'traning'){ stangArk(); visa('s-logga'); }
+    else if(p.dataset.plus === 'somn'){ stangArk(); somnVal = null; setTimeout(visaSomnLogg, 250); }
     else if(p.dataset.plus === 'mat'){ stangArk(); setTimeout(visaMaltid, 250); }
     else { S.vatten = (S.vatten || 0) + 1; if(typeof ritaMat === 'function') ritaMat(); ritaHem(); spara(); stangArk(); toastG(`+1 glas vatten · ${S.vatten} av 8 idag`); }
   }, true);
@@ -4098,6 +4100,47 @@ document.addEventListener('click', async e => {
     else toastG(`${S.namn} är mätt och belåten.${fraga}`, 2400);
     spara(); }, true);
 }
+
+// ===== Sömn: logga natten själv (utan klocka eller för att rätta klockan) och tupplurer =====
+function somnIdag(){ const d = dagNr(new Date()); if(!S.somnLogg || S.somnLogg.dag !== d) S.somnLogg = {dag: d, tupplur: []}; S.somnLogg.tupplur = S.somnLogg.tupplur || []; return S.somnLogg; }
+function tupplurMin(){ return somnIdag().tupplur.reduce((a, x) => a + (x.min || 0), 0); }
+let somnVal = null;
+function visaSomnLogg(){
+  const s = somnIdag(), h = S.halsa || {}, idag = dagNr(new Date());
+  const klocka = h.somnDag === idag && h.somnMin > 0 && !s.min ? h.somnMin : 0;
+  if(!somnVal) somnVal = {tim: s.min ? Math.min(9, Math.max(4, Math.round(s.min / 60))) : klocka ? Math.min(9, Math.max(4, Math.round(klocka / 60))) : null, kval: s.kval || null};
+  const TIM = [[4, 'Under 5 h'], [5, '5 h'], [6, '6 h'], [7, '7 h'], [8, '8 h'], [9, '9 h +']], KV = [['bra', 'Bra'], ['okej', 'Okej'], ['daligt', 'Dåligt']];
+  const t = tupplurMin(), tim = m => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')} min`;
+  const under = klocka ? `Klockan säger ${tim(klocka)}. Stämmer det inte kan du rätta det här.` : s.min ? `Du har loggat ${tim(s.min)} i natt.` : `${S.namn}s vila bygger på hur du sover.`;
+  oppnaArk(arkHuvud('Sömn', 'Hur sov du?', under)
+    + `<div class="somnlogg"><p class="rubrik-liten">I natt</p>`
+    + `<div class="somnval">${TIM.map(([v, n]) => `<button data-somn-tim="${v}" aria-pressed="${somnVal.tim === v}">${n}</button>`).join('')}</div>`
+    + `<div class="somnval">${KV.map(([v, n]) => `<button data-somn-kval="${v}" aria-pressed="${somnVal.kval === v}">${n}</button>`).join('')}</div>`
+    + `<button class="knapp" data-somn-spara ${somnVal.tim ? '' : 'disabled style="opacity:.45"'}>Spara natten</button>`
+    + `<p class="rubrik-liten" style="margin-top:10px">Tupplur</p>`
+    + `<div class="somnval">${[10, 20, 30, 45, 60, 90].map(v => `<button data-tupplur="${v}">${v} min</button>`).join('')}</div>`
+    + `<p class="liten" style="margin:0">${t ? `Tupplur idag: ${t} min. Tryck igen om du sov en gång till.` : 'Sov du en stund mitt på dagen? Tryck på hur länge.'}</p></div>`);
+}
+{ const st = document.createElement('style');
+  st.textContent = '.somnlogg{display:flex;flex-direction:column;gap:12px}.somnlogg .rubrik-liten{margin:0}.somnval{display:flex;flex-wrap:wrap;gap:8px}'
+    + '.somnval button{min-height:44px;padding:0 14px;border:0;border-radius:99px;background:#ffffff10;box-shadow:inset 0 0 0 1px var(--glas-kant);color:var(--pa-scen);font:600 14px var(--text);cursor:pointer}'
+    + '.somnval button[aria-pressed="true"]{background:var(--lugn);color:#1e1230;box-shadow:none}';
+  document.head.appendChild(st); }
+document.addEventListener('click', e => {
+  const t = e.target;
+  const ti = t.closest('[data-somn-tim]'); if(ti && somnVal){ somnVal.tim = +ti.dataset.somnTim; visaSomnLogg(); return; }
+  const kv = t.closest('[data-somn-kval]'); if(kv && somnVal){ somnVal.kval = kv.dataset.somnKval; visaSomnLogg(); return; }
+  if(t.closest('[data-somn-spara]') && somnVal && somnVal.tim){
+    const s = somnIdag(), idag = dagNr(new Date()), min = somnVal.tim === 4 ? 270 : somnVal.tim * 60;
+    s.min = min; s.kval = somnVal.kval; S.halsa = S.halsa || {}; S.halsa.somnMin = min; S.halsa.somnDag = idag; S.data.somn = min / 60;
+    S.m.lugn = Math.max(0, Math.min(100, Math.round(25 + (min / 60 - 5) * 16) + ({bra: 10, okej: 0, daligt: -10}[somnVal.kval] || 0)));
+    somnVal = null; stangArk(); ritaHem(); spara(); toastG(`Sparat. ${S.namn} vet hur du sov.`, 2200); return; }
+  const tu = t.closest('[data-tupplur]'); if(tu){ const min = +tu.dataset.tupplur;
+    somnIdag().tupplur.push({tid: Date.now(), min}); S.m.lugn = Math.min(100, (S.m.lugn || 0) + Math.min(15, Math.round(min / 3)));
+    spara(); ritaHem(); visaSomnLogg(); toastG(`Tupplur ${min} min. ${S.namn} fick lite mer vila.`, 2400); }
+});
+// en tupplur ger lite extra återhämtning till humöret
+{ const _mb = mabra; mabra = function(){ const m = _mb.apply(this, arguments); try{ const t = tupplurMin(); if(t) m.ater = Math.min(100, m.ater + Math.min(10, Math.round(t / 3))); }catch(e){} return m; }; }
 
 </script>
 </body>
