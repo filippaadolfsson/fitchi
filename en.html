@@ -1205,7 +1205,7 @@ function toastG(txt, ms){ const t = $('#toast3'); t.textContent = txt; t.classLi
 function andraGlod(d, txt){
   const fore = S.glod; S.glod = Math.max(0, Math.min(100, S.glod + d));
   if(fore <= 0 && S.glod > 0) S.sover = false;
-  ritaGlod(); if(txt) toastG(`${txt}${d>0?` Glow +${Math.round(S.glod-fore)}`:''}`);
+  ritaGlod(); if(txt) toastG(`${txt}${d>0?(Math.round(S.glod-fore) > 0 ? ` Glow +${Math.round(S.glod-fore)}` : ` Your Glow is already full!`):''}`);
 }
 function ritaGlod(){
   if(!$('#glodrad')) return;
