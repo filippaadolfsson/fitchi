@@ -725,7 +725,7 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-till
 
 // Djurarter
 const ARTER = {
-  bjorn:{namn:'Kraftbjörn', kort:'Bruno', farg:'#ff7a5c', kraft:'Växer av tunga lyft och proteinrik mat. Eldkragen glöder starkare för varje pass.', forslag:'Bruno'},
+  bjorn:{namn:'Kraftbjörn', kort:'Bruno', farg:'#ff7a5c', kraft:'Växer av tunga lyft och pass som tar i. Eldkragen glöder starkare för varje pass.', forslag:'Bruno'},
   hare:{namn:'Vindhare', kort:'Hugo', farg:'#c8f169', kraft:'Lever för löprundor, steg och fart. Vindslöjorna växer när du rör dig.', forslag:'Hugo'},
   uggla:{namn:'Månuggla', kort:'Luna', farg:'#b48be0', kraft:'Blir starkast av sömn och vila. Månskärorna lyser efter en god natt.', forslag:'Luna'},
   utter:{namn:'Vattenutter', kort:'Otto', farg:'#5fd4e0', kraft:'Älskar simning, lek och variation. Bonus varje gång du testar något nytt.', forslag:'Otto'},
@@ -1071,10 +1071,10 @@ const MATARE = {
     kallor:[['Steg','6 240','Apple Hälsa'],['Promenad','20 min','Loggat 07:12'],['Trappor','8 våningar','Apple Hälsa']],
     vecka:[40,55,62,70,48,80,62], insikt:'Din energi är högst de dagar du rör dig före lunch.',
     uppdrag:[['10 min promenad efter lunch',20],['Ta trapporna idag',10],['20 min cykel',35]]},
-  styrka:{namn:'Styrka', om:'Styrketräning, hemmaträning och protein som bygger muskler.',
-    kallor:[['Styrkepass','2 av 3 denna vecka','Loggat'],['Protein','54 av 90 g','Mat'],['Senaste pass','Ben och rygg, 35 min','I tisdags']],
+  styrka:{namn:'Styrka', om:'Styrketräning och hemmaträning som bygger muskler.',
+    kallor:[['Styrkepass','2 av 3 denna vecka','Loggat'],['Senaste pass','Ben och rygg, 35 min','I tisdags']],
     vecka:[30,30,70,65,60,58,55], insikt:'Styrka håller sig uppe när du kör minst två pass i veckan.',
-    uppdrag:[['15 min styrka hemma',30],['3 x 10 knäböj',15],['Proteinrik frukost',10]]},
+    uppdrag:[['15 min styrka hemma',30],['3 x 10 knäböj',15],['Plankan 3 × 30 sekunder',10]]},
   lugn:{namn:'Vila', om:'Sömn, vilopuls, HRV och hur du själv känner dig.',
     kallor:[['Sömn','6 h 10 min','Apple Hälsa'],['Vilopuls','58 slag/min','Apple Watch'],['HRV','42 ms, lägre än vanligt','Apple Watch'],['Din incheckning','Lite stressad','I morse']],
     vecka:[60,58,45,52,40,35,38], insikt:'Vilan sjunker de nätter du sover under 7 timmar. Ikväll kan vara ett bra tillfälle för en tidig kväll.',
@@ -1681,7 +1681,6 @@ oppnaMatare = function(k){
   }
   if(k === 'styrka'){
     rader.push(['Styrkepass', `${passVecka.length} senaste 7 dagarna`, passVecka.length ? 'Se listan nedan' : 'Loggat']);
-    rader.push(['Protein', `${Math.round(S.protein || 0)} av 90 g`, 'Mat']);
     insikt = passVecka.length >= 2 ? 'Två styrkepass i veckan håller styrkan uppe. Du är där!' : `${passVecka.length ? 'Ett pass till' : 'Två pass'} den här veckan håller styrkan uppe.`;
   }
   if(k === 'lugn'){
@@ -1706,6 +1705,7 @@ oppnaMatare = function(k){
     insikt = n.tips;
   }
   m.kallor = rader; m.insikt = insikt || '';
+  if(k === 'styrka') m.om = 'Styrketräning och hemmaträning som bygger muskler.';
   if(k === 'lugn') m.om = HALSA ? 'Sömn, puls och hur du själv känner dig.' : 'Sömn och hur du själv känner dig.';
   _oppnaMatare(k);
   const ark = $('#ark');
@@ -2543,7 +2543,7 @@ ritaVanner = function(){
       return `<div class="vkort"><span class="vbild"><img src="${(stegNu(v.niva) !== 'vuxen' && F3DS[v.art] && F3DS[v.art][stegNu(v.niva)] && F3DS[v.art][stegNu(v.niva)].neutral) || F3D[v.art] || F3D.bjorn}" alt=""></span><span class="vinfo"><b>${v.namn}</b><small>Nivå ${v.niva} · ${v.namn} ${HUMORTEXT[v.humor] || 'mår bra'}</small><small class="${aktiv ? 'aktiv' : ''}">${aktiv ? `Aktiv idag · ${v.uppdrag} av 3 uppdrag` : 'Inte aktiv idag än'}</small></span>
         <button class="pepp" data-peppa="${v.id}" aria-pressed="${peppad}" ${peppad ? 'disabled' : ''}>${peppad ? 'Peppad' : 'Peppa'}</button></div>`; }).join('')
       : '<div class="vtom">Inga vänner än. Bjud in någon med din kod – det är roligare att hålla igång tillsammans.</div>'}</div>
-    <p class="liten" style="text-align:center">Vänner ser bara din fitchi, humör, nivå och om du har varit aktiv idag. Aldrig steg, sömn, puls eller mat.</p>`;
+    <p class="liten" style="text-align:center">Vänner ser bara din fitchi, humör, nivå och om du har varit aktiv idag. Aldrig steg, sömn eller puls.</p>`;
 };
 async function laddaVanner(){
   vanLaddar = true; vanFel = ''; if($('#s-vanner').classList.contains('aktiv')) ritaVanner();
@@ -3000,7 +3000,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     const somn = dagar.map(d => d === idagNr() && S.data && S.data.halsa ? S.data.somn : db(d)?.somn).filter(x => x > 0);
     const prot = dagar.map(d => d === idagNr() ? (S.protein || 0) : (db(d)?.protein || 0));
     return {aktiva: dagar.filter(aktiv).length, min: dagar.reduce((s, d) => s + passPa(d).reduce((a, p) => a + (p.min || 0), 0), 0), pass: dagar.reduce((s, d) => s + passPa(d).length, 0),
-      steg: steg.length ? Math.round(steg.reduce((a, b) => a + b, 0) / steg.length) : null, somn: somn.length ? somn.reduce((a, b) => a + b, 0) / somn.length : null, protDagar: prot.filter(x => x >= 90).length}; };
+      steg: steg.length ? Math.round(steg.reduce((a, b) => a + b, 0) / steg.length) : null, somn: somn.length ? somn.reduce((a, b) => a + b, 0) / somn.length : null, protDagar: prot.filter(x => x >= 90).length, uppdragSum: dagar.reduce((a, d) => a + (((S.dagbok || {})[d] || {}).uppdrag || 0), 0)}; };
   const raknaDagar = f => Object.keys(S.dagbok || {}).filter(d => f(S.dagbok[d], +d)).length;
   const maxSteg = () => Math.max(0, ...Object.values(S.dagbok || {}).map(b => b.steg || 0), ...(S.data && S.data.halsa ? [S.data.steg || 0] : []), ...((S.stegDagar || []).map(x => typeof x === 'number' ? x : x.steg || 0)));
   const MARKEN = [
@@ -3011,7 +3011,6 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     ['rad7', '🌟', 'En hel vecka', 'Var aktiv 7 dagar i rad', () => [Math.max(S.basRad || 0, iRad()), 7]],
     ['alla3', '✅', 'Alla tre', 'Klara alla tre uppdrag en dag', () => [raknaDagar(b => b.uppdrag >= 3) + ((S.uppdrag || []).every(u => u.klar) && S.uppdrag?.length ? 1 : 0) ? 1 : 0, 1]],
     ['steg10k', '👟', '10 000 steg', 'Gå 10 000 steg på en dag', () => [maxSteg(), 10000]],
-    ['protein5', '🥚', 'Proteinproffs', 'Nå proteinmålet 5 dagar', () => [raknaDagar(b => b.protein >= 90), 5]],
     ['somn3', '🌙', 'Utsövd', 'Sov minst 7 timmar 3 nätter', () => [raknaDagar(b => b.somn >= 7), 3]],
     ['andas', '🌬️', 'Andas lugnt', 'Andas med din fitchi', () => [S.andasDag ? 1 : 0, 1]],
     ['guldkista', '👑', 'Guldkistan', 'Öppna en guldkista', () => [S.kistGuld ? 1 : 0, 1]],
@@ -3047,7 +3046,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
           <div><b>${v.pass}</b><small>pass ${pil(v.pass, f.pass)}</small></div>
           <div><b>${v.steg != null ? fmtN(v.steg) : '–'}</b><small>steg per dag i snitt</small></div>
           <div><b>${v.somn != null ? fmtH(v.somn) : '–'}</b><small>sömn per natt i snitt</small></div>
-          <div><b>${v.protDagar}</b><small>dagar med proteinmålet</small></div>
+          <div><b>${v.uppdragSum}</b><small>uppdrag klara</small></div>
           <div><b>${(kistaNu().dagar || []).length}/7</b><small>nycklar till kistan</small></div></div>
         <p class="liten">Pilarna jämför med förra veckan.</p></div>
       <div class="fkort"><div class="frub"><button class="kpil" data-kman="-1" aria-label="Förra månaden">‹</button><span class="etk" style="text-transform:capitalize">${manadNamn}</span><button class="kpil" data-kman="1" aria-label="Nästa månad" ${manad >= 0 ? 'disabled' : ''}>›</button></div>
@@ -3065,7 +3064,6 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
     if(b.uppdrag != null) rader.push(['Uppdrag', `${b.uppdrag} av 3`]);
     if(b.steg) rader.push(['Steg', fmtN(b.steg)]);
     if(b.somn) rader.push(['Sömn', fmtH(b.somn)]);
-    if(b.protein) rader.push(['Protein', `${Math.round(b.protein)} g`]);
     p.forEach(x => rader.push([x.namn, `${x.min} min`]));
     oppnaArk(arkHuvud(aktiv(d) ? 'Aktiv dag ✓' : 'Dag', datum.charAt(0).toUpperCase() + datum.slice(1), '') + (rader.length
       ? `<div class="rader">${rader.map(([a, c]) => `<div class="rad2"><span>${a}</span><b>${c}</b></div>`).join('')}</div>`
@@ -4071,7 +4069,8 @@ document.addEventListener('click', async e => {
   const st = document.createElement('style');
   st.textContent = '.ringar{grid-template-columns:repeat(3,1fr)!important} #notisMatVaxla,[data-plus="mat"]{display:none!important}';
   document.head.appendChild(st);
-  // matfrågorna i starten hoppas över
+  // matfrågorna i starten hoppas över, och målet Äta bättre finns inte längre
+  VAL.mal = VAL.mal.filter(x => x[0] !== 'kost'); if(S.pref && S.pref.mal && S.pref.mal.delete) S.pref.mal.delete('kost');
   const oi = ORD.indexOf('s-matpref'); if(oi >= 0) ORD.splice(oi, 1);
   document.querySelectorAll('[data-till="s-matpref"]').forEach(b => { b.dataset.till = 's-pepp'; });
   // fitchin frågar inte längre om måltider
