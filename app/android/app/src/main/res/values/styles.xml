@@ -13,6 +13,11 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- mörk bakgrund bakom telefonens status- och navigeringsfält, ljusa ikoner -->
+        <item name="android:windowBackground">#ff120c1c</item>
+        <item name="android:statusBarColor">#ff120c1c</item>
+        <item name="android:navigationBarColor">#ff120c1c</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
 

@@ -3,7 +3,8 @@
   "appName": "Fitchi",
   "webDir": "www",
   "android": {
-    "backgroundColor": "#120c1c"
+    "backgroundColor": "#120c1c",
+    "adjustMarginsForEdgeToEdge": "auto"
   },
   "plugins": {
     "LocalNotifications": {
