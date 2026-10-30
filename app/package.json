@@ -10,7 +10,8 @@
     "@capacitor/android": "7.6.9",
     "@capacitor/core": "7.6.9",
     "@capacitor/ios": "^7.6.9",
-    "@capacitor/local-notifications": "7.0.7"
+    "@capacitor/local-notifications": "7.0.7",
+    "@capacitor/push-notifications": "7.0.7"
   },
   "devDependencies": {
     "@capacitor/cli": "7.6.9"

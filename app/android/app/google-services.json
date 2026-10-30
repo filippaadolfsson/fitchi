@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "418521435510",
+    "project_id": "fitchi-a4cfa",
+    "storage_bucket": "fitchi-a4cfa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418521435510:android:84d4899202d7c0c7417e57",
+        "android_client_info": {
+          "package_name": "app.fitchi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCeTJRMX8Yw2w4Kc5h7hZuKieVchpAWWg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
