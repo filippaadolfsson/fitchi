@@ -1550,7 +1550,9 @@ if(HALSA){
     const delar = [];
     if(typeof d.steg === 'number') delar.push(`<span><b>${d.steg.toLocaleString('en-GB')}</b> steps</span>`);
     if(d.somnMin > 0) delar.push(`<span><b>${fmtH(d.somnMin)}</b> sleep</span>`);
-    if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> bpm${d.pulsNuMinSedan > 20 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min ago)</small>` : ''}</span>`);
+    // puls nu bara om mätningen är högst 15 min gammal, annars vilopulsen (beslut 2026-10-30)
+    if(d.pulsNu && d.pulsNuMinSedan <= 15) delar.push(`<span><b>${d.pulsNu}</b> pulse</span>`);
+    else if(d.vilopuls) delar.push(`<span><b>${d.vilopuls}</b> resting HR</span>`);
     // lägsta puls och vilopuls visas under Vila, inte på hemskärmen
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     stegUppdrag(d.steg);
