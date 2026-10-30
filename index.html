@@ -1436,7 +1436,7 @@ const TEST = false; // release: ingen testpanel
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag','somnLogg'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag','somnLogg','notisPlan'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -2611,33 +2611,52 @@ function klockPass(lista){
 // ===== Påminnelser (bara i Android-appen) =====
 const NOTIS = HALSA && window.Capacitor.Plugins.LocalNotifications ? window.Capacitor.Plugins.LocalNotifications : null;
 function nastaKl(h, m, dagar){ const d = new Date(); d.setHours(h, m || 0, 0, 0); if(dagar) d.setDate(d.getDate() + dagar); else if(d <= new Date()) d.setDate(d.getDate() + 1); return d; }
+// En smart påminnelse om dagen (beslut 2026-10-30). Planeras om varje gång appen stängs, så den bygger på senaste läget.
+// Idag: bara om dagens påminnelse inte redan gått och det finns en anledning. Imorgon och dagen efter: kl 17 om man inte tittat in.
 async function planeraNotiser(){
   if(!NOTIS) return;
   try{
-    const p = await NOTIS.getPending(); if(p.notifications && p.notifications.length) await NOTIS.cancel({notifications: p.notifications.map(n => ({id: n.id}))});
+    const p = await NOTIS.getPending(); if(p.notifications && p.notifications.length) await NOTIS.cancel({notifications: p.notifications.filter(x => x.id !== 22).map(x => ({id: x.id}))});
     if(!S.notis || !S.klar) return;
-    const n = S.namn, lista = [], nu = new Date(), dag = d => d.toDateString(), upptagen = {};
-    const lagg = (id, d, title, body) => { if(d <= nu) return; const k = dag(d); upptagen[k] = (upptagen[k] || 0) + 1; if(upptagen[k] > 2) return; lista.push({id, title, body, schedule: {at: d, allowWhileIdle: true}}); };
-    // söndag: kistan (ersätter morgonen den dagen)
-    const sondag = new Date(); sondag.setHours(10, 0, 0, 0); sondag.setDate(sondag.getDate() + ((7 - sondag.getDay()) % 7)); if(sondag <= nu) sondag.setDate(sondag.getDate() + 7);
-    const k = kistaNu();
-    lagg(3, sondag, 'Veckans kista kan öppnas! 🗝️', `${k.dagar.length} av 7 nycklar. Se vad ${n} får.`);
-    // morgon
-    const m0 = nastaKl(8, 0), m1 = new Date(m0); m1.setDate(m1.getDate() + 1);
-    [m0, m1].forEach((m, i) => { if(m.getDay() !== 0) lagg(1 + i * 10, m, `☀️ ${n} har vaknat`, 'Hur sov du? Kika in och starta dagen tillsammans.'); });
-    // glöden börjar bli låg
-    if(S.glod > 0){
-      let d = new Date(nu.getTime() + Math.max(1, (S.glod - 30) / 50 * 24) * 36e5);
-      if(d.getHours() < 9 || d.getHours() >= 20){ d.setHours(d.getHours() >= 20 ? 24 + 12 : 12, 0, 0, 0); }
-      lagg(2, d, `${n} saknar dig lite`, 'Glöden har börjat falna. Ett litet uppdrag räcker för att den ska lysa igen.');
+    const n = S.namn, nu = new Date(), idag = dagNr(nu), lista = [], plan = S.notisPlan || {};
+    const vid = (dag, h, m) => { const d = new Date(nu); d.setDate(d.getDate() + dag); d.setHours(h, m || 0, 0, 0); return d; };
+    const sondag = dag => vid(dag, 12).getDay() === 0;
+    const klara = (S.uppdrag || []).filter(u => u.klar).length;
+    const k = kistaNu(), kistaRedo = k.dagar.length > 0 && !k.oppnad;
+    // lagmålet, från senaste hämtningen
+    let lag = null;
+    try{ if(S.lagmalMed && lagData && vanLista.length && sbSession){ const med = vanLista.filter(v => lagData.med.has(v.id));
+      if(med.length){ const folk = [{id: sbSession.uid}, ...med], mal = folk.length * LAG_PER, summa = folk.reduce((a, x) => a + (lagData.per[x.id] || 0), 0);
+        if(summa < mal) lag = {kvar: mal - summa, namn: med.map(v => v.namn).join(', ').replace(/, ([^,]*)$/, ' och $1'), dagarKvar: 6 - ((nu.getDay() + 6) % 7)}; } } }catch(e){}
+    // vän som peppat idag och inte fått pepp tillbaka
+    let pepp = null; try{ const v = BESOK.inn[0]; if(v && !(S.peppIdag || []).includes(v.id)) pepp = v; }catch(e){}
+    const lagg = (id, dag, d, title, body) => { lista.push({id, title, body, schedule: {at: d, allowWhileIdle: true}}); plan[idag + dag] = d.getTime(); };
+    // idag
+    const gatt = plan[idag] && plan[idag] <= nu.getTime(), tidigast = nu.getTime() + 90 * 6e4;
+    if(!gatt){ delete plan[idag];
+      const kand = [];
+      if(sondag(0) && kistaRedo) kand.push([vid(0, 10), 'Veckans kista kan öppnas! 🗝️', `${k.dagar.length} av 7 nycklar. Se vad ${n} får.`]);
+      if(lag && (lag.dagarKvar <= 2 || klara === 0)) kand.push([vid(0, 18), `Laget behöver ${lag.kvar} uppdrag till`, lag.dagarKvar === 0 ? `Sista dagen! Ni klarar det tillsammans.` : lag.dagarKvar === 1 ? `En dag kvar. Ett uppdrag idag hjälper laget.` : `${lag.dagarKvar} dagar kvar. Ett uppdrag idag hjälper laget.`]);
+      if(pepp) kand.push([vid(0, 17, 30), `${pepp.namn} peppade dig idag 💛`, `Peppa tillbaka så får ni båda +10 glöd.`]);
+      if(klara === 2) kand.push([vid(0, 19), 'Ett uppdrag kvar till bonusen', `Klara det tredje så får du +25 mynt.`]);
+      if(klara === 0 && !S.vila) kand.push([vid(0, 17), `${n} har tre uppdrag åt dig idag`, 'Ett av dem tar bara några minuter.']);
+      const val = kand.find(x => x[0].getTime() >= tidigast);
+      if(val) lagg(1, 0, ...val);
     }
-    // kväll
-    if(!S.sover) lagg(4, nastaKl(21, 0), `🌙 Dags att natta ${n}?`, 'Säg godnatt så sover ni båda gott.');
+    // imorgon
+    if(sondag(1) && lag) lagg(11, 1, vid(1, 10), 'Sista dagen för lagmålet', `Laget behöver ${lag.kvar} uppdrag till. ${kistaRedo ? 'Veckans kista väntar också! 🗝️' : 'Titta in och hjälp laget.'}`);
+    else if(sondag(1) && (kistaRedo || k.dagar.length > 0)) lagg(11, 1, vid(1, 10), 'Veckans kista kan öppnas! 🗝️', `Se vad ${n} får den här veckan.`);
+    else lagg(11, 1, vid(1, 17), `${n} har tre nya uppdrag åt dig`, 'Ett av dem tar bara några minuter.');
+    // dagen efter, om man inte tittat in alls
+    let gava = false; try{ gava = !!(S.valkomst && S.valkomst.tagna && S.valkomst.tagna.length < GAVOR.length); }catch(e){}
+    if(!gava) lagg(12, 2, vid(2, 17), `${n} saknar dig lite`, `Titta in och se vad ${n} har hittat på.`);
+    for(const d of Object.keys(plan)) if(+d < idag - 1) delete plan[d];
+    S.notisPlan = plan; spara();
     if(lista.length) await NOTIS.schedule({notifications: lista});
   }catch(e){ console.log('notis', e); }
 }
 async function fragaNotis(){
-  oppnaArk(arkHuvud('Påminnelser', `Får ${S.namn} påminna dig?`, `Högst två små påminnelser om dagen: på morgonen, när glöden börjar falna, när det är kväll och när veckans kista kan öppnas. Du kan stänga av dem i Din resa.`)
+  oppnaArk(arkHuvud('Påminnelser', `Får ${S.namn} påminna dig?`, `Högst en påminnelse om dagen, och bara när det finns något: en vän som peppat dig, lagmålet, bonusen eller veckans kista. Du kan stänga av dem i Din resa.`)
     + `<div style="display:flex;flex-direction:column;gap:10px"><button class="knapp ljus" id="notisJa">Ja, gärna</button><button class="knapp sek" id="notisNej">Inte nu</button></div>`);
 }
 async function slaPaNotis(){
@@ -2824,7 +2843,7 @@ visaResa = function(){
       ${resaAllt ? '' : `<button class="visamer" id="resaAllt">Visa hela vägen till nivå ${NIVABEL[NIVABEL.length - 1][0]}</button>`}
       <button class="knapp ljus" id="visaVeckan">Veckan med ${S.namn}</button>
       <div class="installningar">
-        ${NOTIS ? `<button id="notisVaxla"><span>Påminnelser<br><small>Högst två om dagen</small></span><span class="vaxel ${S.notis ? 'pa' : ''}"></span></button>` : ''}
+        ${NOTIS ? `<button id="notisVaxla"><span>Påminnelser<br><small>Högst en om dagen</small></span><span class="vaxel ${S.notis ? 'pa' : ''}"></span></button>` : ''}
         <a id="integritetLank" href="https://fitchi.app/integritet/" target="_blank" rel="noopener"><span>Integritetspolicy<br><small>Så hanterar vi dina uppgifter</small></span><span>›</span></a>
         <button id="borjaOm"><span>Börja om från början<br><small>Raderar din fitchi, dina vänner och allt du har samlat</small></span><span>›</span></button>
       </div>
