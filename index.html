@@ -1436,7 +1436,7 @@ const TEST = false; // release: ingen testpanel
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -2317,7 +2317,7 @@ ritaButik = function(){
     <div class="brubrik"><h2>Förmåner</h2><span>Lös in med dina mynt</span></div>
     ${fk('dose', true)}
     ${fk('yoga', false)}
-    <div class="kort bred sambox"><span class="etk">Samarbete</span><h2 style="font-size:17px">Näring saknar protein idag</h2><p style="font-size:14px;line-height:20px">En proteinbar ger 20 g. Rabatt via Fitchi.</p><p class="liten">Eller: kesella med bär, 25 g.</p><button class="lite sek">Visa erbjudandet</button></div>`;
+    <div class="kort bred sambox"><span class="etk">Samarbete</span><h2 style="font-size:17px">Något gott efter passet</h2><p style="font-size:14px;line-height:20px">En proteinbar ger 20 g. Rabatt via Fitchi.</p><button class="lite sek">Visa erbjudandet</button></div>`;
 };
 document.addEventListener('click', e => {
   const kp = e.target.closest('[data-kopPryl]');
@@ -2883,13 +2883,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
      ja: 'Lägg till uppdrag', gor: () => lagUppdrag({m: 'energi', t: '5 min rörelsepaus', p: 15}, 'Rörelsepausen är tillagd.'), varfor: 'Bygger på energi-mätaren.'},
     {id: 'vatten', nar: () => kl() >= 12 && (S.vatten || 0) < 3,
      text: () => `Du har loggat ${S.vatten || 0} glas vatten idag. Ta ett glas nu?`,
-     ja: 'Ja, ett glas', gor: () => { S.vatten = (S.vatten || 0) + 1; if(typeof ritaMat === 'function') ritaMat(); spara(); toastG('+1 glas vatten loggat.'); }, varfor: 'Bygger på dagens matlogg.'},
-    {id: 'protein', nar: () => kl() >= 15 && (S.protein || 0) < 45,
-     text: () => `${S.protein || 0} g protein hittills idag. Kvarg, ägg eller bönor till mellanmål tar dig närmare målet på 90 g.`,
-     ja: 'Logga mat', gor: () => visa('s-mat'), varfor: 'Bygger på dagens matlogg.'},
-    {id: 'gront', nar: () => kl() >= 16 && (S.gront || 0) < 2,
-     text: () => `${S.gront ? 'En portion' : 'Inga'} grönsaker loggade än idag. Lägg till något grönt till middagen?`,
-     ja: 'Logga mat', gor: () => visa('s-mat'), varfor: 'Bygger på dagens matlogg.'},
+     ja: 'Ja, ett glas', gor: () => { S.vatten = (S.vatten || 0) + 1; if(typeof ritaMat === 'function') ritaMat(); spara(); toastG('+1 glas vatten loggat.'); }, varfor: 'Vatten hjälper både dig och din fitchi.'},
     {id: 'styrkaVecka', nar: () => new Date().getDay() >= 3 && passVecka('styrka') === 0,
      text: () => `Inget styrkepass än den här veckan. Ett kort pass hemma på 15 minuter räcker för att hålla ${S.namn} stark.`,
      ja: 'Lägg till uppdrag', gor: () => lagUppdrag({m: 'styrka', t: '15 min styrka hemma', p: 35}, 'Styrkepasset är tillagt.'), varfor: 'Bygger på veckans loggade pass.'},
@@ -2963,7 +2957,7 @@ else { S.m = {energi:50, styrka:50, lugn:50, naring:50}; S.data.somn = 7; S.data
   const ritaMeny = () => document.querySelectorAll('[data-flikar]').forEach(n => { const egen = n.closest('.skarm').id;
     const flik = (id, t) => `<button class="flik${id===egen?' aktiv':''}" ${id===egen?'aria-current="page"':`data-till="${id}"`} aria-label="${t}">${IKON[id]}<span>${t}</span></button>`;
     n.innerHTML = flik('s-hem', 'Hem') + flik('s-framsteg', 'Vecka')
-      + `<button class="flik plusk" data-plusval aria-label="Logga träning, mat eller vatten">${IKON.plus}</button>` + flik('s-vanner', 'Vänner') + flik('s-butik', 'Butik'); });
+      + `<button class="flik plusk" data-plusval aria-label="Logga träning eller vatten">${IKON.plus}</button>` + flik('s-vanner', 'Vänner') + flik('s-butik', 'Butik'); });
   // Framsteg-skärmen skapas här (måste finnas innan menyn ritas)
   if(!document.getElementById('s-framsteg')){ const s = document.createElement('section'); s.className = 'skarm'; s.id = 's-framsteg'; s.setAttribute('aria-label', 'Framsteg');
     s.innerHTML = '<div class="pad" id="framstegPad" style="display:flex;flex-direction:column;gap:14px;padding-bottom:12px"></div><nav class="flikar" aria-label="Meny" data-flikar></nav>';
@@ -4068,6 +4062,42 @@ document.addEventListener('click', async e => {
 }, true);
 // när ett uppdrag bockas av: skicka nya antalet (bara för den som är med)
 { const _sp3 = spara; let senast = -1; spara = function(){ _sp3.apply(this, arguments); const n = (S.uppdrag || []).filter(u => u.klar).length; if(n !== senast && S.moln && S.lagmalMed){ senast = n; setTimeout(synkaDagsuppdrag, 1500); } }; }
+
+// ===== Utan näring (beslut 2026-10-30): tre mätare som fylls av sig själva. Vatten och Mata finns kvar som lek. =====
+{ const ri = RINGAR.findIndex(r => r[0] === 'naring'); if(ri >= 0) RINGAR.splice(ri, 1);
+  const st = document.createElement('style');
+  st.textContent = '.ringar{grid-template-columns:repeat(3,1fr)!important} #notisMatVaxla,[data-plus="mat"]{display:none!important}';
+  document.head.appendChild(st);
+  // matfrågorna i starten hoppas över
+  const oi = ORD.indexOf('s-matpref'); if(oi >= 0) ORD.splice(oi, 1);
+  document.querySelectorAll('[data-till="s-matpref"]').forEach(b => { b.dataset.till = 's-pepp'; });
+  // fitchin frågar inte längre om måltider
+  fragaNu = () => null; visaMatKvall = () => {}; S.notisMat = false;
+  try{ if(typeof NOTIS !== 'undefined' && NOTIS) NOTIS.cancel({notifications: [30, 31, 32, 33, 34, 35].map(id => ({id}))}).catch(() => {}); }catch(e){}
+  // hungrig bara när du själv säger det
+  hungrigNu = function(){ const k = kanslaIdag(); return !!(k && k.hungrig && Date.now() - k.hungrig < 3 * 36e5); };
+  // uppdrag: inga matuppdrag, vattnet blir ett må bra-uppdrag
+  UBANK.gladje.push(...UBANK.naring.filter(x => x.auto === 'vatten2' || x.auto === 'vatten6').map(x => ({t: x.t, auto: x.auto, nar: x.nar})));
+  UBANK.naring = [];
+  UVARFOR.hungrig = ['gladje', '{namn} undrar om du har ätit'];
+  const _sk = skapaUppdrag;
+  skapaUppdrag = function(){ const m = S.m.naring; S.m.naring = 1e6; try{ return _sk.apply(this, arguments); } finally{ S.m.naring = m; } };
+  setTimeout(() => { try{ let bytt = false;
+    (S.uppdrag || []).forEach((u, i) => { if(u.m === 'naring' && !u.klar){ const ny = ['energi', 'lugn', 'styrka'].find(k => !(S.uppdrag || []).some(x => x.m === k)) || 'energi'; S.uppdrag[i] = valjUppdrag(ny); bytt = true; } });
+    if(bytt){ ritaUppdrag(); spara(); } }catch(e){} }, 0);
+  // veckan: bara de tre mätarna
+  const _vd = veckoData; veckoData = function(){ const v = _vd.apply(this, arguments); v.matare = (v.matare || []).filter(x => x[0] !== 'naring'); return v; };
+  // Mata är lek: fitchin får något gott, glöd de tre första gångerna varje dag
+  const GOTT = ['ett bär', 'en morotsbit', 'en äppelbit', 'ett blåbär', 'en liten kaka'];
+  document.addEventListener('click', e => { const o = e.target.closest('[data-oms="mata"]'); if(!o) return; e.stopImmediatePropagation(); e.preventDefault();
+    if(S.sover) return;
+    const dag = dagNr(new Date()); if(!S.mataDag || S.mataDag.dag !== dag) S.mataDag = {dag, n: 0};
+    S.mataDag.n++; const gott = GOTT[Math.floor(Math.random() * GOTT.length)], h = new Date().getHours();
+    const fraga = (h >= 11 && h < 14) ? ' Har du själv ätit lunch?' : (h >= 17 && h < 20) ? ' Har du själv ätit middag?' : '';
+    if(S.mataDag.n <= 3) andraGlod(5, `${S.namn} åt upp ${gott}.${fraga}`);
+    else toastG(`${S.namn} är mätt och belåten.${fraga}`, 2400);
+    spara(); }, true);
+}
 
 </script>
 </body>
