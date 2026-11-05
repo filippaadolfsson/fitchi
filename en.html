@@ -924,7 +924,7 @@ function ritaHem(){
 // Logga
 const TYPER_ALLA = [['promenad','Walk','energi','#c8f169'],['styrka','Strength','styrka','#ff7a5c'],['yoga','Yoga or rest','lugn','#d9b8f0'],['lopning','Running','energi','#c8f169'],['padel','Padel','energi','#c8f169'],['dans','Dance','energi','#c8f169'],['cykel','Cycling','energi','#c8f169'],['hemma','Home workout','styrka','#ff7a5c'],['simning','Swimming','energi','#c8f169'],['annat','Other','energi','#c8f169']];
 const TYPER = [...TYPER_ALLA].sort((a,b) => (S.pref.typer.has(b[0])?1:0)-(S.pref.typer.has(a[0])?1:0));
-function ritaTyper(){ TYPER.sort((a,b) => (S.pref.typer.has(b[0])?1:0)-(S.pref.typer.has(a[0])?1:0)); $('#typer').innerHTML = TYPER.map(([k,t,m]) => `<button class="typ" aria-pressed="${k===S.typ}" data-typ="${k}">${t}<small>Fills ${m==='naring'?'nutrition':m==='lugn'?'rest':m}</small></button>`).join(''); }
+function ritaTyper(){ TYPER.sort((a,b) => (S.pref.typer.has(b[0])?1:0)-(S.pref.typer.has(a[0])?1:0)); $('#typer').innerHTML = TYPER.map(([k,t,m]) => `<button class="typ" aria-pressed="${k===S.typ}" data-typ="${k}">${t}<small>${({energi:'Fills energy',styrka:'Fills strength',lugn:'Fills rest',naring:'Fills nutrition'})[m]||''}</small></button>`).join(''); }
 ritaTyper();
 $('#typer').addEventListener('click', e => { const b = e.target.closest('[data-typ]'); if(!b) return; S.typ = b.dataset.typ;
   document.querySelectorAll('[data-typ]').forEach(x => x.setAttribute('aria-pressed', x===b)); });
@@ -2034,7 +2034,7 @@ document.addEventListener('click', e => {
     if(pr.closest('.prylhylla')){ ritaButik(); toastG(`${PRYLAR[S.framme].namn} now stands next to ${S.namn}.`, 2200); } else visaPrylar(); return; }
   // nyckel: första uppdraget eller passet för dagen
   const k = e.target.closest('[data-klar]'); if(k && S.uppdrag && S.uppdrag[+k.dataset.klar] && !S.uppdrag[+k.dataset.klar].klar) nyckelIdag();
-  if(e.target.closest('#spara')) nyckelIdag();
+  if(e.target.closest('#spara') && !arEfterhand()) nyckelIdag(); // pass i efterhand ger ingen nyckel
 }, true);
 // --- minispel 2: fånga hjärtstenar (nivå 7)
 NIVABEL.forEach(r => { if(r[0] === 3){ r[1] = 'Mini-game: breathe with your fitchi'; r[2] = 'andningsspelet'; } if(r[0] === 7){ r[1] = 'Mini-game: catch heart stones'; r[2] = 'the heart stone game'; } if(r[0] === 5){ r[1] = 'New behaviour: the dance'; r[2] = 'dansen'; } if(r[0] === 12){ r[1] = 'Teams and team challenges'; r[2] = 'lag'; } });
@@ -4329,6 +4329,46 @@ document.addEventListener('click', e => {
     }
     if(lista.length) await NOTIS.schedule({notifications: lista});
   }catch(e){ console.log('svagnotis', e); } }; }
+
+
+// ===== Logga i efterhand (beslut 2026-11-05): upp till 7 dagar bakåt, från Logga och från kalendern =====
+// Räknas den dagen det gjordes (veckosiffror, kalendern, mätarna). Ger inte nyckel, uppdrag, dagsbonus eller glöd i efterhand.
+let loggDag = null; // null = idag
+function arEfterhand(){ try{ return loggDag != null && loggDag !== dagNr(new Date()); }catch(e){ return false; } }
+const loggDagar = () => { const i = dagNr(new Date()); return [...Array(7)].map((_, k) => i - k); };
+const dagEtikett = d => { const i = dagNr(new Date()); if(d === i) return 'Today'; if(d === i - 1) return 'Yesterday';
+  const t = new Date(d * 864e5).toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'UTC'}); return t.charAt(0).toUpperCase() + t.slice(1); };
+function ritaLoggDag(){
+  const typer = document.getElementById('typer'); if(!typer) return;
+  let w = document.getElementById('loggNar'); if(!w){ typer.insertAdjacentHTML('beforebegin', '<div id="loggNar"></div>'); w = document.getElementById('loggNar'); }
+  const val = loggDag ?? dagNr(new Date());
+  w.innerHTML = `<p class="liten" style="margin-bottom:10px">When?</p><div class="nardagar">${loggDagar().map(d => `<button data-loggdag="${d}" aria-pressed="${d === val}">${dagEtikett(d)}</button>`).join('')}</div>`;
+  const sp = document.getElementById('spara'); if(sp) sp.textContent = val === dagNr(new Date()) ? 'Save workout' : `Save workout for ${dagEtikett(val).toLowerCase()}`;
+}
+{ const st = document.createElement('style'); st.textContent = `
+  .nardagar{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none} .nardagar::-webkit-scrollbar{display:none}
+  .nardagar button{appearance:none;flex:0 0 auto;min-height:44px;padding:0 16px;border-radius:99px;border:1px solid var(--glas-kant);background:transparent;color:inherit;font:600 15px var(--text);cursor:pointer}
+  .nardagar button[aria-pressed="true"]{background:var(--lime);color:#120c1c;border-color:var(--lime)}`; document.head.appendChild(st); }
+{ const _v = visa; visa = function(id){ if(id !== 's-logga') loggDag = null; _v.apply(this, arguments); if(id === 's-logga') ritaLoggDag(); }; }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-loggdag]'); if(b){ e.stopImmediatePropagation(); const d = +b.dataset.loggdag; loggDag = d === dagNr(new Date()) ? null : d; ritaLoggDag(); return; }
+  const k = e.target.closest('[data-efterhand]'); if(k){ e.stopImmediatePropagation(); const d = +k.dataset.efterhand; stangArk(); setTimeout(() => { visa('s-logga'); loggDag = d === dagNr(new Date()) ? null : d; ritaLoggDag(); }, 250); return; }
+  if(e.target.closest('#spara') && loggDag != null && loggDag !== dagNr(new Date())){
+    e.stopImmediatePropagation(); e.preventDefault();
+    const d = loggDag, nu = new Date(), tid = new Date(nu.getTime() - (dagNr(nu) - d) * 864e5).getTime();
+    const p = {id: 'e' + Date.now(), tid, typ: S.typ, min: S.min, efterhand: true};
+    const g0 = S.glod; tillampaPass(p); S.glod = g0; p.eff.glod = 0;   // glöden gäller idag, inte i efterhand
+    S.passlogg = (S.passlogg || []).concat(p).sort((a, b) => a.tid - b.tid).slice(-60);
+    const namn = p.namn, etk = dagEtikett(d).toLowerCase(); loggDag = null;
+    spara(); try{ svagVard(); }catch(err){} visa('s-hem'); ritaHem();
+    setTimeout(() => toastG(`${namn} added for ${etk}. +${p.eff.mynt} coins`, 2800), 300); return; }
+}, true);
+// kalendern: tryck på en dag → lägg till träning den dagen
+{ const _oa = oppnaArk; oppnaArk = function(html){ _oa.apply(this, arguments);
+    try{ const ark = document.getElementById('ark'), d = ark && ark._kdag; if(d == null) return; ark._kdag = null;
+      const i = dagNr(new Date()); if(d > i || d < i - 6) return;
+      const plats = ark.querySelector('.rader') || ark.querySelector('p.liten'); if(plats) plats.insertAdjacentHTML('afterend', `<button class="knapp ljus" data-efterhand="${d}" style="margin-top:12px">+ Add workout</button>`); }catch(e){} }; }
+document.addEventListener('click', e => { const k = e.target.closest('[data-kdag]'); if(k){ const a = document.getElementById('ark'); if(a) a._kdag = +k.dataset.kdag; } }, true);
 
 </script>
 </body>
