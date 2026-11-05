@@ -912,7 +912,7 @@ function ritaHem(){
   const borta = S.data.borta >= 3; $('#tillbaka').hidden = !borta && !S.formNytt;
   if(S.formNytt && !borta && S.formNytt.typ==='upp'){ $('#tillbakaTitel').textContent = 'Ny form!'; $('#tillbakaText').textContent = `${S.namn}s ${S.formNytt.m.map(k => UPPTEXT[k]).join(' och ')}. Det syns att du har varit aktiv.`; }
   if(S.formNytt && S.formNytt.typ==='ner'){ $('#tillbaka').hidden = false; $('#tillbakaTitel').textContent = `${S.namn} har tappat lite form`; $('#tillbakaText').textContent = `Men ${S.namn} minns allt. Ett par aktiva veckor så är ni tillbaka, det går dubbelt så snabbt andra gången. Prylarna och minnena behåller ni alltid.`; }
-  else if(borta){ $('#tillbakaTitel').textContent = `Välkommen tillbaka!`; $('#tillbakaText').textContent = `${S.namn} har väntat på dig. Inget har gått förlorat, och idag börjar vi lugnt med lite kortare uppdrag.`; }
+  else if(borta){ $('#tillbakaTitel').textContent = `Välkommen tillbaka!`; $('#tillbakaText').textContent = `${S.namn} har väntat på dig. Idag börjar vi lugnt med lite kortare uppdrag.`; }
   const [mood, txt] = humor(); $('#hemOrkis').innerHTML = ork(mood, 150); $('#hemOrkis').setAttribute('aria-label', `${txt}. Tryck för att klappa ${S.namn}`);
   $('#humor').textContent = txt;
   $('#ringar').innerHTML = RINGAR.map(([k,n]) => `<button class="chip glas" data-matare="${k}" aria-label="${n}: ${Math.round(S.m[k])} av 100. Visa detaljer">${ring(S.m[k],k)}<span>${n}</span></button>`).join('');
@@ -1436,7 +1436,7 @@ const TEST = false; // release: ingen testpanel
 if(new URLSearchParams(location.search).has('borjaom')){ try{ localStorage.removeItem(LAGER); }catch(e){} history.replaceState(null, '', location.pathname); }
 document.body.classList.toggle('testlage', TEST);
 const dagNr = d => Math.floor((d.getTime() - d.getTimezoneOffset()*60000) / 864e5);
-const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag','somnLogg','notisPlan'];
+const SPARA = ['namn','art','saldo','xp','niva','m','glod','sover','uppdrag','byten','protein','vatten','gront','senastNiva','kristaller','formTopp','vecka','start','lag','form','hist','passlogg','formDag','kista','prylar','framme','forstaPryl','andasDag','fangaDag','fangaRekord','myntDag','teman','tema','besokBonus','bastisar','peppGlod','popular','kansla','pulsHist','matKvall','notisMat','uppdragHumorDag','visaKcal','kopia','kopiaKod','kopiaTid','valkomst','humorDag','veckaVisad','lagmal','lagmalMed','lagmalRensat','klockpass','notis','egenMat','dagbok','stegDagar','losta','matlogg','matloggDag','moln','peppIdag','tips','marken','kistGuld','basRad','mataDag','somnLogg','notisPlan','svag','svagDag','vardDag','paus','pausAr','omstart'];
 function spara(){
   if(!S.klar || FLYTTAR) return;
   loggaDag();
@@ -4184,6 +4184,151 @@ document.addEventListener('click', e => {
 });
 // en tupplur ger lite extra återhämtning till humöret
 { const _mb = mabra; mabra = function(){ const m = _mb.apply(this, arguments); try{ const t = tupplurMin(); if(t) m.ater = Math.min(100, m.ater + Math.min(10, Math.round(t / 3))); }catch(e){} return m; }; }
+
+
+// ===== Svagare dag för dag (beslut 2026-11-05) =====
+// Varje hel dag utan omsorg blir fitchin ett steg svagare. Dag 7 är den borta och man börjar om med ett nytt ägg (vänner kvar).
+// Omsorg = man gör något i appen (leka, mata, natta, uppdrag, logga). Varje dag med omsorg blir den ett steg starkare.
+// Pausläge (sjuk/resa) fryser nedräkningen: 3–14 dagar i taget, 30 dagar per år, inte när fitchin redan är svag (steg 3+).
+const SVAG_TEXT = [null, '{n} saknar dig', '{n} är hungrig och trött', '{n} känner sig svag', '{n} blir svagare', '{n} är väldigt svag', '{n} klarar sig inte mycket längre'];
+const SVAG_FILTER = ['', 'saturate(.75)', 'saturate(.6) brightness(.9)', 'grayscale(.5) brightness(.8)', 'grayscale(.65) brightness(.7)', 'grayscale(.8) brightness(.65)', 'grayscale(.9) brightness(.6)'];
+const SVAG_OPAC = [1, 1, 1, 1, .85, .55, .3];
+const SVAG_GLOD = [100, 70, 50, 30, 20, 10, 4];
+const PAUS_PER_AR = 30;
+const pausad = (dd) => !!(S.paus && dd >= S.paus.fran && dd < S.paus.till);
+const pausNu = () => pausad(dagNr(new Date()));
+const pausDatum = () => { try{ return new Date(S.paus.till * 864e5 + 12 * 36e5).toLocaleDateString('sv-SE', {day: 'numeric', month: 'long'}); }catch(e){ return ''; } };
+function pausKvar(){ const ar = new Date().getFullYear(); if(!S.pausAr || S.pausAr.ar !== ar) S.pausAr = {ar, dagar: 0}; return Math.max(0, PAUS_PER_AR - S.pausAr.dagar); }
+function svagUppdatera(){
+  if(!S.klar) return;
+  const idag = dagNr(new Date());
+  if(S.svagDag == null || S.svag == null){ S.svagDag = idag; S.svag = 0; S.vardDag = idag; spara(); return; } // befintliga fitchis börjar räkna nu
+  if(idag > S.svagDag){
+    let n = 0;
+    for(let dd = S.svagDag; dd < idag; dd++){ if(dd === S.svagDag && S.vardDag === dd) continue; if(pausad(dd)) continue; n++; }
+    S.svag = Math.min(7, S.svag + n); S.svagDag = idag;
+    if(S.paus && idag >= S.paus.till) S.paus = null;
+    spara();
+  }
+  if(S.svag < 7 && !pausNu()){ S.glod = Math.max(1, Math.min(S.glod, SVAG_GLOD[S.svag])); S.sover = S.sover && S.svag < 5; }
+}
+function svagVard(){
+  if(!S.klar || S.svag >= 7) return;
+  const idag = dagNr(new Date()); svagUppdatera();
+  if(S.vardDag === idag) return;
+  S.vardDag = idag;
+  if(S.svag > 0){ S.svag--; setTimeout(() => toastG(S.svag === 0 ? `${S.namn} mår bra igen!` : `${S.namn} mår lite bättre. Kom tillbaka imorgon också.`, 2600), 1400); }
+  spara(); try{ ritaHem(); }catch(e){}
+}
+// omsorg: riktiga tryck på leka, mata, natta, lekar, uppdrag och plusmenyns loggning
+document.addEventListener('click', e => { if(!e.isTrusted) return;
+  if(e.target.closest('[data-oms="mata"],[data-oms="natta"],[data-lek],[data-klar],[data-godnatt],[data-somn-spara],[data-tupplur],[data-plus="vatten"]')) setTimeout(svagVard, 0); }, true);
+{ const _ag = andraGlod; andraGlod = function(d){ const r = _ag.apply(this, arguments); try{ if(d > 0 && navigator.userActivation && navigator.userActivation.isActive) svagVard(); }catch(e){} return r; }; }
+// humörtexten och bilden följer nedräkningen
+{ const _hu = humor; humor = function(){
+    if(S.klar && pausNu()) return ['lugn', `${S.namn} sover i sin kristall till ${pausDatum()}`];
+    if(S.klar && S.svag >= 1 && S.svag < 7) return [S.svag >= 2 ? 'trott' : 'neutral', SVAG_TEXT[S.svag].replace('{n}', S.namn)];
+    return _hu.apply(this, arguments); }; }
+{ const st = document.createElement('style'); st.textContent = `
+  #svagKort{margin:0 0 16px;padding:14px 16px;border-radius:22px;display:flex;flex-direction:column;gap:4px;font:400 14px/20px var(--text);color:#f1e9f7}
+  #svagKort b{font:700 15px var(--text)} #svagKort.varn{background:#ffb07a1f;box-shadow:inset 0 0 0 1px #ffb07a66} #svagKort.varn b{color:#ffcfa8}
+  #svagKort.sista{background:#ff8a8a1f;box-shadow:inset 0 0 0 1.5px #ff8a8a} #svagKort.sista b{color:#ffc2c2}
+  #svagKort.paus{background:#ffffff12;box-shadow:inset 0 0 0 1px #ffffff2e} #svagKort .lite{align-self:flex-start;margin-top:6px}
+  #borta{position:fixed;inset:0;z-index:90;background:radial-gradient(120% 60% at 50% 0%,#1f1b26 0%,#15111c 55%,#0b0810 100%);color:#fff;display:flex;flex-direction:column;gap:16px;padding:calc(52px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));box-sizing:border-box;overflow:auto}
+  #borta h1{margin:auto 0 0;font:800 34px/38px var(--display);letter-spacing:-.03em;text-align:center} #borta p{margin:0;text-align:center;color:#c9c2d3;font-size:15px;line-height:22px}
+  #borta .forlust{padding:16px;border-radius:22px;background:#ffffff0a;box-shadow:inset 0 0 0 1px #ffffff1f;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;color:#e6e0ee;font-size:15px}
+  #borta .forlust small{grid-column:1/-1;font:700 13px var(--text);letter-spacing:.12em;color:#a8a0b4}`;
+  document.head.appendChild(st); }
+function ritaSvag(){
+  const sc = document.getElementById('djurscen'), ork = document.getElementById('hemOrkis'); if(!sc || !ork || !S.klar) return;
+  const p = pausNu(), s = S.svag || 0;
+  sc.classList.toggle('kristall', p); if(p) sc.classList.remove('sover');
+  ork.style.opacity = p ? '' : String(SVAG_OPAC[Math.min(6, s)]);
+  if(!p && s > 0) ork.style.filter = SVAG_FILTER[Math.min(6, s)];
+  const om = document.getElementById('omsorg'), vk = document.getElementById('vack'); if(om) om.hidden = p; if(vk) vk.hidden = true;
+  document.getElementById('svagKort')?.remove();
+  const kvar = 7 - s, h = document.getElementById('humor'); let html = '';
+  if(p) html = `<div id="svagKort" class="paus"><b>Pausad till ${pausDatum()}</b><span>${S.namn} blir inte svagare medan du är borta.</span><button class="lite" data-paus-slut>Avsluta pausen</button></div>`;
+  else if(s === 6) html = `<div id="svagKort" class="sista"><b>Sista dagen</b><span>Imorgon är ${S.namn} borta, och allt du har samlat försvinner också. Gör något för ${S.namn} idag.</span></div>`;
+  else if(s >= 3) html = `<div id="svagKort" class="varn"><b>${kvar} dagar kvar</b><span>${S.namn} blir svagare för varje dag du inte är här. Ta hand om ${S.namn} så blir det bättre, ett steg om dagen.</span></div>`;
+  const under = document.querySelector('#s-hem .under'); if(html && under) under.insertAdjacentHTML('afterbegin', html); else if(html && h) h.insertAdjacentHTML('afterend', html);
+  if(s >= 7) visaBorta();
+}
+function visaBorta(){
+  if(document.getElementById('borta')) return;
+  let pr = 0, mk = 0, ny = 0; try{ pr = (S.prylar || []).length; mk = Object.keys(S.marken || {}).length; ny = kistaNu().dagar.length; }catch(e){}
+  document.body.insertAdjacentHTML('beforeend', `<div id="borta" role="dialog" aria-modal="true" aria-label="${S.namn} är borta">
+    <h1>${S.namn} är borta</h1><p>Ingen tog hand om ${S.namn} på sju dagar.</p>
+    <div class="forlust"><small>FÖRSVANN MED ${String(S.namn).toUpperCase()}</small><span>Nivå ${S.niva}</span><span>${fmtTal(S.saldo)} mynt</span><span>${pr} prylar</span><span>${ny} nycklar</span><span>${mk} märken</span><span>Veckans kista</span></div>
+    <button class="knapp ljus" data-nytt-agg style="margin-bottom:auto">Börja om med ett nytt ägg</button></div>`);
+  try{ if(typeof NOTIS !== 'undefined' && NOTIS) NOTIS.getPending().then(p => p.notifications && p.notifications.length && NOTIS.cancel({notifications: p.notifications.map(n => ({id: n.id}))})).catch(() => {}); }catch(e){}
+}
+const fmtTal = n => Math.round(n || 0).toLocaleString('sv-SE');
+// nytt ägg: allt nollställs utom vänner, inställningar och språk
+document.addEventListener('click', e => { if(!e.target.closest('[data-nytt-agg]')) return; e.stopImmediatePropagation();
+  const spar = {moln: S.moln, notis: S.notis, notisMat: S.notisMat, lagmalMed: S.lagmalMed, lagmalRensat: S.lagmalRensat, kopia: S.kopia, kopiaKod: S.kopiaKod, tema: S.tema};
+  try{ localStorage.setItem('fitchi-omstart', JSON.stringify(spar)); localStorage.removeItem(LAGER); }catch(err){}
+  S.klar = false; location.replace(location.pathname); }, true);
+// efter att det nya ägget kläckts: lägg tillbaka det som sparades
+setInterval(() => { try{ if(!S.klar) return; const o = JSON.parse(localStorage.getItem('fitchi-omstart') || 'null'); if(!o) return;
+  for(const [k, v] of Object.entries(o)) if(v !== undefined) S[k] = v; localStorage.removeItem('fitchi-omstart'); S.svagDag = null; svagUppdatera(); spara(); }catch(e){} }, 2000);
+{ const _rh = ritaHem; ritaHem = function(){ try{ svagUppdatera(); }catch(e){} _rh.apply(this, arguments); try{ ritaSvag(); }catch(e){} }; }
+document.addEventListener('visibilitychange', () => { if(!document.hidden && S.klar){ svagUppdatera(); try{ ritaHem(); }catch(e){} } });
+setInterval(() => { if(!document.hidden && S.klar && S.svagDag !== dagNr(new Date())){ svagUppdatera(); try{ ritaHem(); }catch(e){} } }, 60000);
+svagUppdatera(); try{ if(S.klar) ritaHem(); }catch(e){}
+
+// pausläge: i Din resa och på hemskärmen
+function visaPaus(){
+  const p = pausNu();
+  if(p){ oppnaArk(arkHuvud('Pausläge', `${S.namn} sover till ${pausDatum()}`, `${S.namn} blir inte svagare medan pausen pågår.`) + `<button class="knapp" data-paus-slut>Avsluta pausen nu</button>`); return; }
+  if((S.svag || 0) >= 3){ oppnaArk(arkHuvud('Pausläge', `${S.namn} är för svag för att pausa`, `Ta hand om ${S.namn} några dagar först. Pausläget går att använda igen när ${S.namn} mår bättre.`)); return; }
+  const kvar = pausKvar();
+  if(kvar < 3){ oppnaArk(arkHuvud('Pausläge', 'Inga pausdagar kvar i år', `Du har använt alla ${PAUS_PER_AR} pausdagar i år.`)); return; }
+  window._pausVal = window._pausVal || {orsak: 'sjuk', dagar: Math.min(7, kvar)};
+  const v = window._pausVal, val = (k, t) => `<button class="knapp ${v.orsak === k ? '' : 'sek'}" data-paus-orsak="${k}" aria-pressed="${v.orsak === k}">${t}</button>`;
+  const dag = d => `<button class="knapp ${v.dagar === d ? '' : 'sek'}" data-paus-dagar="${d}" aria-pressed="${v.dagar === d}" ${d > kvar ? 'disabled style="opacity:.4"' : ''}>${d} dagar</button>`;
+  const till = new Date((dagNr(new Date()) + v.dagar) * 864e5 + 12 * 36e5).toLocaleDateString('sv-SE', {day: 'numeric', month: 'long'});
+  oppnaArk(arkHuvud('Pausläge', `Pausa ${S.namn}`, `${S.namn} sover lugnt medan du är borta. ${S.namn} blir inte svagare, och ingenting försvinner.`)
+    + `<p class="liten" style="margin:0">Varför?</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${val('sjuk', 'Jag är sjuk')}${val('resa', 'Jag är på resa')}</div>`
+    + `<p class="liten" style="margin:0">Hur länge?</p><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${[3, 7, 10, 14].map(dag).join('')}</div>`
+    + `<p class="liten" style="margin:0">Du har ${PAUS_PER_AR} pausdagar per år. ${kvar} kvar. Du kan avsluta pausen när du vill.</p>`
+    + `<button class="knapp ljus" data-paus-start>Pausa till ${till}</button>`);
+}
+document.addEventListener('click', e => {
+  const t = e.target;
+  if(t.closest('[data-paus-oppna]')){ e.stopImmediatePropagation(); stangArk(); setTimeout(visaPaus, 250); return; }
+  const o = t.closest('[data-paus-orsak]'); if(o){ e.stopImmediatePropagation(); window._pausVal.orsak = o.dataset.pausOrsak; visaPaus(); return; }
+  const d = t.closest('[data-paus-dagar]'); if(d){ e.stopImmediatePropagation(); window._pausVal.dagar = +d.dataset.pausDagar; visaPaus(); return; }
+  if(t.closest('[data-paus-start]')){ e.stopImmediatePropagation(); const v = window._pausVal, kvar = pausKvar(), n = Math.min(v.dagar, kvar), idag = dagNr(new Date());
+    svagUppdatera(); S.paus = {fran: idag, till: idag + n, orsak: v.orsak}; S.pausAr.dagar += n; S.vardDag = idag;
+    spara(); stangArk(); ritaHem(); try{ planeraNotiser(); }catch(err){} toastG(`${S.namn} sover nu i sin kristall till ${pausDatum()}.`, 2600); return; }
+  if(t.closest('[data-paus-slut]')){ e.stopImmediatePropagation(); if(S.paus){ const idag = dagNr(new Date()), ater = Math.max(0, S.paus.till - idag - 1); pausKvar(); S.pausAr.dagar = Math.max(0, S.pausAr.dagar - ater); S.paus = null; S.svagDag = idag; S.vardDag = idag; }
+    spara(); stangArk(); ritaHem(); try{ planeraNotiser(); }catch(err){} toastG(`${S.namn} har vaknat!`, 2200); return; }
+}, true);
+{ const _vr = visaResa; visaResa = function(){ _vr.apply(this, arguments);
+    const ref = document.getElementById('notisVaxla') || document.getElementById('integritetLank'); if(!ref || document.getElementById('pausRad')) return;
+    const p = pausNu();
+    ref.insertAdjacentHTML('beforebegin', `<button id="pausRad" data-paus-oppna><span>${p ? `Pausad till ${pausDatum()}` : `Pausa ${S.namn}`}<br><small>${p ? 'Tryck för att avsluta pausen' : 'Om du är sjuk eller på resa'}</small></span><span>›</span></button>`); }; }
+
+// notiser: nedräkningen tar över dagarna framåt (en om dagen), och pausen får en väckning
+{ const _pn = planeraNotiser; planeraNotiser = async function(){ await _pn.apply(this, arguments);
+  try{ if(typeof NOTIS === 'undefined' || !NOTIS || !S.notis || !S.klar) return; svagUppdatera();
+    const n = S.namn, idag = dagNr(new Date()), nu = Date.now(), vid = (dd, h) => { const d = new Date(dd * 864e5); const x = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), h, 0, 0, 0); return x; };
+    const pausar = !!(S.paus && S.paus.till > idag), svagIdag = !pausar && (S.svag || 0) >= 1 && S.vardDag !== idag;
+    const p = await NOTIS.getPending(), bort = (p.notifications || []).filter(x => (x.id >= 11 && x.id <= 19) || ((pausar || svagIdag) && x.id >= 1 && x.id <= 9) || (pausar && x.id >= 20 && x.id <= 29)); if(bort.length) await NOTIS.cancel({notifications: bort.map(x => ({id: x.id}))});
+    const lista = [];
+    if(pausar){ const d = vid(S.paus.till, 9); if(d.getTime() > nu) lista.push({id: 11, title: `${n} vaknar idag`, body: `Pausen är slut. Kika in och säg hej till ${n}.`, schedule: {at: d, allowWhileIdle: true}}); }
+    else {
+      const TXT = [null, [`${n} saknar dig`, `Titta in och ge ${n} lite omsorg.`], [`${n} är hungrig och trött`, `Mata eller klappa ${n} idag.`], [`${n} känner sig svag`, `4 dagar kvar. Ta hand om ${n} idag.`], [`${n} blir svagare`, `3 dagar kvar. ${n} behöver dig.`], [`${n} är väldigt svag`, `2 dagar kvar. Gör något för ${n} idag.`], [`${n} klarar sig inte mycket längre`, `Sista dagen. Imorgon är ${n} borta.`], [`${n} är borta`, `Ingen tog hand om ${n} på sju dagar.`]];
+      if(svagIdag){ const d = vid(idag, 17); if(d.getTime() > nu + 30 * 6e4) lista.push({id: 1, title: TXT[S.svag][0], body: TXT[S.svag][1], schedule: {at: d, allowWhileIdle: true}}); }
+      const gavaDag = new Set((await NOTIS.getPending()).notifications.filter(x => x.id >= 20 && x.id <= 29 && x.schedule && x.schedule.at).map(x => new Date(x.schedule.at).toDateString()));
+      let steg = (S.svag || 0) + (S.vardDag === idag ? 0 : 1);
+      for(let k = 1; k <= 7 && steg <= 7; k++, steg++){ if(steg < 1) continue; const d = vid(idag + k, steg === 7 ? 9 : 17); if(d.getTime() <= nu || (steg < 6 && gavaDag.has(d.toDateString()))) continue; lista.push({id: 10 + k, title: TXT[steg][0], body: TXT[steg][1], schedule: {at: d, allowWhileIdle: true}}); }
+      if((S.svag || 0) === 0 && S.vardDag === idag && !gavaDag.has(vid(idag + 1, 17).toDateString())){ // i morgon mår den fortfarande bra: behåll vanliga påminnelsen
+        const d = vid(idag + 1, 17); if(d.getTime() > nu) lista.unshift({id: 11, title: `${n} har tre nya uppdrag åt dig`, body: 'Ett av dem tar bara några minuter.', schedule: {at: d, allowWhileIdle: true}}); }
+    }
+    if(lista.length) await NOTIS.schedule({notifications: lista});
+  }catch(e){ console.log('svagnotis', e); } }; }
 
 </script>
 </body>
