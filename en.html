@@ -2476,7 +2476,7 @@ async function sb(vag, opt = {}){
   if(!r.ok){ const txt = await r.text(); throw new Error(txt || r.status); }
   return r.status === 204 ? null : r.json().catch(() => null);
 }
-const idagStr = () => new Date().toLocaleDateString('en-GB', {timeZone: 'Europe/Stockholm'});
+const idagStr = () => new Date().toLocaleDateString('en-CA', {timeZone: 'Europe/Stockholm'}) /* ÅÅÅÅ-MM-DD till servern, oavsett språk */;
 function minaKortdata(){ const [mood] = humor(); return {namn: (S.namn || 'Fitchi').slice(0, 20), art: S.art, humor: (S.sover || S.glod <= 0) ? 'sover' : (typeof posFor === 'function' ? posFor(mood) : mood), niva: S.niva, uppdrag: (S.uppdrag || []).filter(u => u.klar).length, aktiv_dag: (S.uppdrag || []).some(u => u.klar) || (S.passlogg || []).some(p => dagNr(new Date(p.tid)) === dagNr(new Date())) ? idagStr() : null}; }
 let synkSenast = '';
 async function synkaProfil(tvinga){
@@ -3281,11 +3281,11 @@ const STEGORD = {bebis: 'Baby', barn: 'Child', tonaring: 'Teen', vuxen: 'Adult'}
   .bastisrad i{width:60px;height:5px;border-radius:99px;background:var(--linje);overflow:hidden;display:block}.bastisrad i b{display:block;height:100%;background:var(--lime)}`;
   document.head.appendChild(st);
 }
-function dagOrd(d){ const idag = idagStr(); if(d === idag) return 'today'; const ig = new Date(Date.now() - 864e5).toLocaleDateString('en-GB', {timeZone: 'Europe/Stockholm'}); return d === ig ? 'yesterday' : d.slice(8, 10).replace(/^0/, '') + '/' + d.slice(5, 7).replace(/^0/, ''); }
+function dagOrd(d){ const idag = idagStr(); if(d === idag) return 'today'; const ig = new Date(Date.now() - 864e5).toLocaleDateString('en-CA', {timeZone: 'Europe/Stockholm'}) /* ÅÅÅÅ-MM-DD till servern, oavsett språk */; return d === ig ? 'yesterday' : d.slice(8, 10).replace(/^0/, '') + '/' + d.slice(5, 7).replace(/^0/, ''); }
 async function hamtaBesok(){
   if(!sbSession || !sbSession.uid) return;
   try{
-    const me = sbSession.uid, sedan = new Date(Date.now() - 13 * 864e5).toLocaleDateString('en-GB', {timeZone: 'Europe/Stockholm'});
+    const me = sbSession.uid, sedan = new Date(Date.now() - 13 * 864e5).toLocaleDateString('en-CA', {timeZone: 'Europe/Stockholm'}) /* ÅÅÅÅ-MM-DD till servern, oavsett språk */;
     const rader = await sb('/rest/v1/pepp?select=*&or=(fran.eq.' + me + ',till.eq.' + me + ')&order=skapad.desc&limit=500') || [];
     const ids = [...new Set(rader.map(r => r.fran === me ? r.till : r.fran))];
     const prof = ids.length ? await sb('/rest/v1/profiler?select=id,namn,art,humor,niva&id=in.(' + ids.join(',') + ')') || [] : [];
