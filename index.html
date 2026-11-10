@@ -1555,7 +1555,7 @@ if(HALSA){
     if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> puls${d.pulsNuMinSedan > 15 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min sen)</small>` : ''}</span>`);
     // lägsta puls och vilopuls visas under Vila, inte på hemskärmen
     // klockappen (t.ex. Samsung Health) synkar bara när den öppnas: erbjud att hämta när ingen puls alls har kommit fram (senaste 3 timmarna)
-    if(!PA_IOS && window._klockKalla && window._klockKalla.paket && !d.pulsNu) delar.push(`<button class="hamtaKlocka" data-hamta-klocka>↻ Uppdatera från ${window._klockKalla.namn}</button>`);
+    if(!PA_IOS && window._klockKalla && window._klockKalla.paket && !d.pulsNu) delar.push(`<button class="hamtaKlocka" data-hamta-klocka aria-label="Synka puls från ${window._klockKalla.namn}">↻ Synka puls</button>`);
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     stegUppdrag(d.steg);
     if(Array.isArray(d.pass)) klockPass(d.pass);
