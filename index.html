@@ -1526,6 +1526,8 @@ if(HALSA){
       halsaLas();
     }catch(e){ console.log('halsa', e); klarNu(); }
   }
+  try{ if(!PA_IOS && HALSA.kalla) HALSA.kalla().then(r => { window._klockKalla = r; }).catch(() => {}); }catch(e){}
+  setTimeout(() => { window._halsaLasNu = halsaLas; }, 0);
   async function halsaLas(){
     let d; try{ d = await HALSA.las(); }catch(e){ console.log('las', e); klarNu(); return; }
     const h = S.halsa, idag = dagNr(new Date());
@@ -1552,6 +1554,8 @@ if(HALSA){
     if(d.somnMin > 0) delar.push(`<span><b>${fmtH(d.somnMin)}</b> sömn</span>`);
     if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> puls${d.pulsNuMinSedan > 15 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min sen)</small>` : ''}</span>`);
     // lägsta puls och vilopuls visas under Vila, inte på hemskärmen
+    // klockappen (t.ex. Samsung Health) synkar bara när den öppnas: erbjud att hämta när pulsen är gammal
+    if(!PA_IOS && window._klockKalla && window._klockKalla.paket && (!d.pulsNu || d.pulsNuMinSedan > 30)) delar.push(`<button class="hamtaKlocka" data-hamta-klocka>↻ Hämta från klockan</button>`);
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     stegUppdrag(d.steg);
     if(Array.isArray(d.pass)) klockPass(d.pass);
@@ -4369,6 +4373,22 @@ document.addEventListener('click', e => {
       const i = dagNr(new Date()); if(d > i || d < i - 6) return;
       const plats = ark.querySelector('.rader') || ark.querySelector('p.liten'); if(plats) plats.insertAdjacentHTML('afterend', `<button class="knapp ljus" data-efterhand="${d}" style="margin-top:12px">+ Lägg till träning</button>`); }catch(e){} }; }
 document.addEventListener('click', e => { const k = e.target.closest('[data-kdag]'); if(k){ const a = document.getElementById('ark'); if(a) a._kdag = +k.dataset.kdag; } }, true);
+
+
+// ===== Hämta från klockan (beslut 2026-11-10) =====
+// Samsung Health m.fl. skickar klockans puls och steg till Health Connect med fördröjning, ofta först när appen öppnas.
+// Knappen öppnar klockappen ett ögonblick; när man kommer tillbaka läser Fitchi in igen några gånger.
+{ const st = document.createElement('style'); st.textContent = `.hamtaKlocka{appearance:none;border:1px dashed var(--glas-kant);background:transparent;color:inherit;border-radius:99px;padding:8px 14px;min-height:40px;font:600 14px var(--text);cursor:pointer}`; document.head.appendChild(st); }
+let hamtarKlocka = 0;
+document.addEventListener('click', e => { if(!e.target.closest('[data-hamta-klocka]')) return; e.stopImmediatePropagation();
+  const k = window._klockKalla; if(!HALSA || !k || !k.paket) return;
+  hamtarKlocka = Date.now();
+  toastG(`Öppnar ${k.namn} så att den synkar. Gå tillbaka till Fitchi efter några sekunder.`, 3000);
+  setTimeout(() => { HALSA.oppnaKalla({paket: k.paket}).catch(() => toastG(`Kunde inte öppna ${k.namn}.`, 2400)); }, 900); }, true);
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden || !hamtarKlocka || Date.now() - hamtarKlocka > 10 * 6e4) return; hamtarKlocka = 0;
+  [1500, 5000, 12000, 25000].forEach(ms => setTimeout(() => { try{ window._halsaLasNu && window._halsaLasNu(); }catch(e){} }, ms));
+  toastG('Hämtar det senaste från klockan…', 2200); });
 
 </script>
 </body>

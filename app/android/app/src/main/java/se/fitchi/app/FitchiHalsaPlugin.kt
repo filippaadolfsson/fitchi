@@ -84,6 +84,35 @@ class FitchiHalsaPlugin : Plugin() {
     }
 
     /** Appen skickar fitchins läge hit, widgeten på hemskärmen uppdateras. */
+    // Appar som skriver klockdata till Health Connect. De synkar ofta bara när de öppnas,
+    // så Fitchi kan öppna dem ett ögonblick ("Hämta från klockan").
+    private val kallor = listOf(
+        "com.sec.android.app.shealth" to "Samsung Health",
+        "com.garmin.android.apps.connectmobile" to "Garmin Connect",
+        "com.fitbit.FitbitMobile" to "Fitbit",
+        "com.polar.polarflow" to "Polar Flow",
+        "com.google.android.apps.fitness" to "Google Fit"
+    )
+
+    @PluginMethod
+    fun kalla(call: PluginCall) {
+        val pm = context.packageManager
+        val hit = kallor.firstOrNull { pm.getLaunchIntentForPackage(it.first) != null }
+        val ret = JSObject()
+        if (hit != null) { ret.put("paket", hit.first); ret.put("namn", hit.second) }
+        call.resolve(ret)
+    }
+
+    @PluginMethod
+    fun oppnaKalla(call: PluginCall) {
+        val paket = call.getString("paket") ?: kallor.map { it.first }.firstOrNull { context.packageManager.getLaunchIntentForPackage(it) != null }
+        val intent = paket?.let { context.packageManager.getLaunchIntentForPackage(it) }
+        if (intent == null) { call.reject("Ingen klockapp hittades"); return }
+        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        call.resolve()
+    }
+
     @PluginMethod
     fun widget(call: PluginCall) {
         val p = context.getSharedPreferences(FitchiWidget.PREFS, android.content.Context.MODE_PRIVATE).edit()
