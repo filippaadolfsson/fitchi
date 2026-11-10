@@ -1555,7 +1555,7 @@ if(HALSA){
     if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> bpm${d.pulsNuMinSedan > 15 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min ago)</small>` : ''}</span>`);
     // lägsta puls och vilopuls visas under Vila, inte på hemskärmen
     // klockappen (t.ex. Samsung Health) synkar bara när den öppnas: erbjud att hämta när ingen puls alls har kommit fram (senaste 3 timmarna)
-    if(!PA_IOS && window._klockKalla && window._klockKalla.paket && !d.pulsNu) delar.push(`<button class="hamtaKlocka" data-hamta-klocka>↻ Get data from your watch</button>`);
+    if(!PA_IOS && window._klockKalla && window._klockKalla.paket && !d.pulsNu) delar.push(`<button class="hamtaKlocka" data-hamta-klocka>↻ Update from ${window._klockKalla.namn}</button>`);
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     stegUppdrag(d.steg);
     if(Array.isArray(d.pass)) klockPass(d.pass);
@@ -4375,7 +4375,7 @@ document.addEventListener('click', e => {
 document.addEventListener('click', e => { const k = e.target.closest('[data-kdag]'); if(k){ const a = document.getElementById('ark'); if(a) a._kdag = +k.dataset.kdag; } }, true);
 
 
-// ===== Hämta från klockan (beslut 2026-11-10) =====
+// ===== Uppdatera från hälsoappen (beslut 2026-11-10) =====
 // Samsung Health m.fl. skickar klockans puls och steg till Health Connect med fördröjning, ofta först när appen öppnas.
 // Knappen öppnar klockappen ett ögonblick; när man kommer tillbaka läser Fitchi in igen några gånger.
 { const st = document.createElement('style'); st.textContent = `.hamtaKlocka{appearance:none;border:1px dashed var(--glas-kant);background:transparent;color:inherit;border-radius:99px;padding:8px 14px;min-height:40px;font:600 14px var(--text);cursor:pointer}`; document.head.appendChild(st); }
@@ -4388,7 +4388,7 @@ document.addEventListener('click', e => { if(!e.target.closest('[data-hamta-kloc
 document.addEventListener('visibilitychange', () => {
   if(document.hidden || !hamtarKlocka || Date.now() - hamtarKlocka > 10 * 6e4) return; hamtarKlocka = 0;
   [1500, 5000, 12000, 25000].forEach(ms => setTimeout(() => { try{ window._halsaLasNu && window._halsaLasNu(); }catch(e){} }, ms));
-  toastG('Getting the latest from your watch…', 2200); });
+  toastG(`Getting the latest from ${(window._klockKalla || {}).namn || 'the health app'}…`, 2200); });
 
 </script>
 </body>
