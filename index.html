@@ -1554,8 +1554,8 @@ if(HALSA){
     if(d.somnMin > 0) delar.push(`<span><b>${fmtH(d.somnMin)}</b> sömn</span>`);
     if(d.pulsNu) delar.push(`<span><b>${d.pulsNu}</b> puls${d.pulsNuMinSedan > 15 ? ` <small style="opacity:.7">(${d.pulsNuMinSedan} min sen)</small>` : ''}</span>`);
     // lägsta puls och vilopuls visas under Vila, inte på hemskärmen
-    // klockappen (t.ex. Samsung Health) synkar bara när den öppnas: erbjud att hämta när pulsen är gammal
-    if(!PA_IOS && window._klockKalla && window._klockKalla.paket && (!d.pulsNu || d.pulsNuMinSedan > 30)) delar.push(`<button class="hamtaKlocka" data-hamta-klocka>↻ Hämta från klockan</button>`);
+    // klockappen (t.ex. Samsung Health) synkar bara när den öppnas: erbjud att hämta när ingen puls alls har kommit fram (senaste 3 timmarna)
+    if(!PA_IOS && window._klockKalla && window._klockKalla.paket && !d.pulsNu) delar.push(`<button class="hamtaKlocka" data-hamta-klocka>↻ Hämta från klockan</button>`);
     rad.innerHTML = delar.join(''); rad.hidden = !delar.length;
     stegUppdrag(d.steg);
     if(Array.isArray(d.pass)) klockPass(d.pass);
