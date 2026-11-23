@@ -2113,7 +2113,7 @@ function slutFanga(poang){
 }
 
 // --- dansen (nivå 5)
-const DANSHP = {"bjorn": 103, "hare": 100.6, "uggla": 100.6, "utter": 100, "katt": 100.3};
+const DANSHP = {"bjorn": 103, "hare": 100.0, "uggla": 100.6, "utter": 100, "katt": 100.3};
 let dansTimer = null;
 { const _ork = ork;
   ork = (mood, w) => { const p = F3DP[S.art] || {};
@@ -2636,14 +2636,16 @@ async function planeraNotiser(){
     let pepp = null; try{ const v = BESOK.inn[0]; if(v && !(S.peppIdag || []).includes(v.id)) pepp = v; }catch(e){}
     const lagg = (id, dag, d, title, body) => { lista.push({id, title, body, schedule: {at: d, allowWhileIdle: true}}); plan[idag + dag] = d.getTime(); };
     // idag
-    const gatt = plan[idag] && plan[idag] <= nu.getTime(), tidigast = nu.getTime() + 90 * 6e4;
+    const gatt = plan[idag] && plan[idag] <= nu.getTime(), tidigast = nu.getTime() + 45 * 6e4;
     if(!gatt){ delete plan[idag];
       const kand = [];
       if(sondag(0) && kistaRedo) kand.push([vid(0, 10), 'Veckans kista kan öppnas! 🗝️', `${k.dagar.length} av 7 nycklar. Se vad ${n} får.`]);
       if(lag && (lag.dagarKvar <= 2 || klara === 0)) kand.push([vid(0, 18), `Laget behöver ${lag.kvar} uppdrag till`, lag.dagarKvar === 0 ? `Sista dagen! Ni klarar det tillsammans.` : lag.dagarKvar === 1 ? `En dag kvar. Ett uppdrag idag hjälper laget.` : `${lag.dagarKvar} dagar kvar. Ett uppdrag idag hjälper laget.`]);
       if(pepp) kand.push([vid(0, 17, 30), `${pepp.namn} peppade dig idag 💛`, `Peppa tillbaka så får ni båda +10 glöd.`]);
-      if(klara === 2) kand.push([vid(0, 19), 'Ett uppdrag kvar till bonusen', `Klara det tredje så får du +25 mynt.`]);
-      if(klara === 0 && !S.vila) kand.push([vid(0, 17), `${n} har tre uppdrag åt dig idag`, 'Ett av dem tar bara några minuter.']);
+      // kvällspåminnelse kl 18 (beslut 2026-11-23): kommer även om man varit inne tidigare, så länge inte alla tre uppdrag är klara
+      if(!S.vila && klara < 3) kand.push(klara === 2 ? [vid(0, 18), 'Ett uppdrag kvar till bonusen', `Klara det tredje så får du +25 mynt.`]
+        : klara === 1 ? [vid(0, 18), 'Två uppdrag kvar idag', `${n} väntar på dig. Ett av dem tar bara några minuter.`]
+        : [vid(0, 18), `${n} har tre uppdrag åt dig idag`, 'Ett av dem tar bara några minuter.']);
       const val = kand.find(x => x[0].getTime() >= tidigast);
       if(val) lagg(1, 0, ...val);
     }
@@ -2660,7 +2662,7 @@ async function planeraNotiser(){
   }catch(e){ console.log('notis', e); }
 }
 async function fragaNotis(){
-  oppnaArk(arkHuvud('Påminnelser', `Får ${S.namn} påminna dig?`, `Högst en påminnelse om dagen, och bara när det finns något: en vän som peppat dig, lagmålet, bonusen eller veckans kista. Du kan stänga av dem i Din resa.`)
+  oppnaArk(arkHuvud('Påminnelser', `Får ${S.namn} påminna dig?`, `Högst en påminnelse om dagen, och bara när det finns något: uppdrag kvar på kvällen, en vän som peppat dig, lagmålet eller veckans kista. Du kan stänga av dem i Din resa.`)
     + `<div style="display:flex;flex-direction:column;gap:10px"><button class="knapp ljus" id="notisJa">Ja, gärna</button><button class="knapp sek" id="notisNej">Inte nu</button></div>`);
 }
 async function slaPaNotis(){

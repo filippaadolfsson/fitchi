@@ -2113,7 +2113,7 @@ function slutFanga(poang){
 }
 
 // --- dansen (nivå 5)
-const DANSHP = {"bjorn": 103, "hare": 100.6, "uggla": 100.6, "utter": 100, "katt": 100.3};
+const DANSHP = {"bjorn": 103, "hare": 100.0, "uggla": 100.6, "utter": 100, "katt": 100.3};
 let dansTimer = null;
 { const _ork = ork;
   ork = (mood, w) => { const p = F3DP[S.art] || {};
@@ -2636,14 +2636,16 @@ async function planeraNotiser(){
     let pepp = null; try{ const v = BESOK.inn[0]; if(v && !(S.peppIdag || []).includes(v.id)) pepp = v; }catch(e){}
     const lagg = (id, dag, d, title, body) => { lista.push({id, title, body, schedule: {at: d, allowWhileIdle: true}}); plan[idag + dag] = d.getTime(); };
     // idag
-    const gatt = plan[idag] && plan[idag] <= nu.getTime(), tidigast = nu.getTime() + 90 * 6e4;
+    const gatt = plan[idag] && plan[idag] <= nu.getTime(), tidigast = nu.getTime() + 45 * 6e4;
     if(!gatt){ delete plan[idag];
       const kand = [];
       if(sondag(0) && kistaRedo) kand.push([vid(0, 10), 'This week’s chest can be opened! 🗝️', `${k.dagar.length} of 7 keys. See what ${n} gets.`]);
       if(lag && (lag.dagarKvar <= 2 || klara === 0)) kand.push([vid(0, 18), `The team needs ${lag.kvar} more missions`, lag.dagarKvar === 0 ? `Last day! You can make it together.` : lag.dagarKvar === 1 ? `One day left. One mission today helps the team.` : `${lag.dagarKvar} days left. One mission today helps the team.`]);
       if(pepp) kand.push([vid(0, 17, 30), `${pepp.namn} cheered you on today 💛`, `Cheer back and you both get +10 Glow.`]);
-      if(klara === 2) kand.push([vid(0, 19), 'One mission left to the bonus', `Finish the third and you get +25 coins.`]);
-      if(klara === 0 && !S.vila) kand.push([vid(0, 17), `${n} has three missions for you today`, 'One of them only takes a few minutes.']);
+      // kvällspåminnelse kl 18 (beslut 2026-11-23): kommer även om man varit inne tidigare, så länge inte alla tre uppdrag är klara
+      if(!S.vila && klara < 3) kand.push(klara === 2 ? [vid(0, 18), 'One mission left to the bonus', `Finish the third and you get +25 coins.`]
+        : klara === 1 ? [vid(0, 18), 'Two missions left today', `${n} is waiting for you. One of them only takes a few minutes.`]
+        : [vid(0, 18), `${n} has three missions for you today`, 'One of them only takes a few minutes.']);
       const val = kand.find(x => x[0].getTime() >= tidigast);
       if(val) lagg(1, 0, ...val);
     }
@@ -2660,7 +2662,7 @@ async function planeraNotiser(){
   }catch(e){ console.log('notis', e); }
 }
 async function fragaNotis(){
-  oppnaArk(arkHuvud('Reminders', `Can ${S.namn} remind you?`, `At most one reminder a day, and only when there’s something: a friend who cheered you on, the team goal, the bonus or this week’s chest. You can turn them off in Your journey.`)
+  oppnaArk(arkHuvud('Reminders', `Can ${S.namn} remind you?`, `At most one reminder a day, and only when there’s something: missions left in the evening, a friend who cheered you on, the team goal or this week’s chest. You can turn them off in Your journey.`)
     + `<div style="display:flex;flex-direction:column;gap:10px"><button class="knapp ljus" id="notisJa">Yes, please</button><button class="knapp sek" id="notisNej">Not now</button></div>`);
 }
 async function slaPaNotis(){
